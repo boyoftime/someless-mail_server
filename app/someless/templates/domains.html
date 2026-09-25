@@ -1,0 +1,16 @@
+{% extends "shell.html" %}
+{% block title %}Domains | Someless Mail{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h1 class="page-title">Domains</h1>
+  <p class="page-subtitle">Connect your own domains to send and receive mail with them.</p>
+</header>
+
+<section class="empty-state" aria-labelledby="no-domains-title">
+  <span class="empty-state-badge" aria-hidden="true">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.3 2.5 3.5 5.3 3.5 8.5s-1.2 6-3.5 8.5c-2.3-2.5-3.5-5.3-3.5-8.5s1.2-6 3.5-8.5z"/></svg>
+  </span>
+  <h2 id="no-domains-title" class="empty-state-title">No domains yet</h2>
+  <p class="empty-state-text">Domains you connect will be listed here, with their inboxes.</p>
+</section>
+{% endblock %}

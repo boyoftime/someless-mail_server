@@ -78,14 +78,14 @@
     timer = setTimeout(hide, STAY_MS + (reduceMotion ? 0 : 900));
   }
 
-  // Messages from the server (e.g. "Password changed.") come down on a board too. Error
-  // messages also stay next to their form after the board goes back up. page-swap.js
-  // calls this for each page it brings in without a reload.
+  // Messages from the server ("Password changed.", "Current password is wrong.") come down
+  // on a board instead of showing on the page. Without JavaScript they stay on the page.
+  // page-swap.js calls this for each page it brings in without a reload.
   function fromPage(root) {
     var first = root.querySelector("[data-board]");
     if (!first) return;
     root.querySelectorAll("[data-board]").forEach(function (el) {
-      if (el.dataset.board !== "error") el.hidden = true;
+      el.hidden = true;
     });
     show({ type: first.dataset.board, title: first.dataset.boardTitle, message: first.textContent.trim() });
   }

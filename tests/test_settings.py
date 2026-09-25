@@ -18,11 +18,23 @@ def change_password(client, current="admin", new="new-secret-1", confirm=None):
     })
 
 
-def change_username(client, new="postmaster", current_password="admin"):
-    return client.post("/settings/username", data={
-        "username": new,
-        "current_password": current_password,
-    })
+def change_username(client, new="postmaster"):
+    return client.post("/settings/username", data={"username": new})
+
+
+def test_save_buttons_show_a_spinner_while_saving(client, login):
+    login()
+    page = client.get("/settings").get_data(as_text=True)
+    buttons = re.findall(r'<button class="button card-button" type="submit".*?</button>', page, re.S)
+    main = page[page.index('<main class="app-main"'):page.index("</main>")]
+
+    assert len(buttons) == 2
+    for button in buttons:
+        assert "data-busy-label=" in button
+        assert '<span class="button-spinner" aria-hidden="true"></span>' in button
+    assert 'src="/static/js/busy-button.js?v=' in page
+    # loaded once with the layout, not again with every page swapped into the main area
+    assert "busy-button.js" not in main
 
 
 def test_settings_requires_login(client):
@@ -100,13 +112,13 @@ def test_admin_can_change_username(client, login):
     assert login("postmaster", "admin").status_code == 302
 
 
-def test_username_change_needs_the_current_password(client, login):
-    login()
+def test_username_card_does_not_ask_for_the_password(client, login):
+    html = settings_page(client, login)
+    username_card = html[html.index('aria-labelledby="username-title"'):html.index('class="glow-divider"')]
 
-    response = change_username(client, new="postmaster", current_password="wrong")
-
-    assert response.status_code == 400
-    assert "Current password is wrong." in text(response)
+    # only the password card asks for it
+    assert 'name="current_password"' not in username_card
+    assert 'type="password"' not in username_card
 
 
 def test_username_must_use_allowed_characters(client, login):
@@ -180,18 +192,9 @@ def test_settings_has_a_username_card_and_a_password_card(client, login):
 def test_password_rules_are_listed_for_a_live_check(client, login):
     html = settings_page(client, login)
 
-    for rule in ["length", "mix", "special"]:
+    for rule in ["length", "letter", "number", "special"]:
         assert f'data-rule="{rule}"' in html
     assert 'src="/static/js/password-rules.js?v=' in html
-
-
-def test_new_password_needs_letters_and_numbers(client, login):
-    login()
-
-    for weak in ["abcdefgh!", "12345678!"]:
-        response = change_password(client, new=weak)
-        assert response.status_code == 400
-        assert "letters and numbers" in text(response)
 
 
 def test_new_password_needs_a_special_character(client, login):
@@ -201,6 +204,18 @@ def test_new_password_needs_a_special_character(client, login):
 
     assert response.status_code == 400
     assert "special character" in text(response)
+
+
+def test_password_errors_never_send_the_typed_passwords_back(client, login):
+    login()
+
+    response = change_password(client, current="wrong-current-1!", new="a-long-new-password-1!", confirm="typo-1!")
+
+    # the page keeps what was typed in the browser (page-swap.js), not by echoing it
+    page = response.get_data(as_text=True)
+    assert response.status_code == 400
+    assert "wrong-current-1!" not in page
+    assert "a-long-new-password-1!" not in page and "typo-1!" not in page
 
 
 def test_settings_errors_come_down_on_the_red_board(client, login):

@@ -3,7 +3,9 @@
 // the background and puts its main area in place of this one. The side menu, the top bar
 // and their animations stay exactly as they are. The address bar, the tab title and the
 // Back and Forward buttons work as usual. Meanwhile the loading bar runs and the loader
-// covers the main area (loading-bar.js, page-loader.js).
+// covers the main area (loading-bar.js, page-loader.js). A form that brings back the page
+// it was sent from (an error, or a save) leaves the page just as it was: what was typed,
+// open cards, the place on the screen. The message comes down on the notice board.
 // Anything that isn't a signed-in page (the login page once the session has ended, say)
 // loads the normal way. Links marked data-full-load always do.
 (function () {
@@ -114,21 +116,31 @@
           window.location.assign(again); // not a signed-in page: load it the normal way
           return;
         }
-        var pageChanged = withoutHash(response.url) !== shownUrl;
-        if (!revisit && (method === "GET" || response.redirected)) {
+        // A form's answer without a redirect (an error) is still the page it was sent from.
+        var moved = method === "GET" || response.redirected;
+        var pageChanged = moved && withoutHash(response.url) !== shownUrl;
+        if (!revisit && moved) {
           // As the browser does it: a new page adds a history entry, the same page again doesn't.
           if (pageChanged) history.pushState({}, "", response.url);
           else history.replaceState({}, "", response.url);
         }
-        if (method === "GET" || response.redirected) shownUrl = withoutHash(response.url);
+        if (moved) shownUrl = withoutHash(response.url);
+        // A form that brings back the page it was sent from, with an error or after going
+        // through: everything stays as it was left (a long password can be corrected instead
+        // of typed again), except the form itself once it went through.
+        var kept = form && method !== "GET" && !pageChanged ? keep(form, response.redirected) : null;
+        var stayed = false;
         try {
-          swap(doc, newMain, pageChanged);
+          stayed = swap(doc, newMain, pageChanged, kept);
         } catch (error) {
           console.error(error);
           window.location.assign(again); // something went wrong swapping: load it for real
           return;
         }
-        window.scrollTo(0, revisit && revisit.scroll ? revisit.scroll : 0);
+        if (!stayed) {
+          window.scrollTo(0, revisit && revisit.scroll ? revisit.scroll : 0);
+          focusHeading();
+        }
       })
       .catch(function (error) {
         // a newer page is on its way, so this one doesn't matter any more
@@ -139,6 +151,7 @@
           return;
         }
         done();
+        if (form) form.dispatchEvent(new Event("someless:done")); // its button stops spinning
         if (window.somelessMenu) window.somelessMenu.restore();
         if (window.somelessBoard) {
           window.somelessBoard.show({
@@ -150,7 +163,13 @@
       });
   }
 
-  function swap(doc, newMain, pageChanged) {
+  // Returns true if the form in `kept` came back and was put back as it was left.
+  function swap(doc, newMain, pageChanged, kept) {
+    // Filled in and its cards opened before it goes in, so nothing animates or moves. The
+    // focus leaves the old form first: taking out a focused field makes the browser lay the
+    // page out while the main area is empty, and the scroll jumps to the top.
+    var form = kept ? putBack(kept, newMain) : null;
+    if (form && main.contains(document.activeElement)) document.activeElement.blur();
     document.title = doc.title;
     main.className = newMain.className;
     main.replaceChildren.apply(main, Array.from(document.adoptNode(newMain).childNodes));
@@ -179,8 +198,99 @@
 
     if (window.somelessBoard) window.somelessBoard.fromPage(main);
     document.dispatchEvent(new CustomEvent("someless:swap", { detail: { main: main } }));
-    focusHeading();
     done();
+    if (!form) return false;
+
+    // Everything stays at the same place on the screen, with the focus where it was.
+    if (kept.top !== null && visible(form)) window.scrollBy(0, form.getBoundingClientRect().top - kept.top);
+    else window.scrollTo(0, kept.scrollY);
+    focusAgain(kept, form);
+    return true;
+  }
+
+  // The main area as the admin left it: what was typed in each form (the server never
+  // sends that back, least of all passwords), except in the form that just went through;
+  // the open cards; the focus; where the sent form sits on the screen.
+  function keep(sent, wentThrough) {
+    return {
+      forms: Array.from(main.querySelectorAll("form")).filter(function (form) {
+        return !(wentThrough && form === sent); // that one starts afresh
+      }).map(function (form) {
+        return {
+          action: form.getAttribute("action"),
+          fields: Array.from(form.elements).filter(typedIn).map(function (field) {
+            return { name: field.name, value: field.value, checked: field.checked };
+          }),
+        };
+      }),
+      sent: sent.getAttribute("action"),
+      openCards: Array.from(main.querySelectorAll("[data-card-toggle][aria-expanded='true']")).map(function (toggle) {
+        return toggle.getAttribute("aria-controls");
+      }),
+      focus: wentThrough ? "" : focusIn(sent),
+      top: visible(sent) ? sent.getBoundingClientRect().top : null,
+      scrollY: window.scrollY,
+    };
+  }
+
+  function typedIn(field) {
+    return field.name && ["hidden", "submit", "button", "reset", "file"].indexOf(field.type) === -1;
+  }
+
+  function visible(el) {
+    return el.getClientRects().length > 0;
+  }
+
+  function formIn(root, action) {
+    return Array.from(root.querySelectorAll("form")).find(function (form) {
+      return form.getAttribute("action") === action;
+    });
+  }
+
+  // The field that has the focus, or "submit" when it was on the send button (locked while
+  // sending, it may have lost it); "" when the focus has gone elsewhere.
+  function focusIn(form) {
+    var active = document.activeElement;
+    if (active && form.contains(active) && active.id) return active.id;
+    return !active || active === document.body || form.contains(active) ? "submit" : "";
+  }
+
+  // The page that came back, before it goes in: fill the forms in again and reopen the
+  // cards. Returns the sent form, or nothing if something else came back (an error page).
+  function putBack(kept, newMain) {
+    kept.forms.forEach(function (saved) {
+      var form = formIn(newMain, saved.action);
+      if (!form) return;
+      Array.from(form.elements).filter(typedIn).forEach(function (field) {
+        saved.fields.forEach(function (typed) {
+          if (typed.name !== field.name) return;
+          if (field.type === "checkbox" || field.type === "radio") {
+            if (typed.value === field.value) field.checked = typed.checked;
+          } else {
+            field.value = typed.value;
+          }
+        });
+      });
+    });
+    kept.openCards.forEach(function (id) {
+      var toggle = newMain.querySelector("[data-card-toggle][aria-controls='" + id + "']");
+      var card = toggle && toggle.closest("[data-card]");
+      if (!card) return;
+      toggle.setAttribute("aria-expanded", "true");
+      card.classList.add("is-open");
+    });
+    return formIn(newMain, kept.sent);
+  }
+
+  // Back to the field that had the focus, or the send button. A form in a dialog that has
+  // closed hands it to the button that opens the dialog, as closing a dialog does.
+  function focusAgain(kept, form) {
+    var target = kept.focus === "submit" ? form.querySelector("[type=submit]") : document.getElementById(kept.focus);
+    if (!target || !form.contains(target) || !visible(target)) {
+      var dialog = form.closest("dialog");
+      target = dialog ? main.querySelector("[data-dialog-open='" + dialog.id + "']") : form.querySelector("[type=submit]");
+    }
+    if (target && visible(target)) target.focus({ preventScroll: true });
   }
 
   function done() {

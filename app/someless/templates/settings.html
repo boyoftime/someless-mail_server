@@ -11,6 +11,8 @@
   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20.5c1.4-3.8 4.4-5.5 8-5.5s6.6 1.7 8 5.5"/></svg>
   {%- elif name == "lock" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>
+  {%- elif name == "sliders" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
   {%- endif -%}
 {% endmacro %}
 
@@ -89,18 +91,21 @@
           </div>
           <span class="field-hint" id="new-username-hint">Use letters, numbers, dots, dashes or underscores.</span>
         </div>
-        {{ password_field("username-password", "current_password", "Current password", "Enter current password", "current-password") }}
       </div>
       <div class="card-actions">
-        <button class="button card-button" type="submit">Update username</button>
+        <button class="button card-button" type="submit" data-busy-label="Updating username…">
+          <span class="button-spinner" aria-hidden="true"></span>
+          <span class="button-label">Update username</span>
+        </button>
       </div>
     </form>
   {% endcall %}
 
   <div class="glow-divider" aria-hidden="true"></div>
 
-  {% call card("password", "Change password", "Keep your account secure with a strong password.", "lock", open=password_error, accent="settings-card-violet") %}
+  {% call card("password", "Change password", "Keep your account secure with a strong password.", "lock", open=password_error or rules_error, accent="settings-card-violet") %}
     {% if password_error %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't change password">{{ password_error }}</p>{% endif %}
+    {% if rules_error %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't save the rules">{{ rules_error }}</p>{% endif %}
     <form method="post" action="{{ url_for('settings.change_password') }}" class="form card-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="card-fields">
@@ -108,23 +113,91 @@
         {{ password_field("new-password", "new_password", "New password", "Enter new password", "new-password", "password-rules") }}
         {{ password_field("confirm-password", "confirm_password", "Confirm new password", "Enter new password again", "new-password") }}
       </div>
-      {# The same rules as PASSWORD_RULES in settings.py; password-rules.js ticks them off #}
-      <div class="password-rules" id="password-rules" data-password-rules>
-        <p class="password-rules-title">Password must contain:</p>
+      {# The saved password rules (password_checks in settings.py); password-rules.js ticks
+         them off as you type, and the button opens the dialog below to change them #}
+      <div class="password-rules" id="password-rules" data-password-rules data-min-length="{{ rules.min_length }}">
+        <div class="password-rules-top">
+          <p class="password-rules-title">Password must contain:</p>
+          <button type="button" class="rules-button" data-dialog-open="password-rules-dialog" aria-haspopup="dialog">
+            {{ icon("sliders") }}<span>Password rules</span>
+          </button>
+        </div>
         <ul>
-          <li data-rule="length"><span class="rule-mark" aria-hidden="true"></span>At least 8 characters<span class="visually-hidden rule-state"></span></li>
-          <li data-rule="mix"><span class="rule-mark" aria-hidden="true"></span>A mix of letters and numbers<span class="visually-hidden rule-state"></span></li>
-          <li data-rule="special"><span class="rule-mark" aria-hidden="true"></span>A special character (e.g. ! @ # $ % ^ &amp; *)<span class="visually-hidden rule-state"></span></li>
+          {% for check in checks %}
+          <li data-rule="{{ check.key }}"><span class="rule-mark" aria-hidden="true"></span>{{ check.label }}<span class="visually-hidden rule-state"></span></li>
+          {% endfor %}
         </ul>
       </div>
       <div class="card-actions">
-        <button class="button card-button" type="submit">Change password</button>
+        <button class="button card-button" type="submit" data-busy-label="Changing password…">
+          <span class="button-spinner" aria-hidden="true"></span>
+          <span class="button-label">Change password</span>
+        </button>
       </div>
     </form>
   {% endcall %}
 </div>
 
+{# "Password rules": the minimum length on a glowing line of dots, and which kinds of
+   character a new password must have (password-rules-dialog.js) #}
+{% set characters = "character" if rules.min_length == 1 else "characters" %}
+<dialog class="rules-dialog" id="password-rules-dialog" aria-labelledby="rules-title">
+  <form method="post" action="{{ url_for('settings.change_password_rules') }}" class="rules-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("sliders") }}</span>
+      <div>
+        <h2 id="rules-title" class="rules-title">Password rules</h2>
+        <p class="rules-hint">Choose what a new password must contain.</p>
+      </div>
+    </div>
+
+    <div class="length-picker" data-length-picker style="--value: {{ rules.min_length }}">
+      <div class="length-picker-top">
+        <label class="field-label" for="min-length">Minimum length</label>
+        <output class="length-value" for="min-length" data-length-value>{{ rules.min_length }} {{ characters }}</output>
+      </div>
+      <div class="length-track">
+        <span class="length-line" aria-hidden="true">
+          {%- for n in range(1, 13) %}<span class="length-dot{% if n <= rules.min_length %} is-lit{% endif %}" data-n="{{ n }}"></span>{% endfor -%}
+        </span>
+        <input type="range" id="min-length" name="min_length" min="1" max="12" step="1" value="{{ rules.min_length }}" aria-valuetext="{{ rules.min_length }} {{ characters }}" aria-describedby="min-length-hint">
+      </div>
+      <div class="length-numbers" aria-hidden="true">
+        {%- for n in range(1, 13) %}<span data-n="{{ n }}"{% if n == rules.min_length %} class="is-current"{% endif %}>{{ n }}</span>{% endfor -%}
+      </div>
+      <p class="field-hint" id="min-length-hint">8 or more is recommended.</p>
+    </div>
+
+    <div class="rules-toggles">
+      {% for name, label, hint in [
+        ("require_special", "Force special character", "! @ # $ % ^ & *"),
+        ("require_numbers", "Force numbers", "0 to 9"),
+        ("require_letters", "Force letters", "a to z, A to Z"),
+      ] %}
+      <label class="rule-toggle">
+        <span class="rule-toggle-text">
+          <span class="rule-toggle-label">{{ label }}</span>
+          <span class="rule-toggle-hint">{{ hint }}</span>
+        </span>
+        <input type="checkbox" role="switch" name="{{ name }}"{% if rules[name] %} checked{% endif %}>
+        <span class="switch" aria-hidden="true"><span class="switch-knob"></span></span>
+      </label>
+      {% endfor %}
+    </div>
+
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet" data-dialog-close>Cancel</button>
+      <button class="button rules-save" type="submit" data-busy-label="Saving…">
+        <span class="button-spinner" aria-hidden="true"></span>
+        <span class="button-label">Save rules</span>
+      </button>
+    </div>
+  </form>
+</dialog>
+
 <script src="{{ url_for('static', filename='js/collapsible-cards.js') }}"></script>
 <script src="{{ url_for('static', filename='js/password-toggle.js') }}"></script>
 <script src="{{ url_for('static', filename='js/password-rules.js') }}"></script>
+<script src="{{ url_for('static', filename='js/password-rules-dialog.js') }}"></script>
 {% endblock %}

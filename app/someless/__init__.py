@@ -38,6 +38,7 @@ SIGNED_IN_PAGE_FILES = [
     "js/page-loader.js",
     "js/page-swap.js",
     "js/password-rules.js",
+    "js/password-rules-dialog.js",
     "js/collapsible-cards.js",
     "lottie/page-loader.json",
     "lottie/menu-on-dark.json",
@@ -90,10 +91,11 @@ def create_app(test_config=None):
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     csrf.init_app(app)
 
-    from . import auth, db, errors, pages, settings
+    from . import auth, db, domains, errors, pages, settings
     db.init_app(app)
     app.register_blueprint(auth.bp)
     app.register_blueprint(pages.bp)
+    app.register_blueprint(domains.bp)
     app.register_blueprint(settings.bp)
     app.register_blueprint(errors.bp)
 

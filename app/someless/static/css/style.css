@@ -38,13 +38,15 @@
   --auth-label-focus: #1463f3;
   /* loader while the next page loads */
   --loader-veil: rgba(243, 245, 250, 0.55);
-  --loader-box: rgba(255, 255, 255, 0.94);
-  --loader-shadow: 0 24px 60px rgba(15, 26, 61, 0.18);
   /* cards, inputs and tabs on the signed-in pages */
   --card-bg: #ffffff;
   --card-shadow: 0 12px 32px rgba(15, 26, 61, 0.07);
   --input-bg: #f6f8fc;
   --tabs-bg: rgba(255, 255, 255, 0.7);
+  /* dialogs (Password rules) */
+  --dialog-bg: #ffffff;
+  --violet-text: #6d28d9;
+  --dot-idle: #c9d1e3;
 }
 :root[data-theme="dark"] {
   --paper: #0b1230;
@@ -61,12 +63,13 @@
   --auth-field-focus: #111d47;
   --auth-label-focus: #8cc8ff;
   --loader-veil: rgba(5, 9, 28, 0.5);
-  --loader-box: rgba(17, 26, 63, 0.94);
-  --loader-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
   --card-bg: linear-gradient(180deg, rgba(22, 33, 78, 0.92), rgba(14, 22, 56, 0.92));
   --card-shadow: 0 18px 44px rgba(0, 0, 0, 0.3);
   --input-bg: rgba(7, 12, 36, 0.55);
   --tabs-bg: rgba(8, 14, 40, 0.45);
+  --dialog-bg: #10193f;
+  --violet-text: #c4a1ff;
+  --dot-idle: #34437a;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -663,6 +666,219 @@ html.js .settings-card:not(.is-open) .card-body-content { opacity: 0; transform:
   border: solid #fff;
   border-width: 0 2px 2px 0;
   rotate: 45deg;
+}
+
+/* "Password rules" (password-rules-dialog.js). The button sits in the rules box; the
+   dialog wears the password card's violet: the minimum length is a glowing line of 12
+   dots with the slider's handle on it, and each kind of character has a switch. */
+.password-rules-top { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin: 0 0 0.4rem; }
+.password-rules-top .password-rules-title { margin: 0; }
+.rules-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.85rem;
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  border-radius: 999px;
+  background: rgba(139, 92, 246, 0.12);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+.rules-button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.rules-button:hover { background: rgba(139, 92, 246, 0.22); box-shadow: 0 0 18px -4px rgba(139, 92, 246, 0.8); }
+html:not(.js) .rules-button { display: none; } /* the dialog needs JavaScript */
+
+.rules-dialog {
+  --accent: #8b5cf6;
+  --badge: linear-gradient(135deg, #6d28d9, #a855f7);
+  --thumb: 24px; /* the slider's handle */
+  width: min(calc(100vw - 2rem), 30rem);
+  max-width: none;
+  max-height: calc(100dvh - 2rem);
+  padding: 0;
+  overflow: auto;
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  border-radius: 22px;
+  background: var(--dialog-bg);
+  color: var(--ink);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35), 0 0 48px -12px rgba(139, 92, 246, 0.8);
+}
+.rules-dialog::backdrop { background: var(--loader-veil); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.rules-dialog[open] { animation: dialog-in 0.32s var(--menu-ease) both; }
+.rules-dialog[open]::backdrop { animation: fade-in 0.25s ease both; }
+.rules-dialog.is-closing { animation: dialog-out 0.18s ease both; }
+.rules-dialog.is-closing::backdrop { animation: fade-out 0.18s ease both; }
+@keyframes dialog-in { from { opacity: 0; transform: translateY(14px) scale(0.97); } }
+@keyframes dialog-out { to { opacity: 0; transform: translateY(8px) scale(0.98); } }
+.rules-form { display: grid; gap: 1.35rem; padding: 1.5rem clamp(1.1rem, 4vw, 1.75rem); }
+.rules-head { display: flex; align-items: center; gap: 0.9rem; }
+.rules-title { margin: 0; font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; }
+.rules-hint { margin: 0.1rem 0 0; color: var(--muted); font-size: 0.9rem; }
+
+/* Minimum length: the line and its dots lie under a transparent slider, half a handle in
+   from each end, which is exactly where the handle stops for 1 to 12 */
+.length-picker { display: grid; gap: 0.45rem; }
+.length-picker-top { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.length-value { color: var(--violet-text); font-weight: 700; font-variant-numeric: tabular-nums; }
+.length-track { position: relative; height: var(--thumb); }
+.length-line {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--thumb) / 2);
+  right: calc(var(--thumb) / 2);
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.length-line::before,
+.length-line::after {
+  content: "";
+  position: absolute;
+  top: -1.5px;
+  left: 0;
+  height: 3px;
+  border-radius: 3px;
+}
+.length-line::before { right: 0; background: var(--dot-idle); }
+/* the glowing part, from 1 up to the chosen length (--value, set by the script) */
+.length-line::after {
+  width: calc((var(--value) - 1) / 11 * 100%);
+  background: linear-gradient(90deg, #6d28d9, #a855f7);
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.85), 0 0 3px rgba(168, 85, 247, 1);
+  transition: width 0.25s var(--menu-ease);
+}
+.length-dot { position: relative; z-index: 1; width: 0; }
+.length-dot::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--dialog-bg);
+  box-shadow: inset 0 0 0 2px var(--dot-idle);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+.length-dot.is-lit::before { background: #a855f7; box-shadow: 0 0 10px rgba(168, 85, 247, 0.9); }
+.length-track input[type="range"] {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: 100%;
+  height: var(--thumb);
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+.length-track input[type="range"]:focus { outline: none; }
+.length-track input[type="range"]::-webkit-slider-runnable-track { height: var(--thumb); border: 0; background: transparent; }
+.length-track input[type="range"]::-moz-range-track { height: var(--thumb); border: 0; background: transparent; }
+.length-track input[type="range"]::-webkit-slider-thumb {
+  width: var(--thumb);
+  height: var(--thumb);
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 28%, #a855f7 32% 100%);
+  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.25), 0 0 18px 3px rgba(168, 85, 247, 0.8);
+  -webkit-appearance: none;
+  appearance: none;
+  transition: transform 0.15s ease;
+}
+.length-track input[type="range"]::-moz-range-thumb {
+  width: var(--thumb);
+  height: var(--thumb);
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 28%, #a855f7 32% 100%);
+  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.25), 0 0 18px 3px rgba(168, 85, 247, 0.8);
+}
+.length-track input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.12); }
+.length-track input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--dialog-bg), 0 0 0 6px var(--airmail-blue), 0 0 18px 3px rgba(168, 85, 247, 0.8);
+}
+.length-track input[type="range"]:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px var(--dialog-bg), 0 0 0 6px var(--airmail-blue), 0 0 18px 3px rgba(168, 85, 247, 0.8);
+}
+/* one cell per number, as wide as the gap between two dots and starting half a gap before
+   the first one, so each number sits right under its dot and is easy to click */
+.length-numbers {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  margin: 0 calc(var(--thumb) / 2 - (100% - var(--thumb)) / 22);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.length-numbers span { padding: 0.1rem 0; cursor: pointer; transition: color 0.2s ease; }
+.length-picker .field-hint { margin: 0; }
+.length-numbers span.is-current { color: var(--violet-text); font-weight: 700; }
+
+/* Switches for the kinds of character. The checkbox is still there for the keyboard and
+   screen readers; .switch shows it. */
+.rules-toggles { display: grid; gap: 0.5rem; }
+.rule-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--input-bg);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.rule-toggle:hover { border-color: rgba(139, 92, 246, 0.5); }
+.rule-toggle:has(input:checked) { border-color: rgba(139, 92, 246, 0.45); box-shadow: 0 0 18px -8px rgba(139, 92, 246, 0.8); }
+.rule-toggle-text { display: grid; gap: 0.05rem; }
+.rule-toggle-label { font-weight: 600; }
+.rule-toggle-hint { color: var(--muted); font-size: 0.8125rem; }
+.rule-toggle input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+.switch {
+  position: relative;
+  flex: none;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--dot-idle);
+  transition: background-color 0.25s ease, box-shadow 0.25s ease;
+}
+.switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition: transform 0.3s var(--menu-ease);
+}
+.rule-toggle input:checked + .switch { background: linear-gradient(90deg, #6d28d9, #a855f7); box-shadow: 0 0 14px rgba(168, 85, 247, 0.6); }
+.rule-toggle input:checked + .switch .switch-knob { transform: translateX(18px); }
+.rule-toggle input:focus-visible + .switch { outline: 3px solid var(--airmail-blue); outline-offset: 3px; }
+
+.rules-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.6rem; }
+.rules-actions .button { padding: 0.75rem 1.5rem; font-size: 1rem; }
+.button-quiet { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+.button-quiet:hover { background: rgba(139, 92, 246, 0.12); color: var(--ink); }
+.rules-dialog .rules-save { background: var(--badge); color: #fff; box-shadow: 0 10px 24px -10px var(--accent); }
+.rules-dialog .rules-save:hover { background: var(--badge); filter: brightness(1.1); }
+@media (prefers-reduced-motion: reduce) {
+  .rules-dialog[open], .rules-dialog[open]::backdrop,
+  .rules-dialog.is-closing, .rules-dialog.is-closing::backdrop { animation: none; }
+  .length-line::after, .length-dot::before, .switch, .switch-knob,
+  .length-track input[type="range"]::-webkit-slider-thumb { transition: none; }
 }
 
 /* Forms */
@@ -1463,8 +1679,8 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
 }
 
 /* While the next page loads (page-loader.js), a soft blurred veil covers only the main
-   area, with the loading animation in a small card in its middle. The side menu and the
-   top bar stay sharp. The veil starts where the top bar ends (--loader-top, measured by
+   area, with the loading animation in its middle. The side menu and the top bar stay
+   sharp. The veil starts where the top bar ends (--loader-top, measured by
    page-loader.js) and beside the docked menu, following it when it folds to icons. */
 .page-loader {
   position: fixed;
@@ -1488,11 +1704,6 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
   display: grid;
   justify-items: center;
   gap: 0.15rem;
-  padding: 1rem 1.75rem 1.1rem;
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  background: var(--loader-box);
-  box-shadow: var(--loader-shadow);
   transform: scale(0.94);
   transition: transform 0.3s var(--menu-ease);
 }
@@ -1510,10 +1721,34 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; font-weight: 500; }
 
-/* Error pages (errors.py): the animation, what went wrong and the way back, centred. On
-   their own they sit in a card like the login one; signed in, in the middle of the main
-   area. */
-.error-card { max-width: 30rem; }
+/* A page with nothing to list yet (Domains): a quiet dashed card saying so */
+.empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  padding: clamp(2rem, 6vw, 3.5rem) 1.5rem;
+  border: 1.5px dashed var(--line);
+  border-radius: 18px;
+  background: var(--tabs-bg);
+  text-align: center;
+}
+.empty-state-badge {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 0.6rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1463f3, #0195fb);
+  color: #fff;
+  box-shadow: 0 10px 26px -8px rgba(1, 149, 251, 0.7);
+}
+.empty-state-badge svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.empty-state-title { margin: 0; font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em; }
+.empty-state-text { max-width: 26rem; margin: 0; color: var(--muted); text-wrap: pretty; }
+
+/* Error pages (errors.py): the animation, what went wrong and the way back, centred on
+   the page (signed out) or in the middle of the main area (signed in). */
 .error-state {
   display: grid;
   justify-items: center;

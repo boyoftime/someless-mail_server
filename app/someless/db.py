@@ -14,6 +14,15 @@ CREATE TABLE IF NOT EXISTS admin (
     password_hash TEXT NOT NULL,
     default_password INTEGER NOT NULL DEFAULT 1
 );
+-- What a new password must contain (Settings > Password rules)
+CREATE TABLE IF NOT EXISTS password_rules (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    min_length INTEGER NOT NULL DEFAULT 8,
+    require_letters INTEGER NOT NULL DEFAULT 1,
+    require_numbers INTEGER NOT NULL DEFAULT 1,
+    require_special INTEGER NOT NULL DEFAULT 1
+);
+INSERT OR IGNORE INTO password_rules (id) VALUES (1);
 """
 
 

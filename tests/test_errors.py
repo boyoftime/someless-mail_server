@@ -32,6 +32,13 @@ def test_unknown_address_shows_our_not_found_page(client):
     assert "The requested URL was not found on the server" not in page  # Flask's own page
 
 
+def test_error_page_on_its_own_has_no_card_around_it(client):
+    page = text(client.get("/settings/fgh"))
+
+    assert "auth-card" not in page
+    assert '<section class="error-state"' in page
+
+
 def test_unknown_address_when_signed_in_shows_in_the_main_area(client, login):
     login()
     response = client.get("/settings/fgh")
@@ -115,7 +122,7 @@ def test_expired_form_when_signed_in_shows_in_the_main_area(csrf_client):
     token = re.search(r'name="csrf_token" value="([^"]+)"', login_page).group(1)
     csrf_client.post("/login", data={"csrf_token": token, "username": "admin", "password": "admin"})
 
-    response = csrf_client.post("/settings/username", data={"username": "boss", "current_password": "admin"})
+    response = csrf_client.post("/settings/username", data={"username": "boss"})
 
     page = text(response)
     assert response.status_code == 400

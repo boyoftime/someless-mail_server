@@ -28,6 +28,7 @@ def test_side_menu_links_to_every_page_and_logs_out(client, login):
     menu = html[html.index('<dialog class="side-menu"'):html.index("</dialog>")]
 
     assert 'href="/dashboard"' in menu
+    assert 'href="/domains"' in menu
     assert 'href="/settings"' in menu
     assert 'action="/logout"' in menu
 
@@ -67,7 +68,7 @@ def test_collapsed_sidebar_keeps_icons_with_their_names(client, login):
     menu = side_menu_html(client, login)
 
     # names stay readable (screen readers, hover tooltips) when only icons show
-    for name in ["Dashboard", "Settings", "Log out"]:
+    for name in ["Dashboard", "Domains", "Settings", "Log out"]:
         assert f'<span class="side-menu-label">{name}</span>' in menu
         assert f'title="{name}"' in menu
 
@@ -86,6 +87,14 @@ def test_every_menu_row_carries_the_active_animation_so_a_click_can_light_it_up(
         assert 'data-lottie-light="/static/lottie/menu-active-on-light.json?v=' in row
     for name in ["menu-active-on-dark", "menu-active-on-light"]:
         assert "layers" in client.get(f"/static/lottie/{name}.json").get_json()
+
+
+def test_domains_sits_under_dashboard(client, login):
+    menu = side_menu_html(client, login)
+    main_nav = menu[menu.index('aria-label="Main"'):]
+    main_nav = main_nav[:main_nav.index("</nav>")]
+
+    assert main_nav.index('href="/dashboard"') < main_nav.index('href="/domains"')
 
 
 def test_settings_sits_at_the_bottom_of_the_menu(client, login):

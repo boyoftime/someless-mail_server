@@ -47,7 +47,13 @@
   }
 
   window.somelessPageLoader = { show: show, hide: hide };
-  document.addEventListener("someless:navigate", show);
+  document.addEventListener("someless:navigate", function (event) {
+    // A form whose button has its own spinner (busy-button.js) shows that instead: the
+    // veil would blur it out of sight.
+    var form = event.detail && event.detail.form;
+    if (form && form.querySelector("button[data-busy-label]")) return;
+    show();
+  });
 
   // The Back button can bring a page back exactly as it was left, loader and all.
   window.addEventListener("pageshow", function (event) {

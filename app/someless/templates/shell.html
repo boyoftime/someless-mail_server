@@ -76,6 +76,9 @@
       {% call nav_item(url_for('pages.dashboard'), "Dashboard", here == 'pages.dashboard') %}
         <svg class="side-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg>
       {% endcall %}
+      {% call nav_item(url_for('domains.index'), "Domains", request.blueprint == 'domains') %}
+        <svg class="side-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.3 2.5 3.5 5.3 3.5 8.5s-1.2 6-3.5 8.5c-2.3-2.5-3.5-5.3-3.5-8.5s1.2-6 3.5-8.5z"/></svg>
+      {% endcall %}
     </nav>
 
     {% set account_open = request.blueprint == 'settings' %}
@@ -141,6 +144,7 @@
 <script src="{{ url_for('static', filename='js/side-menu.js') }}"></script>
 <script src="{{ url_for('static', filename='js/account-panel.js') }}"></script>
 <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+<script src="{{ url_for('static', filename='js/busy-button.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/lottie_light.min.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/lottie-autoplay.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/page-loader.js') }}" defer></script>

@@ -7,13 +7,13 @@
 (function () {
   var root = document.documentElement;
 
-  // Also tells the rest of the page a new page is on its way ("someless:navigate"),
-  // so the signed-in pages can show their loader (page-loader.js).
-  function startLoading() {
+  // Also tells the rest of the page a new page is on its way ("someless:navigate", with the
+  // form being sent, if any), so the signed-in pages can show their loader (page-loader.js).
+  function startLoading(form) {
     root.classList.remove("is-loading", "is-finishing");
     void root.offsetWidth; // restart the CSS animation
     root.classList.add("is-loading");
-    document.dispatchEvent(new CustomEvent("someless:navigate"));
+    document.dispatchEvent(new CustomEvent("someless:navigate", { detail: { form: form || null } }));
   }
 
   // From wherever the bar had crept to, on to the end (style.css, .is-finishing).
@@ -40,7 +40,7 @@
   });
 
   document.addEventListener("submit", function (event) {
-    if (!event.defaultPrevented) startLoading();
+    if (!event.defaultPrevented) startLoading(event.target);
   });
 
   // Coming back with the Back button can show the page from cache, still "loading".
