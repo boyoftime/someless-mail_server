@@ -124,9 +124,36 @@ your-folder/
 So the database is at `data/someless/someless.db`.
 
 - **Updates keep it.** `docker compose pull && docker compose up -d` never touches it.
-- **To back up,** copy the whole `data` folder. For a perfect copy, stop Someless Mail first (`docker compose stop`), copy, then `docker compose start`.
+- **Back it up regularly.** See [Back up and restore](#back-up-and-restore) below.
 - **Don't delete it** unless you want to start over with `admin` / `admin`.
 - **No permissions to set up.** Someless Mail runs as its own user (ID 2001), not as root, and takes the folder over by itself when it starts.
+
+### Back up and restore
+
+Run these in the folder with your `docker-compose.yml`.
+
+**Back up:** stop Someless Mail for a moment so nothing changes while you copy, pack the `data` folder into one file, and start it again:
+
+```
+docker compose stop
+tar czf someless-backup-$(date +%F).tar.gz data
+docker compose start
+```
+
+You get one file, such as `someless-backup-2026-09-25.tar.gz`. Keep a copy somewhere other than this server.
+
+**Restore:** stop Someless Mail, put the old `data` folder aside, unpack the backup, and start it again:
+
+```
+docker compose stop
+mv data data-before-restore
+tar xzf someless-backup-2026-09-25.tar.gz
+docker compose start
+```
+
+Once everything looks right, delete `data-before-restore`.
+
+**Always restore while Someless Mail is stopped, then start it.** Files you copy in as root (with `cp`, or an SFTP app logged in as root) belong to root, and Someless Mail can't write to them, so saving anything would fail. When it starts, it gives every file in `data` that isn't its own back to its user, so after `docker compose start` everything works again. No `chown` needed. If you ever copied files in while it was running, run `docker compose restart`.
 
 ### Moving from an older install
 
