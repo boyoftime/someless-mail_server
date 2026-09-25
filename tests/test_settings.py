@@ -142,3 +142,13 @@ def test_new_credentials_survive_app_restart(tmp_path):
     response = second.post("/login", data={"username": "postmaster", "password": "new-secret-1"})
 
     assert response.status_code == 302
+
+
+def test_saved_settings_are_announced_on_a_green_board(client, login):
+    login()
+
+    response = change_password(client)
+    page = text(client.get(response.headers["Location"]))
+
+    assert 'data-board="success"' in page
+    assert 'data-board-title="Saved"' in page

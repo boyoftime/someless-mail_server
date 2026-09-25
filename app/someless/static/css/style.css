@@ -51,13 +51,73 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* The airmail envelope edge along the top of every page */
-.airmail {
-  height: 10px;
-  background: repeating-linear-gradient(-45deg,
-    var(--airmail-red) 0 14px, var(--paper) 14px 22px,
-    var(--airmail-blue) 22px 36px, var(--paper) 36px 44px);
+/* Loading bar along the top of every page: plain Someless blue (the logo's ring) with a
+   glowing head. Each page load fills it left to right; when it is full the head fades. */
+:root {
+  --load-time: 0.9s;
+  --load-ease: cubic-bezier(0.3, 0.6, 0.3, 1);
+  --bar-blue: #0195fb;
+  --bar-glow: rgba(1, 149, 251, 0.85);
 }
+
+.loading-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  height: 4px;
+  overflow-x: clip;
+  overflow-y: visible;
+  pointer-events: none;
+  animation: bar-hide 0.4s ease calc(var(--load-time) + 0.15s) forwards;
+}
+.loading-bar-fill {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: var(--bar-blue);
+  box-shadow: 0 0 8px rgba(1, 149, 251, 0.45);
+  animation: bar-fill var(--load-time) var(--load-ease) both;
+}
+/* The head: a bright streak ending in a glowing tip */
+.loading-bar-fill::before,
+.loading-bar-fill::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  animation:
+    bar-head-pulse 0.6s ease-in-out infinite alternate,
+    bar-head-out 0.3s ease var(--load-time) forwards;
+}
+.loading-bar-fill::before {
+  top: 0;
+  width: 120px;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.9));
+}
+.loading-bar-fill::after {
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  translate: 50% 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 10px 4px var(--bar-glow), 0 0 24px 8px rgba(1, 149, 251, 0.4);
+}
+
+/* Leaving the page: the bar comes back and creeps forward until the next page arrives */
+.is-loading .loading-bar { animation: none; opacity: 1; visibility: visible; }
+.is-loading .loading-bar-fill { animation: bar-trickle 10s cubic-bezier(0.1, 0.7, 0.2, 1) both; }
+.is-loading .loading-bar-fill::before,
+.is-loading .loading-bar-fill::after { animation: bar-head-pulse 0.6s ease-in-out infinite alternate; }
+
+@keyframes bar-fill { from { width: 0; } to { width: 100%; } }
+@keyframes bar-trickle { from { width: 0; } to { width: 90%; } }
+@keyframes bar-head-pulse { from { opacity: 0.65; } to { opacity: 1; } }
+@keyframes bar-head-out { to { opacity: 0; } }
+@keyframes bar-hide { to { opacity: 0; visibility: hidden; } }
 
 .button {
   display: inline-flex;
@@ -81,40 +141,184 @@ a:focus-visible, button:focus-visible, input:focus-visible {
   outline-offset: 3px;
 }
 
-/* Welcome */
-body.welcome {
+/* Welcome splash: 6 seconds, then the page moves on to /login */
+body.splash {
+  --load-time: 6s;
+  --load-ease: linear;
   min-height: 100vh;
   min-height: 100dvh;
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: 1fr auto;
 }
-.welcome-main, .welcome-footer {
-  width: 100%;
-  max-width: calc(1120px + 2 * var(--gutter));
-  margin-inline: auto;
+.splash-main {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 0.25rem;
+  padding: 2rem var(--gutter);
+  text-align: center;
 }
-.welcome-main {
-  align-self: center;
-  padding: clamp(3rem, 8vh, 6rem) var(--gutter);
+.splash-animation {
+  width: min(300px, 75vw);
+  aspect-ratio: 4 / 3;
 }
-.welcome-title {
-  margin: 0 0 2.5rem;
-  font-size: clamp(3.25rem, 12vw, 9.5rem);
+.splash-title {
+  margin: 0;
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
   font-weight: 700;
-  line-height: 0.92;
-  letter-spacing: -0.04em;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
 }
-.welcome-title span { display: block; }
-.welcome-lede {
-  max-width: 34ch;
-  margin: 0 0 2rem;
-  color: var(--muted);
-  font-size: 1.25rem;
+.splash-title span {
+  display: inline-block;
+  opacity: 0;
 }
-.welcome-footer {
+
+/* Nothing on the splash moves until splash.js adds .is-playing, so the bar,
+   the words, the water animation and the 6-second countdown share one clock. */
+body.splash:not(.is-playing) .loading-bar { animation: none; }
+body.splash:not(.is-playing) .loading-bar-fill { animation: none; width: 0; }
+body.splash:not(.is-playing) .loading-bar-fill::before,
+body.splash:not(.is-playing) .loading-bar-fill::after { animation: none; opacity: 0; }
+body.is-playing .splash-main { animation: splash-out 0.6s ease 5.4s forwards; }
+body.is-playing .splash-title span { animation: word-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+body.is-playing .splash-title span:nth-child(1) { animation-delay: 0.3s; }
+body.is-playing .splash-title span:nth-child(2) { animation-delay: 0.42s; }
+body.is-playing .splash-title span:nth-child(3) { animation-delay: 0.54s; }
+body.is-playing .splash-title span:nth-child(4) { animation-delay: 0.66s; }
+body.is-playing .splash-title span:nth-child(5) { animation-delay: 0.78s; }
+.splash-footer {
   padding: 1.5rem var(--gutter);
   color: var(--muted);
   font-size: 0.875rem;
+  text-align: center;
+}
+@keyframes word-in {
+  from { opacity: 0; transform: translateY(0.5em); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes splash-out { to { opacity: 0; transform: translateY(-6px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-bar { display: none; }
+  .splash-main, .splash-title span { animation: none !important; opacity: 1 !important; }
+}
+
+/* Notice board (board.js): hangs from two ropes, drops in from the top with a swing,
+   then is pulled back up. Green glow for success, red glow for errors. */
+.board-wrap {
+  --rope: 70px;
+  --glow: 52, 211, 153; /* success green */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 150;
+  width: min(92vw, 26rem);
+  margin: 0 auto;
+  transform: translateY(-110%);
+  transform-origin: 50% 0;
+  visibility: hidden;
+  cursor: pointer;
+}
+.board-wrap[data-type="error"] { --glow: 255, 93, 110; }
+.board-wrap.is-down { visibility: visible; animation: board-drop 0.95s linear forwards; }
+.board-wrap.is-up { visibility: visible; animation: board-lift 0.55s ease-in forwards; }
+
+.board-rope {
+  position: absolute;
+  top: 0;
+  width: 4px;
+  height: calc(var(--rope) + 6px);
+  border-radius: 2px;
+  background: repeating-linear-gradient(160deg, #d8b98a 0 4px, #9c7a4c 4px 8px);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
+}
+.board-rope-left { left: 18%; }
+.board-rope-right { right: 18%; }
+
+.board {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: var(--rope);
+  padding: 1.1rem 1.35rem;
+  border: 1.5px solid rgba(var(--glow), 0.75);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #17235c, #0e1740);
+  color: #edf0fa;
+  text-align: left;
+  box-shadow: 0 0 0 4px rgba(var(--glow), 0.08), 0 0 28px rgba(var(--glow), 0.45), 0 22px 48px rgba(0, 0, 0, 0.55);
+  animation: board-glow 1.6s ease-in-out infinite alternate;
+}
+/* metal rings where the ropes hold the board */
+.board-ring {
+  position: absolute;
+  top: -7px;
+  width: 14px;
+  height: 14px;
+  border: 3px solid #c8cfe6;
+  border-radius: 50%;
+  background: #0e1740;
+}
+.board-ring-left { left: calc(18% - 5px); }
+.board-ring-right { right: calc(18% - 5px); }
+.board-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(var(--glow), 0.15);
+  color: rgb(var(--glow));
+  box-shadow: 0 0 0 5px rgba(var(--glow), 0.06);
+}
+.board-title { margin: 0; font-size: 1.1rem; font-weight: 700; letter-spacing: -0.01em; }
+.board-message { margin: 0.15rem 0 0; color: #b4bdd9; font-size: 0.95rem; }
+
+/* drop and swing on the ropes, settling like a hanging sign */
+@keyframes board-drop {
+  0% { transform: translateY(-110%) rotate(0deg); animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.6); }
+  45% { transform: translateY(6%) rotate(2.6deg); animation-timing-function: ease-out; }
+  62% { transform: translateY(-2%) rotate(-2deg); animation-timing-function: ease-in-out; }
+  78% { transform: translateY(1%) rotate(1.1deg); animation-timing-function: ease-in-out; }
+  90% { transform: translateY(0) rotate(-0.5deg); animation-timing-function: ease-in-out; }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+/* a little dip, as if someone takes the weight, then up and away */
+@keyframes board-lift {
+  0% { transform: translateY(0); }
+  20% { transform: translateY(4%); }
+  100% { transform: translateY(-110%); }
+}
+@keyframes board-glow {
+  from { box-shadow: 0 0 0 4px rgba(var(--glow), 0.06), 0 0 18px rgba(var(--glow), 0.3), 0 22px 48px rgba(0, 0, 0, 0.55); }
+  to { box-shadow: 0 0 0 4px rgba(var(--glow), 0.12), 0 0 34px rgba(var(--glow), 0.55), 0 22px 48px rgba(0, 0, 0, 0.55); }
+}
+@media (max-width: 480px) {
+  .board-wrap { --rope: 44px; }
+  .board { padding: 0.9rem 1rem; gap: 0.8rem; }
+  .board-icon { width: 40px; height: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-wrap.is-down { animation: none; transform: none; }
+  .board-wrap.is-up { animation: none; visibility: hidden; }
+  .board { animation: none; }
+}
+
+/* Read out by screen readers, not shown */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Shared page pieces */
@@ -163,14 +367,217 @@ body.welcome {
 }
 .field input:focus-visible { outline-offset: 0; border-color: var(--airmail-blue); }
 
-/* Login */
-.auth-main {
-  width: 100%;
-  max-width: calc(1120px + 2 * var(--gutter));
-  margin-inline: auto;
-  padding: clamp(2rem, 6vh, 4rem) var(--gutter);
+/* Login: always dark, like the logo, with airmail envelopes drifting behind the card */
+body.auth {
+  --paper: #0b1230;
+  --ink: #edf0fa;
+  --muted: #98a2c2;
+  --line: #2a3766;
+  --field: #0e1738;
+  --airmail-red: #ff5d6e;
+  --airmail-blue: #7b96ff;
+  --brand: #1463f3;
+  color-scheme: dark;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  background:
+    radial-gradient(55% 45% at 50% 45%, rgba(1, 149, 251, 0.16), transparent 70%),
+    var(--paper);
 }
-.auth-main .wordmark { display: inline-block; margin-bottom: clamp(3rem, 10vh, 6rem); }
+.auth-main {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem var(--gutter) 0;
+}
+.auth-card {
+  position: relative;
+  width: 100%;
+  padding: 2rem clamp(1.25rem, 5vw, 2.75rem);
+  border: 1px solid rgba(123, 150, 255, 0.18);
+  border-radius: 24px;
+  background: rgba(14, 23, 56, 0.92);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+.auth-logo {
+  display: block;
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 1rem;
+  filter: drop-shadow(0 8px 24px rgba(1, 149, 251, 0.35));
+}
+.auth-title {
+  margin: 0 0 0.25rem;
+  text-wrap: balance;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+.auth-hint { margin: 0 0 1.5rem; color: var(--muted); }
+.auth-card .form { max-width: none; text-align: left; }
+.auth-card .alert { text-align: left; }
+.auth-card .button { background: var(--brand); color: #fff; }
+.auth-card .button:hover { background: #0f55d6; }
+.button-block { width: 100%; }
+.form .button-block { justify-self: stretch; }
+
+/* Login fields grow a little and glow while you type in them */
+.auth-card .control {
+  display: block;
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.auth-card .control:focus-within { transform: scale(1.03); }
+.auth-card .field input {
+  transition: border-color 0.2s ease, box-shadow 0.28s ease, background-color 0.2s ease;
+}
+.auth-card .field input:focus {
+  outline: none;
+  border-color: var(--bar-blue);
+  background-color: #111d47;
+  box-shadow: 0 0 0 4px rgba(1, 149, 251, 0.22), 0 8px 24px rgba(1, 149, 251, 0.18);
+}
+.auth-card .field-label { transition: color 0.2s ease; }
+.auth-card .field:focus-within .field-label { color: #8cc8ff; }
+
+/* Spinner inside a button while its form is being sent */
+.button { gap: 0.6rem; }
+.button-spinner {
+  display: none;
+  width: 1.1em;
+  height: 1.1em;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+.button.is-busy { cursor: progress; }
+.button.is-busy .button-spinner { display: inline-block; }
+@keyframes spin { to { rotate: 360deg; } }
+.auth-footer {
+  position: relative;
+  z-index: 1;
+  padding: 1.5rem var(--gutter);
+  color: var(--muted);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+/* PixiJS draws the falling logo cards into this layer (login-background.js) */
+.login-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.login-bg canvas { display: block; }
+
+/* The login card flips from the welcome side to the login form */
+.flip-card {
+  width: min(100%, 34rem);
+  perspective: 1600px;
+}
+.flip-inner {
+  display: grid;
+  transform-style: preserve-3d;
+  transition: transform 0.9s cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+.flip-card.is-flipped .flip-inner { transform: rotateY(180deg); }
+.face {
+  grid-area: 1 / 1;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.face { display: flex; flex-direction: column; justify-content: center; }
+.face-back { transform: rotateY(180deg); }
+/* A little sway while it turns, as if the wind caught it */
+.flip-card.is-flipping { animation: flip-sway 0.9s cubic-bezier(0.3, 0.7, 0.2, 1); }
+@keyframes flip-sway {
+  35% { transform: translateX(14px) rotate(1.5deg) scale(1.03); }
+}
+/* Without JavaScript the card can't flip, so show the login form only */
+html:not(.js) .face-front { display: none; }
+html:not(.js) .face-back { transform: none; }
+
+.face-back-link {
+  position: absolute;
+  top: 1.1rem;
+  left: 1.25rem;
+  font-size: 0.9375rem;
+}
+.face-back-link[hidden] { display: none; }
+
+.welcome-animation {
+  width: 150px;
+  aspect-ratio: 1;
+  margin: -1.25rem auto 0;
+}
+
+.welcome-points {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+.welcome-points li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid rgba(1, 149, 251, 0.16);
+  border-radius: 12px;
+  background: rgba(1, 149, 251, 0.08);
+}
+.welcome-points li::before {
+  content: "";
+  flex: none;
+  width: 0.45rem;
+  height: 0.8rem;
+  margin: 0 0.25rem 0 0.3rem;
+  border: solid var(--bar-blue);
+  border-width: 0 2.5px 2.5px 0;
+  rotate: 45deg;
+  translate: 0 -2px;
+}
+
+/* Password field with the eye button */
+.password-wrap { position: relative; }
+.password-wrap input { padding-right: 3rem; }
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.35rem;
+  translate: 0 -50%;
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.password-toggle:hover { color: var(--ink); }
+.password-toggle[hidden] { display: none; }
+.password-toggle .icon-eye-off,
+.password-toggle[aria-pressed="true"] .icon-eye { display: none; }
+.password-toggle[aria-pressed="true"] .icon-eye-off { display: block; }
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-card .control { transition: none; }
+  .flip-inner { transition: none; }
+  .flip-card.is-flipping { animation: none; }
+  .auth-card .control:focus-within { transform: none; }
+  .button-spinner { animation-duration: 1.6s; }
+}
 
 /* Signed-in app */
 .topbar {

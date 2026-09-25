@@ -51,7 +51,7 @@ docker compose up -d
 
 ### Open it
 
-Go to `http://your-server-ip:17080` in your browser. You'll see the welcome page — click **Log in**.
+Go to `http://your-server-ip:17080` in your browser. You'll see a short welcome animation, then the login page.
 
 ## First login
 
@@ -129,3 +129,5 @@ SOMELESS_DATA_DIR=./devdata .venv/bin/python -m flask --app app/someless:create_
 
 - Mail engine: [Stalwart](https://github.com/stalwartlabs/stalwart) (AGPL-3.0) — being added next.
 - Font: [Google Sans](https://github.com/googlefonts/googlesans), SIL Open Font License 1.1 (`app/someless/static/fonts/OFL.txt`).
+- Animation player: [lottie-web](https://github.com/airbnb/lottie-web) 5.13.0 (MIT).
+- Login background: [PixiJS](https://github.com/pixijs/pixijs) 8.21.0 (MIT).

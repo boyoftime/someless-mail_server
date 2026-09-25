@@ -37,7 +37,7 @@ def change_username():
     db = get_db()
     db.execute("UPDATE admin SET username = ? WHERE id = ?", (username, g.admin["id"]))
     db.commit()
-    flash("Username changed.")
+    flash("Username changed.", "success")
     return redirect(url_for("settings.index"))
 
 
@@ -61,5 +61,5 @@ def change_password():
         (generate_password_hash(new_password), g.admin["id"]),
     )
     db.commit()
-    flash("Password changed.")
+    flash("Password changed.", "success")
     return redirect(url_for("settings.index"))

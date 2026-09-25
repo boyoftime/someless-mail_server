@@ -2,21 +2,63 @@
 {% block title %}Log in to Someless Mail{% endblock %}
 {% block body_class %}auth{% endblock %}
 {% block body %}
+{# Icons that float in the background: FLOAT_ICONS in someless/__init__.py #}
+<div class="login-bg" aria-hidden="true" data-icons="{% for name in float_icons %}{{ url_for('static', filename='img/float/' ~ name ~ '.webp') }}{% if not loop.last %} {% endif %}{% endfor %}"></div>
 <main class="auth-main">
-  <a class="wordmark" href="{{ url_for('pages.welcome') }}">Someless Mail</a>
-  <h1 class="page-title">Log in</h1>
-  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
-  <form method="post" class="form">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label class="field">
-      <span class="field-label">Username</span>
-      <input name="username" autocomplete="username" required autofocus value="{{ username or '' }}">
-    </label>
-    <label class="field">
-      <span class="field-label">Password</span>
-      <input name="password" type="password" autocomplete="current-password" required>
-    </label>
-    <button class="button" type="submit">Log in</button>
-  </form>
+  <div class="flip-card{% if flipped %} is-flipped{% endif %}">
+    <div class="flip-inner">
+
+      <section class="auth-card face face-front" aria-labelledby="welcome-title">
+        <div class="welcome-animation" data-lottie="{{ url_for('static', filename='lottie/contact-mail.json') }}" aria-hidden="true"></div>
+        <h1 id="welcome-title" class="auth-title">Welcome to Someless Mail</h1>
+        <p class="auth-hint">Your own mail server, managed from your browser.</p>
+        <ul class="welcome-points">
+          <li>Connect your own domains</li>
+          <li>Create inboxes for you and your team</li>
+          <li>Send and receive email securely</li>
+        </ul>
+        <button type="button" class="button button-block" data-flip-to-login>Continue</button>
+      </section>
+
+      <section class="auth-card face face-back" aria-labelledby="login-title">
+        <button type="button" class="link-button face-back-link" data-flip-to-welcome hidden>Back</button>
+        <img class="auth-logo" src="{{ url_for('static', filename='img/logo.webp') }}" alt="Someless Mail" width="96" height="96">
+        <h2 id="login-title" class="auth-title">Log in</h2>
+        <p class="auth-hint">Manage your domains and inboxes.</p>
+        <p class="alert alert-error" role="alert" data-login-error{% if not error %} hidden{% endif %}>{{ error or '' }}</p>
+        <form method="post" class="form" data-login-form>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label class="field">
+            <span class="field-label">Username</span>
+            <span class="control"><input name="username" autocomplete="username" required{% if flipped %} autofocus{% endif %} value="{{ username or '' }}"></span>
+          </label>
+          <div class="field">
+            <label class="field-label" for="password">Password</label>
+            <div class="control password-wrap">
+              <input id="password" name="password" type="password" autocomplete="current-password" required>
+              <button type="button" class="password-toggle" data-password-toggle aria-controls="password" aria-label="Show password" aria-pressed="false" hidden>
+                <svg class="icon-eye" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="icon-eye-off" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1"/><path d="M6.6 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a10.4 10.4 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+              </button>
+            </div>
+          </div>
+          <button class="button button-block" type="submit" data-busy-label="Logging in…">
+            <span class="button-spinner" aria-hidden="true"></span>
+            <span class="button-label">Log in</span>
+          </button>
+        </form>
+      </section>
+
+    </div>
+  </div>
 </main>
+<footer class="auth-footer">Someless Mail {{ version }}</footer>
+<script src="{{ url_for('static', filename='js/login-card.js') }}"></script>
+<script src="{{ url_for('static', filename='js/password-toggle.js') }}"></script>
+<script src="{{ url_for('static', filename='js/busy-button.js') }}"></script>
+<script src="{{ url_for('static', filename='js/login-submit.js') }}"></script>
+<script src="{{ url_for('static', filename='js/lottie_light.min.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/lottie-autoplay.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/pixi.min.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/login-background.js') }}" defer></script>
 {% endblock %}

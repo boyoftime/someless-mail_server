@@ -4,12 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
+  <script>document.documentElement.classList.add("js");</script>
+  {% block head %}{% endblock %}
   <title>{% block title %}Someless Mail{% endblock %}</title>
-  <link rel="preload" href="{{ url_for('static', filename='fonts/GoogleSans-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" type="image/png">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
+  <link rel="preload" href="{{ url_for('static', filename='fonts/GoogleSans-latin.woff2', v=None) }}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="{{ url_for('static', filename='js/loading-bar.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/board.js') }}" defer></script>
 </head>
 <body class="{% block body_class %}{% endblock %}">
-  <div class="airmail" aria-hidden="true"></div>
+  <div class="loading-bar" aria-hidden="true"><div class="loading-bar-fill"></div></div>
   {% block body %}{% endblock %}
 </body>
 </html>

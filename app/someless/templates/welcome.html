@@ -1,15 +1,19 @@
 {% extends "base.html" %}
+{% block head %}
+  <noscript><meta http-equiv="refresh" content="6; url={{ url_for('auth.login') }}"></noscript>
+  <noscript><style>body.splash .loading-bar-fill { width: 100%; } .splash-title span { opacity: 1; }</style></noscript>
+{% endblock %}
 {% block title %}Welcome to Someless Mail Server{% endblock %}
-{% block body_class %}welcome{% endblock %}
+{% block body_class %}splash{% endblock %}
 {% block body %}
-<main class="welcome-main">
-  <h1 class="welcome-title">
-    <span>Welcome to</span>
-    <span>Someless</span>
-    <span>Mail Server</span>
+<main class="splash-main" data-next="{{ url_for('auth.login') }}"
+      data-preload="{% for file in login_page_files %}{{ url_for('static', filename=file) }}{% if not loop.last %} {% endif %}{% endfor %}">
+  <div id="splash-animation" class="splash-animation" data-src="{{ url_for('static', filename='lottie/loading.json') }}" aria-hidden="true"></div>
+  <h1 class="splash-title">
+    <span>Welcome</span> <span>to</span> <span>Someless</span> <span>Mail</span> <span>Server</span>
   </h1>
-  <p class="welcome-lede">Your mail server is installed and running. Log in to set it up.</p>
-  <a class="button" href="{{ url_for('auth.login') }}">Log in</a>
 </main>
-<footer class="welcome-footer">Someless Mail {{ version }}</footer>
+<footer class="splash-footer">Someless Mail {{ version }}</footer>
+<script src="{{ url_for('static', filename='js/lottie_light.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/splash.js') }}"></script>
 {% endblock %}

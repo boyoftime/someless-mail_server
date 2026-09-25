@@ -13,8 +13,10 @@
   </nav>
 </header>
 <main class="app-main">
-  {% for message in get_flashed_messages() %}
-  <p class="alert" role="status">{{ message }}</p>
+  {# board.js shows these on a green notice board; without JavaScript they stay here #}
+  {% set board_titles = {"success": "Saved", "welcome": "Welcome back"} %}
+  {% for category, message in get_flashed_messages(with_categories=true) %}
+  <p class="alert" role="status" data-board="success" data-board-title="{{ board_titles.get(category, 'Done') }}">{{ message }}</p>
   {% endfor %}
   {% block content %}{% endblock %}
 </main>
