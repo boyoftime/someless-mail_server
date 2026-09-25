@@ -1,0 +1,105 @@
+name: Test and publish image
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/boyoftime/someless-mail
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
+            app/requirements.txt
+
+      - run: pip install -r requirements-dev.txt
+
+      - run: python -m pytest
+
+  image:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      # The version lives in one place: VERSION in app/someless/__init__.py
+      - name: Read version
+        id: version
+        run: |
+          version=$(sed -n 's/^VERSION = "\(.*\)"$/\1/p' app/someless/__init__.py)
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v4
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build image for smoke test
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: someless-mail:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test
+        run: |
+          docker run -d --name smoke -p 17080:17080 someless-mail:test
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:17080/healthz && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:17080/healthz | grep -qx ok
+          curl -fsS http://127.0.0.1:17080/ | grep -q "Welcome to"
+          curl -fsS -o /dev/null http://127.0.0.1:17080/login
+
+      - name: Show container logs
+        if: always()
+        run: docker logs smoke || true
+
+      - name: Log in to GitHub Container Registry
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image tags and labels
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=${{ steps.version.outputs.version }}
+            type=raw,value=latest
+            type=sha
+
+      - name: Build and publish (amd64 + arm64)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
