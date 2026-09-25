@@ -1,0 +1,4 @@
+{% extends "shell.html" %}
+{# An error while signed in shows in the main area, with the menu still there (errors.py) #}
+{% block title %}{{ page.title }} | Someless Mail{% endblock %}
+{% block content %}{% include "error-content.html" %}{% endblock %}

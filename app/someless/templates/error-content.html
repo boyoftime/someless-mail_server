@@ -1,0 +1,9 @@
+{# The error itself (errors.py): an animation, what went wrong, and the way back #}
+<section class="error-state" aria-labelledby="error-title">
+  <div class="error-animation error-animation-{{ page.animation }}" aria-hidden="true"
+       data-lottie="{{ url_for('static', filename='lottie/' ~ page.animation ~ '.json') }}"></div>
+  <h1 id="error-title" class="error-title">{{ page.title }}</h1>
+  <p class="error-text">{{ page.text }}</p>
+  <a class="button error-button" href="{{ page.home_url }}">{{ page.home_label }}</a>
+  <p class="error-code">Error {{ page.code }}</p>
+</section>

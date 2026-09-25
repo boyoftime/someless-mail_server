@@ -78,15 +78,18 @@
     timer = setTimeout(hide, STAY_MS + (reduceMotion ? 0 : 900));
   }
 
-  window.somelessBoard = { show: show, hide: hide };
-
   // Messages from the server (e.g. "Password changed.") come down on a board too. Error
-  // messages also stay next to their form after the board goes back up.
-  var first = document.querySelector("[data-board]");
-  if (first) {
-    document.querySelectorAll("[data-board]").forEach(function (el) {
+  // messages also stay next to their form after the board goes back up. page-swap.js
+  // calls this for each page it brings in without a reload.
+  function fromPage(root) {
+    var first = root.querySelector("[data-board]");
+    if (!first) return;
+    root.querySelectorAll("[data-board]").forEach(function (el) {
       if (el.dataset.board !== "error") el.hidden = true;
     });
     show({ type: first.dataset.board, title: first.dataset.boardTitle, message: first.textContent.trim() });
   }
+
+  window.somelessBoard = { show: show, hide: hide, fromPage: fromPage };
+  fromPage(document);
 })();

@@ -37,4 +37,8 @@
     show(toggle.getAttribute("aria-expanded") !== "true");
   });
   show(toggle.getAttribute("aria-expanded") === "true");
+
+  // page-swap.js opens the options when it brings in Settings without a reload, as the
+  // server would have.
+  window.somelessAccountPanel = { open: function () { show(true); } };
 })();

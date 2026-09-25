@@ -50,7 +50,8 @@
     {{ hamburger() }}
   </button>
   <a class="wordmark" href="{{ url_for('pages.dashboard') }}">Someless Mail</a>
-  <span class="topbar-user" title="Signed in as {{ g.admin.username }}">
+  {# data-swap-refresh: page-swap.js updates it along with the main area #}
+  <span class="topbar-user" id="topbar-user" data-swap-refresh title="Signed in as {{ g.admin.username }}">
     <span class="topbar-avatar" aria-hidden="true">{{ g.admin.username[:1] | upper }}</span>
     <span class="topbar-user-name">{{ g.admin.username }}</span>
   </span>
@@ -92,7 +93,7 @@
       <div class="account-panel{% if account_open %} is-open{% endif %}" id="account-panel">
         <div class="account-panel-clip">
           <div class="account-panel-content">
-            <p class="side-menu-signed-in">Signed in as <strong>{{ g.admin.username }}</strong></p>
+            <p class="side-menu-signed-in" id="signed-in-as" data-swap-refresh>Signed in as <strong>{{ g.admin.username }}</strong></p>
             <nav class="side-menu-nav" aria-label="Account">
               {% call nav_item(url_for('settings.index'), "Settings", request.blueprint == 'settings') %}
                 <svg class="side-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
@@ -121,7 +122,8 @@
   </div>
 </dialog>
 
-<main class="app-main">
+{# Moving between the signed-in pages swaps just this part (page-swap.js) #}
+<main class="app-main" id="app-main">
   {# board.js shows these on a green notice board; without JavaScript they stay here #}
   {% set board_titles = {"success": "Saved", "welcome": "Welcome back"} %}
   {% for category, message in get_flashed_messages(with_categories=true) %}
@@ -129,17 +131,18 @@
   {% endfor %}
   {% block content %}{% endblock %}
 </main>
-{# Shown over the page while the next one loads (page-loader.js) #}
-<dialog class="page-loader" id="page-loader" aria-label="Loading">
+{# Shown over the main area while the next page loads (page-loader.js) #}
+<div class="page-loader" id="page-loader" role="status" aria-live="polite" hidden>
   <div class="page-loader-box">
     <span class="page-loader-animation" aria-hidden="true" data-loader-animation="{{ url_for('static', filename='lottie/page-loader.json') }}"></span>
     <p class="page-loader-text">Loading…</p>
   </div>
-</dialog>
+</div>
 <script src="{{ url_for('static', filename='js/side-menu.js') }}"></script>
 <script src="{{ url_for('static', filename='js/account-panel.js') }}"></script>
 <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 <script src="{{ url_for('static', filename='js/lottie_light.min.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/lottie-autoplay.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/page-loader.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/page-swap.js') }}" defer></script>
 {% endblock %}

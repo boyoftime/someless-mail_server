@@ -36,6 +36,7 @@ SIGNED_IN_PAGE_FILES = [
     "js/account-panel.js",
     "js/theme.js",
     "js/page-loader.js",
+    "js/page-swap.js",
     "js/password-rules.js",
     "js/collapsible-cards.js",
     "lottie/page-loader.json",
@@ -89,11 +90,12 @@ def create_app(test_config=None):
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     csrf.init_app(app)
 
-    from . import auth, db, pages, settings
+    from . import auth, db, errors, pages, settings
     db.init_app(app)
     app.register_blueprint(auth.bp)
     app.register_blueprint(pages.bp)
     app.register_blueprint(settings.bp)
+    app.register_blueprint(errors.bp)
 
     @app.url_defaults
     def fingerprint_static_links(endpoint, values):

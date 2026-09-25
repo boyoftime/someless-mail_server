@@ -132,7 +132,7 @@
   // row goes quiet. Waiting for the next page would leave the old row lit, as if the click
   // hadn't registered. Like pineloop.
   var rows = menu.querySelectorAll("a.side-menu-item");
-  var currentOnLoad = menu.querySelector("a.side-menu-item[aria-current='page']");
+  var pageRow = menu.querySelector("a.side-menu-item[aria-current='page']"); // the page shown
 
   function markCurrent(chosen) {
     rows.forEach(function (row) {
@@ -151,8 +151,24 @@
         return;
       }
       markCurrent(row);
+      slideAway(); // on a phone, out of the way while the page comes in
     });
   });
+
+  // page-swap.js brings pages in without a reload:
+  //   somelessMenu.setCurrent(href)  a new page is in; light up its row (none for null)
+  //   somelessMenu.restore()         it couldn't be loaded; back to the page still shown
+  window.somelessMenu = {
+    setCurrent: function (href) {
+      var path = href ? new URL(href, location.href).pathname : null;
+      pageRow = null;
+      rows.forEach(function (row) {
+        if (row.pathname === path) pageRow = row;
+      });
+      markCurrent(pageRow);
+    },
+    restore: function () { markCurrent(pageRow); },
+  };
 
   // Log out lights up as soon as it is clicked, while the logout goes through.
   // The next login starts with the menu expanded again.
@@ -169,7 +185,7 @@
   // current one again, and Log out as not clicked.
   window.addEventListener("pageshow", function (event) {
     if (!event.persisted) return;
-    markCurrent(currentOnLoad);
+    markCurrent(pageRow);
     if (logoutButton) logoutButton.classList.remove("is-going");
   });
 

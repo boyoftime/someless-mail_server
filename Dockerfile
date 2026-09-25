@@ -27,5 +27,9 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 
 # --preload builds the app once before the workers start, so first-start setup
 # (secret key, default admin) runs exactly once.
+# --worker-class gthread: browsers open connections ahead of time and may leave them idle.
+# Threaded workers set those aside until they send something; plain workers would sit on
+# them until killed for "timing out", and the request caught in them got gunicorn's bare
+# "Internal Server Error" page.
 # --no-control-socket: we don't use gunicornc, and its socket would need a home folder.
-CMD ["gunicorn", "--bind", "0.0.0.0:17080", "--workers", "2", "--preload", "--no-control-socket", "--access-logfile", "-", "someless:create_app()"]
+CMD ["gunicorn", "--bind", "0.0.0.0:17080", "--workers", "2", "--worker-class", "gthread", "--threads", "4", "--preload", "--no-control-socket", "--access-logfile", "-", "someless:create_app()"]

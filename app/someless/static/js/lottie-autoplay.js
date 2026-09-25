@@ -4,11 +4,13 @@
 //   (theme.js sends "someless:theme"), those animations switch files on the spot.
 // - With reduced motion it shows a still frame from the middle, or, for elements marked
 //   data-lottie-motion-only, nothing at all, so their plain fallback stays in place.
+// - When page-swap.js brings in a new main area ("someless:swap"), its animations start and
+//   the ones that left with the old main area stop.
 // A loaded animation gets the class "is-playing".
 (function () {
   if (!window.lottie) return;
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var themed = []; // animations with a light version: { el, animation }
+  var playing = []; // { el, animation }
 
   function fileFor(el) {
     var light = document.documentElement.dataset.theme === "light";
@@ -30,16 +32,29 @@
     return animation;
   }
 
-  document.querySelectorAll("[data-lottie]").forEach(function (el) {
-    if (reduceMotion && el.hasAttribute("data-lottie-motion-only")) return;
-    var animation = play(el);
-    if (el.dataset.lottieLight) themed.push({ el: el, animation: animation });
-  });
+  function start(root) {
+    root.querySelectorAll("[data-lottie]").forEach(function (el) {
+      if (reduceMotion && el.hasAttribute("data-lottie-motion-only")) return;
+      playing.push({ el: el, animation: play(el) });
+    });
+  }
 
   document.addEventListener("someless:theme", function () {
-    themed.forEach(function (item) {
+    playing.forEach(function (item) {
+      if (!item.el.dataset.lottieLight) return;
       item.animation.destroy();
       item.animation = play(item.el);
     });
   });
+
+  document.addEventListener("someless:swap", function (event) {
+    playing = playing.filter(function (item) {
+      if (item.el.isConnected) return true;
+      item.animation.destroy();
+      return false;
+    });
+    start(event.detail.main);
+  });
+
+  start(document);
 })();

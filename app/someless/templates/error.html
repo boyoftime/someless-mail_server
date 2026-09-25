@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{# An error page on its own, for visitors who aren't signed in (errors.py) #}
+{% block title %}{{ page.title }} | Someless Mail{% endblock %}
+{% block body_class %}auth{% endblock %}
+{% block body %}
+<main class="auth-main">
+  <div class="auth-card error-card">
+    {% include "error-content.html" %}
+  </div>
+</main>
+<footer class="auth-footer">Someless Mail {{ version }}</footer>
+<script src="{{ url_for('static', filename='js/lottie_light.min.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/lottie-autoplay.js') }}" defer></script>
+{% endblock %}

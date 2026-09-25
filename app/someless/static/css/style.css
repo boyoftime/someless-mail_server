@@ -143,8 +143,20 @@ body {
 .is-loading .loading-bar-fill::before,
 .is-loading .loading-bar-fill::after { animation: bar-head-pulse 0.6s ease-in-out infinite alternate; }
 
+/* The next page came in without a reload (page-swap.js): the bar runs on from wherever it
+   had got to (--bar-from, set by loading-bar.js) to the end, and fades away */
+.is-finishing .loading-bar { animation: bar-hide 0.4s ease 0.3s forwards; }
+.is-finishing .loading-bar-fill { animation: bar-finish 0.3s var(--load-ease) both; }
+.is-finishing .loading-bar-fill::before,
+.is-finishing .loading-bar-fill::after {
+  animation:
+    bar-head-pulse 0.6s ease-in-out infinite alternate,
+    bar-head-out 0.3s ease 0.3s forwards;
+}
+
 @keyframes bar-fill { from { width: 0; } to { width: 100%; } }
 @keyframes bar-trickle { from { width: 0; } to { width: 90%; } }
+@keyframes bar-finish { from { width: var(--bar-from, 0%); } to { width: 100%; } }
 @keyframes bar-head-pulse { from { opacity: 0.65; } to { opacity: 1; } }
 @keyframes bar-head-out { to { opacity: 0; } }
 @keyframes bar-hide { to { opacity: 0; visibility: hidden; } }
@@ -1445,23 +1457,33 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
 
 /* The page fills the space next to the menu, lined up with the top bar (a limit only
    on very wide screens, so lines stay readable) */
-/* The loader over the page while the next one loads (page-loader.js): a soft veil with the
-   loading animation in a small card, fading in. */
-.page-loader {
-  width: fit-content; /* a small card in the middle of the screen */
-  max-width: none;
-  height: fit-content;
-  max-height: none;
-  margin: auto;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  overflow: visible;
+.app-main {
+  max-width: 1600px;
+  padding: clamp(1.75rem, 5vh, 3rem) var(--page-pad);
 }
-.page-loader::backdrop { background: var(--loader-veil); backdrop-filter: blur(3px); }
-.page-loader[open] { animation: loader-in 0.25s ease both; }
-.page-loader[open]::backdrop { animation: fade-in 0.25s ease both; }
-.page-loader:focus { outline: none; }
+
+/* While the next page loads (page-loader.js), a soft blurred veil covers only the main
+   area, with the loading animation in a small card in its middle. The side menu and the
+   top bar stay sharp. The veil starts where the top bar ends (--loader-top, measured by
+   page-loader.js) and beside the docked menu, following it when it folds to icons. */
+.page-loader {
+  position: fixed;
+  inset: var(--loader-top, 0px) 0 0 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: var(--loader-veil);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 0.25s ease, left 0.38s var(--menu-ease);
+}
+.page-loader[hidden] { display: none; }
+.page-loader.is-visible { opacity: 1; }
+@media (min-width: 1024px) {
+  html.menu-docked .page-loader { left: var(--menu-width); }
+  html.menu-docked.menu-rail .page-loader { left: var(--rail-width); }
+}
 .page-loader-box {
   display: grid;
   justify-items: center;
@@ -1471,20 +1493,47 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
   border-radius: 22px;
   background: var(--loader-box);
   box-shadow: var(--loader-shadow);
+  transform: scale(0.94);
+  transition: transform 0.3s var(--menu-ease);
 }
+.page-loader.is-visible .page-loader-box { transform: none; }
 .page-loader-animation { width: 110px; height: 110px; }
 .page-loader-text { margin: 0; color: var(--muted); font-size: 0.875rem; font-weight: 500; }
-@keyframes loader-in { from { opacity: 0; transform: scale(0.94); } }
 @media (prefers-reduced-motion: reduce) {
-  .page-loader[open], .page-loader[open]::backdrop { animation: none; }
+  .page-loader, .page-loader-box { transition: none; }
 }
-
-.app-main {
-  max-width: 1600px;
-  padding: clamp(1.75rem, 5vh, 3rem) var(--page-pad);
-}
+/* The new page's heading takes the focus after a swap (for screen readers); no ring on it */
+.app-main h1[tabindex="-1"]:focus { outline: none; }
 
 .facts { display: grid; gap: 0; margin: 0; border-top: 1px solid var(--line); }
 .facts div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.9rem 0; border-bottom: 1px solid var(--line); }
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; font-weight: 500; }
+
+/* Error pages (errors.py): the animation, what went wrong and the way back, centred. On
+   their own they sit in a card like the login one; signed in, in the middle of the main
+   area. */
+.error-card { max-width: 30rem; }
+.error-state {
+  display: grid;
+  justify-items: center;
+  max-width: 32rem;
+  margin: 0 auto;
+  text-align: center;
+}
+.app-main .error-state { min-height: min(68vh, 36rem); align-content: center; }
+.error-animation { width: min(100%, 22rem); margin-bottom: 1.25rem; }
+.error-animation-not-found { aspect-ratio: 400 / 230; }
+.error-animation-error { aspect-ratio: 320 / 190; }
+.error-title {
+  margin: 0 0 0.5rem;
+  text-wrap: balance;
+  font-size: clamp(1.6rem, 3vw, 2rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+.error-text { margin: 0 0 1.75rem; color: var(--muted); text-wrap: pretty; }
+.error-state .error-button { background: var(--brand); color: #fff; }
+.error-state .error-button:hover { background: #0f55d6; }
+.error-code { margin: 1.25rem 0 0; color: var(--muted); font-size: 0.8125rem; }
