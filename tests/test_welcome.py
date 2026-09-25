@@ -68,14 +68,12 @@ def test_browser_tab_shows_the_someless_icon(client):
     assert client.get("/static/img/favicon.png").status_code == 200
 
 
-STATIC_URL = re.compile(r'(?:src|href|data-src|data-lottie|data-icons)="([^"]*/static/[^"]*)"')
+# every /static/ address anywhere in a page's attributes, lists like data-icons included
+STATIC_URL = re.compile(r'(/static/[^"\s]+)')
 
 
 def static_urls(html):
-    urls = set()
-    for value in STATIC_URL.findall(html):
-        urls.update(u for u in value.split() if u.startswith("/static/"))
-    return urls
+    return set(STATIC_URL.findall(html))
 
 
 def test_static_links_carry_a_content_version(client):
@@ -114,3 +112,13 @@ def test_font_preload_uses_the_same_address_as_the_stylesheet(client):
 
     assert '<link rel="preload" href="/static/fonts/GoogleSans-latin.woff2" as="font"' in html
     assert 'url("../fonts/GoogleSans-latin.woff2")' in css
+
+
+def test_splash_preloads_what_the_signed_in_pages_need(client, login):
+    splash = client.get("/").get_data(as_text=True)
+    preload = re.search(r'data-preload="([^"]*)"', splash).group(1).split()
+    login()
+    dashboard = client.get("/dashboard").get_data(as_text=True)
+
+    missing = static_urls(dashboard) - static_urls(splash) - set(preload)
+    assert not missing, f"dashboard files the splash doesn't preload: {sorted(missing)}"

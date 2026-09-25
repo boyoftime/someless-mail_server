@@ -4,10 +4,13 @@
 (function () {
   var root = document.documentElement;
 
+  // Also tells the rest of the page a new page is on its way ("someless:navigate"),
+  // so the signed-in pages can show their loader (page-loader.js).
   function startLoading() {
     root.classList.remove("is-loading");
     void root.offsetWidth; // restart the CSS animation
     root.classList.add("is-loading");
+    document.dispatchEvent(new CustomEvent("someless:navigate"));
   }
 
   document.addEventListener("click", function (event) {

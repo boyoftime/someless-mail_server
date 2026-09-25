@@ -7,7 +7,7 @@
 {% block body_class %}splash{% endblock %}
 {% block body %}
 <main class="splash-main" data-next="{{ url_for('auth.login') }}"
-      data-preload="{% for file in login_page_files %}{{ url_for('static', filename=file) }}{% if not loop.last %} {% endif %}{% endfor %}">
+      data-preload="{% for file in preload_files %}{{ url_for('static', filename=file) }}{% if not loop.last %} {% endif %}{% endfor %}">
   <div id="splash-animation" class="splash-animation" data-src="{{ url_for('static', filename='lottie/loading.json') }}" aria-hidden="true"></div>
   <h1 class="splash-title">
     <span>Welcome</span> <span>to</span> <span>Someless</span> <span>Mail</span> <span>Server</span>

@@ -4,17 +4,22 @@ import secrets
 from functools import lru_cache
 from pathlib import Path
 
-from flask import Flask
+from flask import Flask, request
 from flask_wtf import CSRFProtect
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 VERSION = "1.0.0"
 
+# The admin picks the theme in the side menu (theme.js keeps it in the "theme" cookie).
+# Every page is drawn in it from the start, the login page after logging out included.
+THEMES = ("dark", "light")
+DEFAULT_THEME = "dark"
+
 # Mail icons that float behind the login card (static/img/float/<name>.webp).
 FLOAT_ICONS = ["gmail-m", "gmail-envelope", "mail-app", "inbox", "paper-plane", "yahoo"]
 
-# Everything the login page loads that the splash doesn't, so the splash can download
-# it during its 6 seconds and the login page appears straight away.
+# Everything the pages after the splash load that the splash itself doesn't, so the
+# splash can download it during its 6 seconds and those pages appear straight away.
 LOGIN_PAGE_FILES = [
     "img/logo.webp",
     "lottie/contact-mail.json",
@@ -26,6 +31,22 @@ LOGIN_PAGE_FILES = [
     "js/pixi.min.js",
     "js/login-background.js",
 ] + [f"img/float/{name}.webp" for name in FLOAT_ICONS]
+SIGNED_IN_PAGE_FILES = [
+    "js/side-menu.js",
+    "js/account-panel.js",
+    "js/theme.js",
+    "js/page-loader.js",
+    "js/password-rules.js",
+    "js/collapsible-cards.js",
+    "lottie/page-loader.json",
+    "lottie/menu-on-dark.json",
+    "lottie/menu-on-light.json",
+    "lottie/menu-active-on-dark.json",
+    "lottie/menu-active-on-light.json",
+    "lottie/account-sphere-on-dark.json",
+    "lottie/account-sphere-on-light.json",
+]
+PRELOAD_FILES = LOGIN_PAGE_FILES + SIGNED_IN_PAGE_FILES
 
 # Static links carry a fingerprint of the file (?v=...), so browsers can keep the files
 # for a year and still fetch a new copy the moment a file changes.
@@ -85,6 +106,12 @@ def create_app(test_config=None):
 
     @app.context_processor
     def inject_globals():
-        return {"version": VERSION, "float_icons": FLOAT_ICONS, "login_page_files": LOGIN_PAGE_FILES}
+        theme = request.cookies.get("theme")
+        return {
+            "version": VERSION,
+            "theme": theme if theme in THEMES else DEFAULT_THEME,
+            "float_icons": FLOAT_ICONS,
+            "preload_files": PRELOAD_FILES,
+        }
 
     return app

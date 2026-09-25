@@ -80,10 +80,13 @@
 
   window.somelessBoard = { show: show, hide: hide };
 
-  // Messages from the server (e.g. "Password changed.") come down on a board too.
+  // Messages from the server (e.g. "Password changed.") come down on a board too. Error
+  // messages also stay next to their form after the board goes back up.
   var first = document.querySelector("[data-board]");
   if (first) {
-    document.querySelectorAll("[data-board]").forEach(function (el) { el.hidden = true; });
+    document.querySelectorAll("[data-board]").forEach(function (el) {
+      if (el.dataset.board !== "error") el.hidden = true;
+    });
     show({ type: first.dataset.board, title: first.dataset.boardTitle, message: first.textContent.trim() });
   }
 })();

@@ -312,6 +312,7 @@
     var s = screenSize();
     for (var i = 0; i < Math.round(s.h / 22); i++) {
       var streak = new PIXI.Sprite(PIXI.Texture.WHITE);
+      streak.tint = document.documentElement.dataset.theme === "light" ? 0x1463f3 : 0xffffff;
       streak.width = random(80, 220);
       streak.height = random(1, 2.5);
       streak.x = -streak.width - random(0, s.w * 0.5);

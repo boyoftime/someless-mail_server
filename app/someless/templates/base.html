@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="{{ theme }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light dark">
+  <meta name="color-scheme" content="{{ theme }}">
   <script>document.documentElement.classList.add("js");</script>
   {% block head %}{% endblock %}
   <title>{% block title %}Someless Mail{% endblock %}</title>

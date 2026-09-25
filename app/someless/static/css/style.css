@@ -16,7 +16,8 @@
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
-/* Tokens: postal navy ink on envelope white, airmail red and blue */
+/* Tokens: postal navy ink on envelope white, airmail red and blue. The admin picks the
+   theme in the side menu (dark by default); the server marks it on <html data-theme>. */
 :root {
   --paper: #f3f5fa;
   --ink: #0f1a3d;
@@ -25,18 +26,47 @@
   --field: #ffffff;
   --airmail-red: #d42a3c;
   --airmail-blue: #1d46c9;
+  --brand: #1463f3;
   --gutter: clamp(1rem, 5vw, 4rem);
+  --page-pad: clamp(1.25rem, 3vw, 3rem); /* side padding of the signed-in pages */
+  /* login page */
+  --auth-glow: rgba(1, 149, 251, 0.1);
+  --auth-card-bg: rgba(255, 255, 255, 0.9);
+  --auth-card-border: rgba(20, 99, 243, 0.14);
+  --auth-card-shadow: 0 30px 80px rgba(15, 26, 61, 0.16);
+  --auth-field-focus: #f5f9ff;
+  --auth-label-focus: #1463f3;
+  /* loader while the next page loads */
+  --loader-veil: rgba(243, 245, 250, 0.55);
+  --loader-box: rgba(255, 255, 255, 0.94);
+  --loader-shadow: 0 24px 60px rgba(15, 26, 61, 0.18);
+  /* cards, inputs and tabs on the signed-in pages */
+  --card-bg: #ffffff;
+  --card-shadow: 0 12px 32px rgba(15, 26, 61, 0.07);
+  --input-bg: #f6f8fc;
+  --tabs-bg: rgba(255, 255, 255, 0.7);
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #0b1230;
-    --ink: #edf0fa;
-    --muted: #98a2c2;
-    --line: #243058;
-    --field: #111a3f;
-    --airmail-red: #ff5d6e;
-    --airmail-blue: #7b96ff;
-  }
+:root[data-theme="dark"] {
+  --paper: #0b1230;
+  --ink: #edf0fa;
+  --muted: #98a2c2;
+  --line: #243058;
+  --field: #111a3f;
+  --airmail-red: #ff5d6e;
+  --airmail-blue: #7b96ff;
+  --auth-glow: rgba(1, 149, 251, 0.16);
+  --auth-card-bg: rgba(14, 23, 56, 0.92);
+  --auth-card-border: rgba(123, 150, 255, 0.18);
+  --auth-card-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+  --auth-field-focus: #111d47;
+  --auth-label-focus: #8cc8ff;
+  --loader-veil: rgba(5, 9, 28, 0.5);
+  --loader-box: rgba(17, 26, 63, 0.94);
+  --loader-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  --card-bg: linear-gradient(180deg, rgba(22, 33, 78, 0.92), rgba(14, 22, 56, 0.92));
+  --card-shadow: 0 18px 44px rgba(0, 0, 0, 0.3);
+  --input-bg: rgba(7, 12, 36, 0.55);
+  --tabs-bg: rgba(8, 14, 40, 0.45);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -291,7 +321,8 @@ body.is-playing .splash-title span:nth-child(5) { animation-delay: 0.78s; }
 @keyframes board-lift {
   0% { transform: translateY(0); }
   20% { transform: translateY(4%); }
-  100% { transform: translateY(-110%); }
+  99% { visibility: visible; }
+  100% { transform: translateY(-130%); visibility: hidden; } /* glow gone too */
 }
 @keyframes board-glow {
   from { box-shadow: 0 0 0 4px rgba(var(--glow), 0.06), 0 0 18px rgba(var(--glow), 0.3), 0 22px 48px rgba(0, 0, 0, 0.55); }
@@ -330,12 +361,16 @@ body.is-playing .splash-title span:nth-child(5) { animation-delay: 0.78s; }
   text-decoration: none;
 }
 .page-title {
-  margin: 0 0 2rem;
-  font-size: clamp(2.25rem, 6vw, 3.5rem);
+  margin: 0 0 1.5rem;
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
   font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.035em;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
 }
+/* a page's title with a line about it */
+.page-header { margin: 0 0 1.5rem; }
+.page-header .page-title { margin-bottom: 0.3rem; }
+.page-subtitle { margin: 0; color: var(--muted); }
 .alert {
   margin: 0 0 1.5rem;
   padding: 0.75rem 1rem;
@@ -346,9 +381,277 @@ body.is-playing .splash-title span:nth-child(5) { animation-delay: 0.78s; }
 .alert-error { border-left-color: var(--airmail-red); }
 .alert a { color: inherit; font-weight: 500; text-decoration-color: var(--airmail-red); text-underline-offset: 3px; }
 
-.settings-section { padding-block: 2rem; border-top: 1px solid var(--line); }
-.section-title { margin: 0 0 0.25rem; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
-.section-hint { margin: 0 0 1.5rem; color: var(--muted); }
+/* Tabs for the sections of a page (Settings > Account, ...) */
+.page-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0 0 1.5rem;
+  padding: 0.3rem;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--tabs-bg);
+}
+.page-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  flex: 0 1 17rem;
+  padding: 0.7rem 1.25rem;
+  border-radius: 12px;
+  color: var(--muted);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+.page-tab svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.page-tab:hover { color: var(--ink); background: rgba(1, 149, 251, 0.06); }
+.page-tab[aria-current="page"] {
+  color: var(--ink);
+  background: linear-gradient(180deg, rgba(1, 149, 251, 0.2), rgba(20, 99, 243, 0.1));
+  box-shadow: inset 0 0 0 1px rgba(1, 149, 251, 0.55), 0 0 22px rgba(1, 149, 251, 0.22);
+}
+
+/* Settings cards: full width, one under another, with a glowing divider between them.
+   Each card has its own accent colour (blue, or violet for the password card). */
+.settings-stack { display: grid; gap: 1.25rem; }
+.settings-card {
+  --accent: #0195fb;
+  --accent-edge: rgba(1, 149, 251, 0.3);
+  --accent-ring: rgba(1, 149, 251, 0.2);
+  --badge: linear-gradient(135deg, #1463f3, #0195fb);
+  padding: 1.15rem 1.4rem;
+  border: 1px solid var(--accent-edge);
+  border-radius: 18px;
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow), 0 0 32px -14px var(--accent);
+  transition: border-color 0.3s ease, box-shadow 0.35s ease;
+}
+.settings-card-violet {
+  --accent: #8b5cf6;
+  --accent-edge: rgba(139, 92, 246, 0.32);
+  --accent-ring: rgba(139, 92, 246, 0.22);
+  --badge: linear-gradient(135deg, #6d28d9, #a855f7);
+}
+.card-heading { margin: 0; }
+/* the header is the button that opens and closes the card */
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.25rem 0;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.card-titles { display: grid; flex: 1; min-width: 0; }
+.card-chevron {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(127, 127, 127, 0.1);
+  color: var(--muted);
+  transition: transform 0.4s var(--menu-ease), color 0.2s ease, background-color 0.2s ease, box-shadow 0.3s ease;
+}
+.card-chevron svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.card-head:hover .card-chevron { color: var(--accent); background: var(--accent-ring); }
+.settings-card:hover { border-color: var(--accent); }
+
+/* Closed to start with: the body unfolds (grid rows 0fr -> 1fr) and fades in. Only with
+   JavaScript, which is what opens it; without it the cards simply stay open. */
+.card-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.45s var(--menu-ease);
+}
+.card-body-clip { min-height: 0; overflow-x: visible; overflow-y: clip; }
+.card-body-content {
+  padding: 1.25rem 0 0.35rem;
+  transition: opacity 0.3s ease, transform 0.45s var(--menu-ease);
+}
+html.js .settings-card:not(.is-open) .card-body { grid-template-rows: 0fr; }
+html.js .settings-card:not(.is-open) .card-body-content { opacity: 0; transform: translateY(-8px); }
+
+/* open: the card glows brighter in its colour, the arrow turns, the badge grows a little */
+.settings-card.is-open {
+  border-color: var(--accent);
+  box-shadow: var(--card-shadow), 0 0 0 1px var(--accent-ring), 0 0 46px -8px var(--accent);
+}
+.settings-card.is-open .card-chevron {
+  transform: rotate(180deg);
+  color: #fff;
+  background: var(--badge);
+  box-shadow: 0 0 14px -2px var(--accent);
+}
+.card-badge { transition: transform 0.35s var(--menu-ease), box-shadow 0.35s ease; }
+.settings-card.is-open .card-badge { transform: scale(1.07); box-shadow: 0 0 26px -2px var(--accent); }
+
+/* each click: a pulse of light around the card (collapsible-cards.js adds .is-flaring) */
+.settings-card.is-flaring { animation: card-flare 0.75s ease-out; }
+@keyframes card-flare {
+  30% { box-shadow: var(--card-shadow), 0 0 0 3px var(--accent-ring), 0 0 64px 4px var(--accent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-body, .card-body-content, .card-chevron, .card-badge, .settings-card { transition: none; }
+  .settings-card.is-flaring { animation: none; }
+}
+.card-badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--badge);
+  color: #fff;
+  box-shadow: 0 8px 22px -6px var(--accent);
+}
+.card-badge svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.card-title { display: block; margin: 0; font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em; }
+.card-hint { display: block; margin: 0.1rem 0 0; color: var(--muted); font-size: 0.9rem; font-weight: 400; }
+/* (qualified with .settings-card so they win over the general .form / .field rules below) */
+.settings-card .card-form { max-width: none; gap: 1.1rem; }
+/* the fields sit side by side across the card (one column on a phone) */
+.card-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 1rem 1.25rem;
+  align-items: start;
+}
+.card-actions { display: flex; justify-content: flex-end; }
+.settings-card .card-form .card-button {
+  min-width: 12rem;
+  margin-top: 0;
+  background: var(--badge);
+  color: #fff;
+  box-shadow: 0 10px 24px -10px var(--accent);
+}
+@media (max-width: 640px) {
+  .settings-card .card-form .card-button { width: 100%; }
+}
+
+/* A glowing line between the settings cards, in the colours of the lines at the account
+   sphere: brightest in the middle and fading at both ends, with a glowing dot at its centre
+   and sparks of light running into it from both sides. */
+.glow-divider {
+  position: relative;
+  height: 2px;
+  margin: 0.35rem 2rem;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--sphere-line) 22%, var(--sphere-line-bright) 50%, var(--sphere-line) 78%, transparent);
+  filter: drop-shadow(0 0 5px var(--sphere-line-glow));
+}
+.glow-divider::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, transparent, var(--sphere-line-bright), transparent) -25% 0 / 20% 100% no-repeat,
+    linear-gradient(90deg, transparent, var(--sphere-line-bright), transparent) 125% 0 / 20% 100% no-repeat;
+  animation: divider-sparks 4.2s ease-in-out infinite;
+}
+.glow-divider::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 50%;
+  background: var(--sphere-line-bright);
+  box-shadow: 0 0 10px 2px var(--sphere-line-glow), 0 0 26px 7px var(--sphere-glow);
+  animation: divider-dot 2.4s ease-in-out infinite alternate;
+}
+@keyframes divider-sparks {
+  0%, 30% { background-position: -25% 0, 125% 0; }
+  100% { background-position: 50% 0, 50% 0; }
+}
+@keyframes divider-dot {
+  from { opacity: 0.75; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1.15); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glow-divider::before, .glow-divider::after { animation: none; }
+}
+.settings-card .card-button:hover { filter: brightness(1.1); }
+
+/* inputs with an icon at the start; they glow in the card's colour while in use */
+.input-wrap { position: relative; }
+.input-icon {
+  position: absolute;
+  top: 50%;
+  left: 0.85rem;
+  display: grid;
+  translate: 0 -50%;
+  color: var(--muted);
+  pointer-events: none;
+  transition: color 0.2s ease;
+}
+.input-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.field .input-wrap input { padding-left: 2.6rem; }
+.settings-card .field input {
+  background: var(--input-bg);
+  transition: border-color 0.2s ease, box-shadow 0.25s ease;
+}
+.settings-card .field input[readonly] { color: var(--muted); cursor: default; }
+.settings-card .field input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-ring), 0 8px 24px -10px var(--accent);
+}
+.settings-card .field:focus-within .input-icon { color: var(--accent); }
+
+/* "Password must contain": each rule gets a green tick once met (password-rules.js) */
+.password-rules {
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--input-bg);
+}
+.password-rules-title { margin: 0 0 0.4rem; font-size: 0.875rem; font-weight: 600; }
+.password-rules ul { display: flex; flex-wrap: wrap; gap: 0.4rem 1.75rem; margin: 0; padding: 0; list-style: none; }
+.password-rules li {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  transition: color 0.2s ease;
+}
+.rule-mark {
+  position: relative;
+  flex: none;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.password-rules li.is-met { color: var(--ink); }
+.password-rules li.is-met .rule-mark { border-color: #22c55e; background: #22c55e; }
+.password-rules li.is-met .rule-mark::after {
+  content: "";
+  position: absolute;
+  top: 1.5px;
+  left: 4.2px;
+  width: 3.5px;
+  height: 7px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  rotate: 45deg;
+}
 
 /* Forms */
 .form { display: grid; gap: 1.25rem; max-width: 24rem; }
@@ -367,23 +670,14 @@ body.is-playing .splash-title span:nth-child(5) { animation-delay: 0.78s; }
 }
 .field input:focus-visible { outline-offset: 0; border-color: var(--airmail-blue); }
 
-/* Login: always dark, like the logo, with airmail envelopes drifting behind the card */
+/* Login: in the picked theme, with mail icons floating behind the card */
 body.auth {
-  --paper: #0b1230;
-  --ink: #edf0fa;
-  --muted: #98a2c2;
-  --line: #2a3766;
-  --field: #0e1738;
-  --airmail-red: #ff5d6e;
-  --airmail-blue: #7b96ff;
-  --brand: #1463f3;
-  color-scheme: dark;
   min-height: 100vh;
   min-height: 100dvh;
   display: grid;
   grid-template-rows: 1fr auto;
   background:
-    radial-gradient(55% 45% at 50% 45%, rgba(1, 149, 251, 0.16), transparent 70%),
+    radial-gradient(55% 45% at 50% 45%, var(--auth-glow), transparent 70%),
     var(--paper);
 }
 .auth-main {
@@ -397,10 +691,10 @@ body.auth {
   position: relative;
   width: 100%;
   padding: 2rem clamp(1.25rem, 5vw, 2.75rem);
-  border: 1px solid rgba(123, 150, 255, 0.18);
+  border: 1px solid var(--auth-card-border);
   border-radius: 24px;
-  background: rgba(14, 23, 56, 0.92);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+  background: var(--auth-card-bg);
+  box-shadow: var(--auth-card-shadow);
   text-align: center;
 }
 .auth-logo {
@@ -438,11 +732,11 @@ body.auth {
 .auth-card .field input:focus {
   outline: none;
   border-color: var(--bar-blue);
-  background-color: #111d47;
+  background-color: var(--auth-field-focus);
   box-shadow: 0 0 0 4px rgba(1, 149, 251, 0.22), 0 8px 24px rgba(1, 149, 251, 0.18);
 }
 .auth-card .field-label { transition: color 0.2s ease; }
-.auth-card .field:focus-within .field-label { color: #8cc8ff; }
+.auth-card .field:focus-within .field-label { color: var(--auth-label-focus); }
 
 /* Spinner inside a button while its form is being sent */
 .button { gap: 0.6rem; }
@@ -579,19 +873,105 @@ html:not(.js) .face-back { transform: none; }
   .button-spinner { animation-duration: 1.6s; }
 }
 
-/* Signed-in app */
+/* Signed-in app: top bar, and the side menu with its animated hamburger */
 .topbar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1.25rem var(--gutter);
+  gap: 0.75rem;
+  padding: 0.85rem var(--page-pad);
   border-bottom: 1px solid var(--line);
 }
-.topnav { display: flex; align-items: center; gap: 1.5rem; }
-.topnav form { margin: 0; }
-.topnav a, .link-button {
+/* The name in the top bar steps aside while the docked menu is expanded (the menu shows
+   the name itself) and slides back when the menu is collapsed to icons. It keeps its
+   place, so the admin chip on the right never moves. */
+.topbar .wordmark {
+  margin-right: auto;
+  transition: opacity 0.3s ease, transform 0.38s var(--menu-ease), visibility 0s linear 0s;
+}
+@media (min-width: 1024px) {
+  html.menu-docked:not(.menu-rail) .topbar .wordmark {
+    opacity: 0;
+    transform: translateX(-16px);
+    visibility: hidden; /* not reachable with the keyboard while hidden */
+    transition: opacity 0.2s ease, transform 0.38s var(--menu-ease), visibility 0s linear 0.38s;
+  }
+}
+
+/* Hamburger buttons: the looping Lottie plays; the plain bars show without it */
+.menu-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.menu-button:hover { background: rgba(1, 149, 251, 0.1); }
+.menu-button-anim {
+  position: absolute;
+  inset: -4px;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.45s cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+.menu-button-bars {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  transition: opacity 0.3s ease, transform 0.45s cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+.menu-button-bars .bar {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+  transition: transform 0.45s cubic-bezier(0.3, 0.7, 0.2, 1), opacity 0.25s ease;
+}
+.menu-button-anim.is-playing + .menu-button-bars { opacity: 0; }
+/* a quick spin each time the hamburger is used (side-menu.js adds .is-spinning) */
+.menu-button.is-spinning .menu-button-anim,
+.menu-button.is-spinning .menu-button-bars { animation: button-spin 0.5s cubic-bezier(0.3, 0.7, 0.2, 1); }
+@keyframes button-spin { from { rotate: -360deg; } }
+
+/* the hamburger inside the menu is a little smaller */
+.menu-button-side { width: var(--menu-button); height: var(--menu-button); border-radius: 11px; }
+.menu-button-side .menu-button-bars { width: 21px; height: 21px; }
+
+/* Top bar hamburger: narrow screens only. While the menu is open over the page it
+   morphs into an X. */
+.menu-button-topbar { margin-left: -0.6rem; }
+.menu-button-topbar[aria-expanded="true"] .menu-button-anim { opacity: 0; transform: scale(0.5) rotate(-120deg); }
+.menu-button-topbar[aria-expanded="true"] .menu-button-bars { opacity: 1; transform: rotate(180deg); }
+.menu-button-topbar[aria-expanded="true"] .bar-top { transform: translateY(5px) rotate(45deg); }
+.menu-button-topbar[aria-expanded="true"] .bar-mid { opacity: 0; transform: scaleX(0); }
+.menu-button-topbar[aria-expanded="true"] .bar-bot { transform: translateY(-5px) rotate(-45deg); }
+@media (min-width: 1024px) {
+  html.js .menu-button-topbar { display: none; }
+}
+
+.topbar-user { display: inline-flex; align-items: center; gap: 0.6rem; color: var(--muted); font-weight: 500; }
+.topbar-avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1463f3, #0195fb);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+@media (max-width: 480px) {
+  .topbar-user-name { display: none; }
+}
+
+.link-button {
   padding: 0;
   border: 0;
   background: none;
@@ -601,12 +981,507 @@ html:not(.js) .face-back { transform: none; }
   text-decoration: none;
   cursor: pointer;
 }
-.topnav a:hover, .link-button:hover { color: var(--ink); }
-.topnav a[aria-current="page"] { color: var(--ink); text-decoration: underline; text-decoration-color: var(--airmail-red); text-decoration-thickness: 2px; text-underline-offset: 6px; }
+.link-button:hover { color: var(--ink); }
+
+/* The side menu is a <dialog>. Narrow screens: full-screen, the panel slides in from the
+   left, the rest dims and a click there closes it. Wide screens: docked (see below). */
+.side-menu {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: hidden;
+}
+.side-menu::backdrop { background: rgba(5, 9, 28, 0.5); backdrop-filter: blur(4px); }
+.side-menu[open]::backdrop { animation: fade-in 0.3s ease; }
+.side-menu.is-closing::backdrop { animation: fade-out 0.28s ease forwards; }
+.side-menu-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(86vw, 20rem);
+  height: 100%;
+  padding: 1rem var(--menu-pad);
+  border-right: 1px solid rgba(1, 149, 251, 0.35);
+  border-radius: 0 22px 22px 0;
+  background: var(--field);
+  color: var(--ink);
+  box-shadow: 18px 0 60px rgba(0, 0, 0, 0.35);
+}
+.side-menu[open] .side-menu-panel { animation: menu-in 0.38s cubic-bezier(0.2, 0.85, 0.25, 1); }
+.side-menu.is-closing .side-menu-panel { animation: menu-out 0.28s ease-in forwards; }
+
+/* The right edge glows blue, with a soft light flowing slowly down it */
+.side-menu-edge {
+  position: absolute;
+  top: 0;
+  right: -1px;
+  bottom: 0;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg,
+    rgba(1, 149, 251, 0.25) 0%, rgba(1, 149, 251, 0.9) 30%, #9fdcff 40%,
+    rgba(1, 149, 251, 0.9) 50%, rgba(1, 149, 251, 0.25) 80%);
+  background-size: 100% 300%;
+  box-shadow: 0 0 10px 1px rgba(1, 149, 251, 0.6), 0 0 30px 4px rgba(1, 149, 251, 0.22);
+  animation: edge-flow 7s linear infinite;
+  pointer-events: none;
+}
+@keyframes edge-flow { from { background-position: 0 100%; } to { background-position: 0 -200%; } }
+
+.side-menu-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding: 0.1rem 0 0.9rem 0.25rem;
+  border-bottom: 1px solid var(--line);
+  transition: padding 0.38s var(--menu-ease);
+}
+.side-menu-logo {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  margin-right: 0.65rem;
+  filter: drop-shadow(0 5px 14px rgba(1, 149, 251, 0.35));
+  transition: width 0.38s var(--menu-ease), margin 0.38s var(--menu-ease),
+              opacity 0.2s ease, transform 0.38s var(--menu-ease);
+}
+.side-menu-brand {
+  min-width: 0;
+  max-width: 12rem;
+  margin-right: auto; /* keeps the hamburger at the right-hand end */
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 0.38s var(--menu-ease), opacity 0.2s ease;
+}
+.side-menu-name { margin: 0; font-size: 0.975rem; font-weight: 700; letter-spacing: -0.01em; }
+.side-menu-version { margin: 0; color: var(--muted); font-size: 0.78rem; }
+
+/* minmax(0, 1fr): rows stay as wide as the menu (the collapsed strip too), never as wide
+   as their names */
+.side-menu-nav { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 0.25rem; }
+.side-menu-foot .side-menu-nav { margin-bottom: 0.25rem; }
+/* icons sit 1rem in, which also centres them in the collapsed strip, so they never move */
+.side-menu-item {
+  position: relative; /* for the beam to the glowing edge */
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.62rem 1rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+/* Each icon sits in a small box; on the current row the pulsing blue hexagon (Lottie,
+   from pineloop) plays behind it without changing the row's height. */
+.side-menu-glyph {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+.side-menu-icon {
+  position: relative; /* above the hexagon */
+  z-index: 1;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: var(--muted);
+  transition: color 0.2s ease;
+}
+.side-menu-pulse { position: absolute; inset: -12px; pointer-events: none; }
+.side-menu-item:not([aria-current="page"]) .side-menu-pulse { display: none; }
+/* the name clips itself (the row doesn't), so the collapsed strip still hides it cleanly */
+.side-menu-label { min-width: 0; overflow: hidden; transition: opacity 0.2s ease; }
+.side-menu-item { transition: background-color 0.2s ease, box-shadow 0.2s ease; }
+.side-menu-item:hover { background: rgba(1, 149, 251, 0.08); }
+.side-menu-item:hover .side-menu-icon { color: var(--bar-blue); }
+/* the page you are on: a soft blue pill, and its icon on the pulsing hexagon (white on
+   the blue hexagon once it plays; blue when there is no animation) */
+/* the beam's colours: strong blue on light backgrounds, pale glowing blue on dark ones */
+:root { --beam-start: #0195fb; --beam-end: #4db3ff; }
+:root[data-theme="dark"] { --beam-start: rgba(143, 208, 255, 0.9); --beam-end: #c8ecff; }
+.side-menu-item[aria-current="page"] {
+  background: linear-gradient(90deg, rgba(1, 149, 251, 0.07), rgba(1, 149, 251, 0.24));
+  box-shadow:
+    inset 0 0 0 1px rgba(1, 149, 251, 0.32),
+    inset -2px 0 0 var(--beam-start),   /* its glowing end */
+    8px 0 18px -8px rgba(1, 149, 251, 0.6),
+    0 4px 14px rgba(1, 149, 251, 0.12);
+  color: var(--ink);
+  font-weight: 600;
+}
+/* A beam of light runs from the end of the row to the menu's glowing edge ... */
+.side-menu-item[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: calc(var(--menu-pad) + 1px);
+  height: 2px;
+  margin-top: -1px;
+  background: linear-gradient(90deg, var(--beam-start), var(--beam-end));
+  box-shadow: 0 0 8px 1px rgba(1, 149, 251, 0.75);
+  transform-origin: left center;
+  animation: beam-in 0.4s cubic-bezier(0.3, 0.7, 0.2, 1) both;
+  pointer-events: none;
+}
+/* ... and the edge glows brighter where they meet, breathing gently */
+.side-menu-item[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: calc(100% + var(--menu-pad));
+  width: 22px;
+  height: 74px;
+  margin: -37px 0 0 -11px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(214, 241, 255, 0.95), rgba(1, 149, 251, 0.6) 45%, rgba(1, 149, 251, 0));
+  animation:
+    edge-spot-in 0.45s ease 0.2s both,
+    edge-spot-breathe 1.6s ease-in-out 0.65s infinite alternate;
+  pointer-events: none;
+}
+@keyframes beam-in { from { transform: scaleX(0); opacity: 0; } }
+@keyframes edge-spot-in { from { opacity: 0; transform: scaleY(0.3); } }
+@keyframes edge-spot-breathe { from { opacity: 0.7; } to { opacity: 1; } }
+.side-menu-item[aria-current="page"] .side-menu-icon { color: var(--bar-blue); }
+.side-menu-item[aria-current="page"] .side-menu-pulse.is-playing + .side-menu-icon { color: #fff; }
+/* the rows slide in one after another as the menu opens */
+.side-menu[open] .side-menu-item { animation: item-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.side-menu[open] .side-menu-nav .side-menu-item:nth-child(1) { animation-delay: 0.08s; }
+.side-menu[open] .side-menu-nav .side-menu-item:nth-child(2) { animation-delay: 0.13s; }
+.side-menu[open] .side-menu-foot .side-menu-item { animation-delay: 0.14s; }
+.side-menu[open] .side-menu-foot .side-menu-logout { animation-delay: 0.19s; }
+
+.side-menu-foot { margin-top: auto; }
+.side-menu-foot form { margin: 0; }
+
+/* The divider at the bottom of the menu, with the account sphere sitting on it. The lines
+   glow, brightest where they meet the sphere, and a spark of light runs along each of them
+   into it now and then. The sphere glows too, with a soft halo breathing behind it. */
+:root {
+  --sphere-glow: rgba(20, 99, 243, 0.45);
+  --sphere-halo: rgba(20, 99, 243, 0.16);
+  --sphere-filter: brightness(1) saturate(1.25) drop-shadow(0 0 2px rgba(20, 99, 243, 0.55));
+  --sphere-flare-filter: brightness(1.2) saturate(1.7) drop-shadow(0 0 14px rgba(20, 99, 243, 1));
+  --sphere-burst: radial-gradient(closest-side, rgba(255, 255, 255, 0.95), rgba(20, 99, 243, 0.5) 45%, rgba(20, 99, 243, 0) 72%);
+  --sphere-line: rgba(20, 99, 243, 0.3);
+  --sphere-line-bright: rgba(20, 99, 243, 0.95);
+  --sphere-line-glow: rgba(20, 99, 243, 0.5);
+}
+:root[data-theme="dark"] {
+  --sphere-glow: rgba(28, 223, 242, 0.6);
+  --sphere-halo: rgba(28, 223, 242, 0.3);
+  --sphere-filter: brightness(1.55) saturate(1.3) drop-shadow(0 0 3px rgba(28, 223, 242, 0.85));
+  --sphere-flare-filter: brightness(2.8) saturate(1.5) drop-shadow(0 0 16px rgba(175, 247, 255, 1));
+  --sphere-burst: radial-gradient(closest-side, rgba(225, 252, 255, 1), rgba(28, 223, 242, 0.6) 45%, rgba(28, 223, 242, 0) 72%);
+  --sphere-line: rgba(28, 223, 242, 0.35);
+  --sphere-line-bright: rgba(175, 247, 255, 1);
+  --sphere-line-glow: rgba(28, 223, 242, 0.9);
+}
+.account-divider { display: flex; align-items: center; gap: 0.3rem; margin: 0.35rem 0 0.15rem; }
+.account-divider::before,
+.account-divider::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+  filter: drop-shadow(0 0 3px var(--sphere-line-glow));
+}
+/* the spark is the first background layer; it travels towards the sphere */
+.account-divider::before {
+  background:
+    linear-gradient(90deg, transparent, var(--sphere-line-bright), transparent) -70% 0 / 40% 100% no-repeat,
+    linear-gradient(90deg, transparent, var(--sphere-line) 55%, var(--sphere-line-bright));
+  animation: spark-right 3.6s ease-in-out infinite;
+}
+.account-divider::after {
+  background:
+    linear-gradient(90deg, transparent, var(--sphere-line-bright), transparent) 170% 0 / 40% 100% no-repeat,
+    linear-gradient(90deg, var(--sphere-line-bright), var(--sphere-line) 45%, transparent);
+  animation: spark-left 3.6s ease-in-out infinite;
+}
+@keyframes spark-right {
+  0%, 35% { background-position: -70% 0, 0 0; }
+  100% { background-position: 170% 0, 0 0; }
+}
+@keyframes spark-left {
+  0%, 35% { background-position: 170% 0, 0 0; }
+  100% { background-position: -70% 0, 0 0; }
+}
+html:not(.js) .account-divider { gap: 0; }
+html:not(.js) .account-sphere { display: none; } /* it couldn't open anything */
+.account-sphere {
+  position: relative;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: width 0.38s var(--menu-ease), height 0.38s var(--menu-ease), transform 0.25s ease, filter 0.3s ease;
+}
+/* the halo behind the sphere */
+.account-sphere::before {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--sphere-halo), transparent 75%);
+  animation: sphere-breathe 2.8s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes sphere-breathe {
+  from { opacity: 0.55; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1.06); }
+}
+.account-sphere-anim { position: absolute; inset: 0; pointer-events: none; }
+.account-sphere-anim.is-playing { filter: var(--sphere-filter); }
+/* a soft glow in its place until the animation has loaded */
+.account-sphere-anim:not(.is-playing) { background: radial-gradient(closest-side, var(--sphere-glow), transparent); opacity: 0.5; }
+.account-sphere:hover { transform: scale(1.08); }
+.account-sphere:active { transform: scale(0.94); }
+
+/* Each click sends out a burst of light (account-panel.js adds .is-flaring): a bright flash
+   that expands into a glowing shockwave ring, the sphere flaring up with a little pop, and
+   the divider lines flashing with it. */
+.account-sphere { z-index: 2; } /* the burst shines over the options below */
+.account-sphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--sphere-line-bright);
+  border-radius: 50%;
+  background: var(--sphere-burst);
+  box-shadow: 0 0 22px 4px var(--sphere-line-glow), inset 0 0 14px var(--sphere-line-glow);
+  opacity: 0;
+  pointer-events: none;
+}
+.account-sphere.is-flaring::after { animation: sphere-burst 0.8s cubic-bezier(0.15, 0.7, 0.25, 1); }
+.account-sphere.is-flaring .account-sphere-anim.is-playing { animation: sphere-flare 0.8s ease-out; }
+.account-divider.is-flaring::before { animation: spark-right 3.6s ease-in-out infinite, line-flash 0.8s ease-out; }
+.account-divider.is-flaring::after { animation: spark-left 3.6s ease-in-out infinite, line-flash 0.8s ease-out; }
+@keyframes sphere-burst {
+  0% { opacity: 1; transform: scale(0.7); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: scale(2.5); }
+}
+@keyframes sphere-flare {
+  0% { filter: var(--sphere-filter); transform: scale(1); }
+  18% { filter: var(--sphere-flare-filter); transform: scale(1.16); }
+  100% { filter: var(--sphere-filter); transform: scale(1); }
+}
+@keyframes line-flash {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 3px var(--sphere-line-glow)); }
+  20% { filter: brightness(2.2) drop-shadow(0 0 9px var(--sphere-line-bright)); }
+}
+.account-sphere[aria-expanded="true"] { filter: drop-shadow(0 0 12px var(--sphere-glow)); }
+.account-sphere[aria-expanded="true"]::before { opacity: 1; }
+.side-menu.is-rail .account-sphere { width: 44px; height: 44px; }
+
+/* The account options unfold below the sphere: the rows of the grid grow from 0fr to 1fr
+   (smooth height), and each part fades and rises in turn. The clip cuts only top and
+   bottom, so the Settings row's beam can still reach the glowing edge. */
+.account-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr); /* as wide as the menu, never as wide as the name */
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.45s var(--menu-ease);
+}
+.account-panel-clip { min-width: 0; min-height: 0; overflow-x: visible; overflow-y: clip; }
+.account-panel-content { padding-top: 0.35rem; transition: padding 0.38s var(--menu-ease); }
+/* the icon strip has no name line, so leave room above Settings for its edge glow */
+.side-menu.is-rail .account-panel-content { padding-top: 1rem; }
+.account-panel-content > * { transition: opacity 0.25s ease, transform 0.4s var(--menu-ease); }
+html.js .account-panel:not(.is-open) { grid-template-rows: 0fr; }
+html.js .account-panel:not(.is-open) .account-panel-content > * { opacity: 0; transform: translateY(12px); }
+.account-panel.is-open .account-panel-content > :nth-child(2) { transition-delay: 0.07s; }
+.account-panel.is-open .account-panel-content > :nth-child(3) { transition-delay: 0.14s; }
+.account-panel.is-open .account-panel-content > :nth-child(4) { transition-delay: 0.21s; }
+
+/* Theme switch (theme.js): a menu row with a small on/off switch, on = dark. The moon and
+   sun swap with a little turn; in the icon strip only the icon shows. */
+.theme-switch .side-menu-glyph > .side-menu-icon {
+  grid-area: 1 / 1;
+  transition: opacity 0.25s ease, transform 0.35s var(--menu-ease), color 0.2s ease;
+}
+.theme-switch[aria-checked="true"] .theme-icon-sun,
+.theme-switch[aria-checked="false"] .theme-icon-moon { opacity: 0; transform: rotate(-70deg) scale(0.5); }
+.theme-switch-track {
+  position: relative;
+  flex: none;
+  width: 34px;
+  height: 20px;
+  margin-left: auto;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line);
+  transition: background-color 0.25s ease, box-shadow 0.25s ease, opacity 0.2s ease,
+              width 0.38s var(--menu-ease), margin 0.38s var(--menu-ease);
+}
+.theme-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition: transform 0.3s var(--menu-ease);
+}
+.theme-switch[aria-checked="true"] .theme-switch-track { background: var(--bar-blue); box-shadow: 0 0 10px rgba(1, 149, 251, 0.45); }
+.theme-switch[aria-checked="true"] .theme-switch-knob { transform: translateX(14px); }
+.side-menu.is-rail .theme-switch-track { width: 0; margin-left: 0; opacity: 0; }
+
+/* switching theme: a soft cross-fade of the whole page (where the browser can) */
+::view-transition-old(root),
+::view-transition-new(root) { animation-duration: 0.45s; }
+.side-menu-signed-in {
+  max-height: 2rem;
+  margin: 0 0.3rem 0.4rem;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  transition: opacity 0.2s ease, max-height 0.38s var(--menu-ease), margin 0.38s var(--menu-ease);
+}
+.side-menu-logout:hover,
+.side-menu-logout.is-going { background: rgba(255, 93, 110, 0.1); color: var(--airmail-red); }
+.side-menu-logout:hover .side-menu-icon,
+.side-menu-logout.is-going .side-menu-icon { color: var(--airmail-red); }
+/* clicked: stays lit while the logout goes through */
+.side-menu-logout.is-going { box-shadow: inset 0 0 0 1px rgba(255, 93, 110, 0.35); font-weight: 600; }
+
+/* Wide screens: the menu is always docked beside the page, either expanded or collapsed
+   to a slim strip of icons (side-menu.js). */
+:root {
+  --menu-width: 16rem;
+  --rail-width: 4.75rem;
+  --menu-pad: 0.75rem; /* the panel's side padding */
+  --menu-button: 42px; /* the hamburger inside the menu */
+  --menu-ease: cubic-bezier(0.2, 0.85, 0.25, 1);
+}
+body.app { transition: padding-left 0.38s var(--menu-ease); }
+@media (min-width: 1024px) {
+  html.menu-docked body.app { padding-left: var(--menu-width); }
+  html.menu-docked.menu-rail body.app { padding-left: var(--rail-width); }
+}
+.side-menu.is-docked {
+  inset: 0 auto 0 0;
+  z-index: 50;
+  width: var(--menu-width);
+  overflow: visible;
+  transition: width 0.38s var(--menu-ease);
+}
+.side-menu.is-docked .side-menu-panel { width: 100%; border-radius: 0; box-shadow: none; }
+/* Docked, the menu is simply there: it never slides in, only its width changes */
+.side-menu.is-docked .side-menu-panel,
+.side-menu.is-docked .side-menu-item { animation: none; }
+/* page load or resize: placed straight away (side-menu.js lifts this two frames later) */
+.side-menu.is-instant,
+.side-menu.is-instant * { transition: none; }
+
+/* collapsed: just the icons (their names stay for screen readers and hover tooltips).
+   The logo and name shrink away and the hamburger glides into the logo's place, centred
+   over the icons (the right padding centres it within the strip). */
+.side-menu.is-rail { width: var(--rail-width); }
+.side-menu.is-rail .side-menu-head {
+  padding: 0.1rem calc((var(--rail-width) - 2 * var(--menu-pad) - var(--menu-button)) / 2) 0.9rem 0;
+}
+.side-menu.is-rail .side-menu-logo { width: 0; margin-right: 0; opacity: 0; transform: scale(0.6); }
+.side-menu.is-rail .side-menu-brand { max-width: 0; }
+/* the words fade out and get clipped as the menu narrows, instead of popping */
+.side-menu.is-rail .side-menu-brand,
+.side-menu.is-rail .side-menu-label,
+.side-menu.is-rail .side-menu-signed-in { opacity: 0; }
+.side-menu.is-rail .side-menu-signed-in { max-height: 0; margin-bottom: 0; }
+
+@keyframes menu-in { from { transform: translateX(-100%); } }
+@keyframes menu-out { to { transform: translateX(-100%); } }
+@keyframes item-in { from { opacity: 0; transform: translateX(-14px); } }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes fade-out { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .side-menu[open] .side-menu-panel, .side-menu.is-closing .side-menu-panel,
+  .side-menu[open]::backdrop, .side-menu.is-closing::backdrop,
+  .side-menu[open] .side-menu-item, .side-menu-edge,
+  .menu-button.is-spinning .menu-button-anim, .menu-button.is-spinning .menu-button-bars { animation: none; }
+  body.app, .side-menu.is-docked, .side-menu-head, .side-menu-logo, .side-menu-brand, .topbar .wordmark,
+  .side-menu-label, .side-menu-signed-in { transition: none; }
+  .side-menu-item[aria-current="page"]::before, .side-menu-item[aria-current="page"]::after { animation: none; }
+  .account-panel, .account-panel-content, .account-panel-content > *, .account-sphere,
+  .theme-switch .side-menu-icon, .theme-switch-track, .theme-switch-knob { transition: none; }
+  .account-divider::before, .account-divider::after, .account-sphere::before,
+  .account-sphere::after, .account-sphere-anim.is-playing { animation: none !important; }
+  .menu-button-anim, .menu-button-bars, .menu-button-bars .bar { transition: none; }
+}
+
+/* The page fills the space next to the menu, lined up with the top bar (a limit only
+   on very wide screens, so lines stay readable) */
+/* The loader over the page while the next one loads (page-loader.js): a soft veil with the
+   loading animation in a small card, fading in. */
+.page-loader {
+  width: fit-content; /* a small card in the middle of the screen */
+  max-width: none;
+  height: fit-content;
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+.page-loader::backdrop { background: var(--loader-veil); backdrop-filter: blur(3px); }
+.page-loader[open] { animation: loader-in 0.25s ease both; }
+.page-loader[open]::backdrop { animation: fade-in 0.25s ease both; }
+.page-loader:focus { outline: none; }
+.page-loader-box {
+  display: grid;
+  justify-items: center;
+  gap: 0.15rem;
+  padding: 1rem 1.75rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: var(--loader-box);
+  box-shadow: var(--loader-shadow);
+}
+.page-loader-animation { width: 110px; height: 110px; }
+.page-loader-text { margin: 0; color: var(--muted); font-size: 0.875rem; font-weight: 500; }
+@keyframes loader-in { from { opacity: 0; transform: scale(0.94); } }
+@media (prefers-reduced-motion: reduce) {
+  .page-loader[open], .page-loader[open]::backdrop { animation: none; }
+}
+
 .app-main {
-  max-width: calc(46rem + 2 * var(--gutter));
-  margin-inline: auto;
-  padding: clamp(2rem, 6vh, 3.5rem) var(--gutter);
+  max-width: 1600px;
+  padding: clamp(1.75rem, 5vh, 3rem) var(--page-pad);
 }
 
 .facts { display: grid; gap: 0; margin: 0; border-top: 1px solid var(--line); }

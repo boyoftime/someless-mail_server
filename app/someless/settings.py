@@ -11,6 +11,17 @@ bp = Blueprint("settings", __name__, url_prefix="/settings")
 USERNAME_PATTERN = re.compile(r"[A-Za-z0-9._-]{3,32}")
 MIN_PASSWORD_LENGTH = 8
 
+# What a new password must contain, with the message when it doesn't. The settings page
+# lists the same rules and ticks them off as you type (password-rules.js).
+PASSWORD_RULES = [
+    (lambda p: len(p) >= MIN_PASSWORD_LENGTH,
+     f"New password must be at least {MIN_PASSWORD_LENGTH} characters."),
+    (lambda p: re.search(r"[A-Za-z]", p) and re.search(r"[0-9]", p),
+     "New password needs both letters and numbers."),
+    (lambda p: re.search(r"[^A-Za-z0-9]", p),
+     "New password needs a special character, like ! @ # $ or %."),
+]
+
 
 def _current_password_ok():
     return check_password_hash(g.admin["password_hash"], request.form.get("current_password", ""))
@@ -46,10 +57,11 @@ def change_username():
 def change_password():
     new_password = request.form.get("new_password", "")
     error = None
+    broken = [message for rule, message in PASSWORD_RULES if not rule(new_password)]
     if not _current_password_ok():
         error = "Current password is wrong."
-    elif len(new_password) < MIN_PASSWORD_LENGTH:
-        error = f"New password must be at least {MIN_PASSWORD_LENGTH} characters."
+    elif broken:
+        error = broken[0]
     elif new_password != request.form.get("confirm_password", ""):
         error = "New passwords don't match."
     if error:

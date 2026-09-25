@@ -1,4 +1,5 @@
 import html
+import re
 
 from someless import create_app
 
@@ -152,3 +153,92 @@ def test_saved_settings_are_announced_on_a_green_board(client, login):
 
     assert 'data-board="success"' in page
     assert 'data-board-title="Saved"' in page
+
+
+def settings_page(client, login):
+    login()
+    return client.get("/settings").get_data(as_text=True)
+
+
+def test_settings_opens_on_the_account_tab(client, login):
+    html = settings_page(client, login)
+    tabs = html[html.index('<nav class="page-tabs"'):]
+    tabs = tabs[:tabs.index("</nav>")]
+
+    assert '<a class="page-tab" href="/settings" aria-current="page">' in tabs
+    assert "Account" in tabs
+
+
+def test_settings_has_a_username_card_and_a_password_card(client, login):
+    html = settings_page(client, login)
+
+    assert "Update username" in html and "Change password" in html
+    assert 'value="admin" readonly' in html  # the current username is shown, not editable
+    assert html.count("data-password-toggle") >= 3  # every password field has the eye
+
+
+def test_password_rules_are_listed_for_a_live_check(client, login):
+    html = settings_page(client, login)
+
+    for rule in ["length", "mix", "special"]:
+        assert f'data-rule="{rule}"' in html
+    assert 'src="/static/js/password-rules.js?v=' in html
+
+
+def test_new_password_needs_letters_and_numbers(client, login):
+    login()
+
+    for weak in ["abcdefgh!", "12345678!"]:
+        response = change_password(client, new=weak)
+        assert response.status_code == 400
+        assert "letters and numbers" in text(response)
+
+
+def test_new_password_needs_a_special_character(client, login):
+    login()
+
+    response = change_password(client, new="abcd1234")
+
+    assert response.status_code == 400
+    assert "special character" in text(response)
+
+
+def test_settings_errors_come_down_on_the_red_board(client, login):
+    login()
+
+    response = change_password(client, current="wrong")
+
+    assert 'data-board="error"' in response.get_data(as_text=True)
+
+
+def test_password_card_sits_below_the_username_card_with_a_glowing_divider(client, login):
+    html = settings_page(client, login)
+
+    username_card = html.index('aria-labelledby="username-title"')
+    divider = html.index('class="glow-divider"')
+    password_card = html.index('aria-labelledby="password-title"')
+    assert username_card < divider < password_card
+
+
+def card_tags(html):
+    return re.findall(r'<section class="settings-card[^"]*"', html)
+
+
+def test_settings_cards_start_closed(client, login):
+    html = settings_page(client, login)
+    toggles = re.findall(r'<button [^>]*data-card-toggle[^>]*>', html)
+
+    assert len(toggles) == 2
+    assert all('aria-expanded="false"' in toggle for toggle in toggles)
+    assert not any("is-open" in tag for tag in card_tags(html))
+    assert 'src="/static/js/collapsible-cards.js?v=' in html
+
+
+def test_a_card_with_an_error_opens_by_itself(client, login):
+    login()
+
+    html = change_password(client, current="wrong").get_data(as_text=True)
+    username_card, password_card = card_tags(html)
+
+    assert "is-open" in password_card and "is-open" not in username_card
+    assert re.search(r'data-card-toggle aria-controls="password-body" aria-expanded="true"', html)
