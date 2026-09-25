@@ -70,6 +70,10 @@ jobs:
           curl -fsS http://127.0.0.1:17080/healthz | grep -qx ok
           curl -fsS http://127.0.0.1:17080/ | grep -q "Welcome to"
           curl -fsS -o /dev/null http://127.0.0.1:17080/login
+          if docker logs smoke 2>&1 | grep "\[ERROR\]"; then
+            echo "Container logged errors"
+            exit 1
+          fi
 
       - name: Show container logs
         if: always()
