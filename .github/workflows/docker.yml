@@ -62,7 +62,9 @@ jobs:
 
       - name: Smoke test
         run: |
-          docker run -d --name smoke -p 17080:17080 someless-mail:test
+          # a data folder owned by root, like the one Docker makes next to docker-compose.yml
+          sudo mkdir smoke-data
+          docker run -d --name smoke -p 17080:17080 -v "$PWD/smoke-data:/data" someless-mail:test
           for i in $(seq 1 30); do
             curl -fsS http://127.0.0.1:17080/healthz && break
             sleep 1
@@ -70,6 +72,11 @@ jobs:
           curl -fsS http://127.0.0.1:17080/healthz | grep -qx ok
           curl -fsS http://127.0.0.1:17080/ | grep -q "Welcome to"
           curl -fsS -o /dev/null http://127.0.0.1:17080/login
+          # the data lands in the folder, written by the app's own user, and the server
+          # itself doesn't run as root
+          sudo test -f smoke-data/someless/someless.db
+          test "$(sudo stat -c %u smoke-data/someless/someless.db)" = 2001
+          docker exec smoke grep -Eq '^Uid:[[:space:]]+2001[[:space:]]' /proc/1/status
           if docker logs smoke 2>&1 | grep "\[ERROR\]"; then
             echo "Container logged errors"
             exit 1

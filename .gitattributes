@@ -1,0 +1,2 @@
+# Shell scripts run inside the Linux container: Unix line endings, even when edited on Windows.
+*.sh text eol=lf

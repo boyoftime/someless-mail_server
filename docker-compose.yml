@@ -6,7 +6,4 @@ services:
     ports:
       - "17080:17080"   # web interface
     volumes:
-      - someless-data:/data
-
-volumes:
-  someless-data:
+      - ./data:/data    # all your data, in a "data" folder next to this file

@@ -13,14 +13,16 @@ Welcome to **Someless Mail Server** — your own mail server in a single Docker 
 
 ## Install
 
-Pick one of the two ways below. Both keep all your data in a Docker volume called `someless-data`, so it survives updates and restarts.
+Pick one of the two ways below. Both keep all your data in a `data` folder right where you install Someless Mail, so it's easy to find and back up, and it survives updates and restarts (see [Your data](#your-data)).
 
 ### Option 1: `docker run`
+
+Run this from the folder where you want your `data` folder:
 
 ```
 docker run -d --name someless-mail --restart unless-stopped \
   -p 17080:17080 \
-  -v someless-data:/data \
+  -v "$(pwd)/data:/data" \
   ghcr.io/boyoftime/someless-mail:1.0.0
 ```
 
@@ -37,10 +39,7 @@ services:
     ports:
       - "17080:17080"   # web interface
     volumes:
-      - someless-data:/data
-
-volumes:
-  someless-data:
+      - ./data:/data    # all your data, in a "data" folder next to this file
 ```
 
 Then start it from that folder:
@@ -48,6 +47,8 @@ Then start it from that folder:
 ```
 docker compose up -d
 ```
+
+The `data` folder appears next to `docker-compose.yml` on the first start.
 
 ### Open it
 
@@ -76,12 +77,9 @@ If you run a reverse proxy such as [Nginx Proxy Manager](https://nginxproxymanag
        expose:
          - "17080"
        volumes:
-         - someless-data:/data
+         - ./data:/data
        networks:
          - nginx-proxy
-
-   volumes:
-     someless-data:
 
    networks:
      nginx-proxy:
@@ -112,7 +110,35 @@ The mail ports will be added to the install commands above when the mail engine 
 
 ## Your data
 
-Everything — your login, settings and (later) mail — lives in the `someless-data` volume at `/data` inside the container. Back up that volume to back up your server.
+Everything Someless Mail keeps (your login, settings, password rules and, later, your mail) is in the `data` folder next to your `docker-compose.yml`:
+
+```
+your-folder/
+├── docker-compose.yml
+└── data/
+    └── someless/
+        ├── someless.db    ← login, settings and password rules
+        └── secret_key     ← signs your login, so it survives restarts
+```
+
+So the database is at `data/someless/someless.db`.
+
+- **Updates keep it.** `docker compose pull && docker compose up -d` never touches it.
+- **To back up,** copy the whole `data` folder. For a perfect copy, stop Someless Mail first (`docker compose stop`), copy, then `docker compose start`.
+- **Don't delete it** unless you want to start over with `admin` / `admin`.
+- **No permissions to set up.** Someless Mail runs as its own user (ID 2001), not as root, and takes the folder over by itself when it starts.
+
+### Moving from an older install
+
+Early installs kept the data in a Docker volume instead. To move it into the `data` folder, run this in the folder with your `docker-compose.yml`. Docker names the volume after that folder, so replace `someless_mail` with your folder's name:
+
+```
+docker compose down
+mkdir -p data
+cp -a /var/lib/docker/volumes/someless_mail_someless-data/_data/. data/
+```
+
+Then replace your `docker-compose.yml` with the one above and start again with `docker compose pull && docker compose up -d`. Once everything works, remove the old volume: `docker volume rm someless_mail_someless-data`.
 
 ## Development
 
