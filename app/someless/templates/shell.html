@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block body_class %}app{% endblock %}
+{% block body %}
+<header class="topbar">
+  <a class="wordmark" href="{{ url_for('pages.dashboard') }}">Someless Mail</a>
+  <nav class="topnav" aria-label="Main">
+    <a href="{{ url_for('pages.dashboard') }}"{% if request.endpoint == 'pages.dashboard' %} aria-current="page"{% endif %}>Dashboard</a>
+    <a href="{{ url_for('settings.index') }}"{% if request.blueprint == 'settings' %} aria-current="page"{% endif %}>Settings</a>
+    <form method="post" action="{{ url_for('auth.logout') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="link-button">Log out</button>
+    </form>
+  </nav>
+</header>
+<main class="app-main">
+  {% for message in get_flashed_messages() %}
+  <p class="alert" role="status">{{ message }}</p>
+  {% endfor %}
+  {% block content %}{% endblock %}
+</main>
+{% endblock %}

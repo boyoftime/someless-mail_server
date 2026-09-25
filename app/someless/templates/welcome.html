@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Welcome to Someless Mail Server{% endblock %}
+{% block body_class %}welcome{% endblock %}
+{% block body %}
+<main class="welcome-main">
+  <h1 class="welcome-title">
+    <span>Welcome to</span>
+    <span>Someless</span>
+    <span>Mail Server</span>
+  </h1>
+  <p class="welcome-lede">Your mail server is installed and running. Log in to set it up.</p>
+  <a class="button" href="{{ url_for('auth.login') }}">Log in</a>
+</main>
+<footer class="welcome-footer">Someless Mail {{ version }}</footer>
+{% endblock %}

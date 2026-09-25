@@ -1,0 +1,47 @@
+{% extends "shell.html" %}
+{% block title %}Settings | Someless Mail{% endblock %}
+{% block content %}
+<h1 class="page-title">Settings</h1>
+
+<section class="settings-section" aria-labelledby="username-heading">
+  <h2 id="username-heading" class="section-title">Username</h2>
+  <p class="section-hint">The name you use to log in.</p>
+  {% if username_error %}<p class="alert alert-error" role="alert">{{ username_error }}</p>{% endif %}
+  <form method="post" action="{{ url_for('settings.change_username') }}" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="field">
+      <span class="field-label">Username</span>
+      <input name="username" autocomplete="username" required minlength="3" maxlength="32" value="{{ username_value or g.admin.username }}">
+      <span class="field-hint">Letters, numbers, dots, dashes or underscores.</span>
+    </label>
+    <label class="field">
+      <span class="field-label">Current password</span>
+      <input name="current_password" type="password" autocomplete="current-password" required>
+    </label>
+    <button class="button" type="submit">Change username</button>
+  </form>
+</section>
+
+<section class="settings-section" aria-labelledby="password-heading">
+  <h2 id="password-heading" class="section-title">Password</h2>
+  <p class="section-hint">Pick one you don't use anywhere else.</p>
+  {% if password_error %}<p class="alert alert-error" role="alert">{{ password_error }}</p>{% endif %}
+  <form method="post" action="{{ url_for('settings.change_password') }}" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="field">
+      <span class="field-label">Current password</span>
+      <input name="current_password" type="password" autocomplete="current-password" required>
+    </label>
+    <label class="field">
+      <span class="field-label">New password</span>
+      <input name="new_password" type="password" autocomplete="new-password" required minlength="8">
+      <span class="field-hint">At least 8 characters.</span>
+    </label>
+    <label class="field">
+      <span class="field-label">Confirm new password</span>
+      <input name="confirm_password" type="password" autocomplete="new-password" required minlength="8">
+    </label>
+    <button class="button" type="submit">Change password</button>
+  </form>
+</section>
+{% endblock %}

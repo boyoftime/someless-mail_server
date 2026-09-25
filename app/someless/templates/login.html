@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Log in to Someless Mail{% endblock %}
+{% block body_class %}auth{% endblock %}
+{% block body %}
+<main class="auth-main">
+  <a class="wordmark" href="{{ url_for('pages.welcome') }}">Someless Mail</a>
+  <h1 class="page-title">Log in</h1>
+  {% if error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="field">
+      <span class="field-label">Username</span>
+      <input name="username" autocomplete="username" required autofocus value="{{ username or '' }}">
+    </label>
+    <label class="field">
+      <span class="field-label">Password</span>
+      <input name="password" type="password" autocomplete="current-password" required>
+    </label>
+    <button class="button" type="submit">Log in</button>
+  </form>
+</main>
+{% endblock %}

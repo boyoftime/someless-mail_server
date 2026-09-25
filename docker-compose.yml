@@ -1,0 +1,12 @@
+services:
+  someless-mail:
+    image: ghcr.io/boyoftime/someless-mail:1.0.0
+    container_name: someless-mail
+    restart: unless-stopped
+    ports:
+      - "17080:17080"   # web interface
+    volumes:
+      - someless-data:/data
+
+volumes:
+  someless-data:

@@ -1,0 +1,208 @@
+/* Google Sans (SIL Open Font License, see ../fonts/OFL.txt) — variable, weights 400–700 */
+@font-face {
+  font-family: "Google Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../fonts/GoogleSans-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Google Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../fonts/GoogleSans-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Tokens: postal navy ink on envelope white, airmail red and blue */
+:root {
+  --paper: #f3f5fa;
+  --ink: #0f1a3d;
+  --muted: #56607d;
+  --line: #d9deea;
+  --field: #ffffff;
+  --airmail-red: #d42a3c;
+  --airmail-blue: #1d46c9;
+  --gutter: clamp(1rem, 5vw, 4rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0b1230;
+    --ink: #edf0fa;
+    --muted: #98a2c2;
+    --line: #243058;
+    --field: #111a3f;
+    --airmail-red: #ff5d6e;
+    --airmail-blue: #7b96ff;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Google Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The airmail envelope edge along the top of every page */
+.airmail {
+  height: 10px;
+  background: repeating-linear-gradient(-45deg,
+    var(--airmail-red) 0 14px, var(--paper) 14px 22px,
+    var(--airmail-blue) 22px 36px, var(--paper) 36px 44px);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem 1.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--paper);
+  font: inherit;
+  font-size: 1.0625rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+.button:hover { background: var(--airmail-blue); color: #fff; }
+
+a:focus-visible, button:focus-visible, input:focus-visible {
+  outline: 3px solid var(--airmail-blue);
+  outline-offset: 3px;
+}
+
+/* Welcome */
+body.welcome {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+.welcome-main, .welcome-footer {
+  width: 100%;
+  max-width: calc(1120px + 2 * var(--gutter));
+  margin-inline: auto;
+}
+.welcome-main {
+  align-self: center;
+  padding: clamp(3rem, 8vh, 6rem) var(--gutter);
+}
+.welcome-title {
+  margin: 0 0 2.5rem;
+  font-size: clamp(3.25rem, 12vw, 9.5rem);
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+}
+.welcome-title span { display: block; }
+.welcome-lede {
+  max-width: 34ch;
+  margin: 0 0 2rem;
+  color: var(--muted);
+  font-size: 1.25rem;
+}
+.welcome-footer {
+  padding: 1.5rem var(--gutter);
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+/* Shared page pieces */
+.wordmark {
+  color: var(--ink);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+.page-title {
+  margin: 0 0 2rem;
+  font-size: clamp(2.25rem, 6vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+.alert {
+  margin: 0 0 1.5rem;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid var(--airmail-blue);
+  background: var(--field);
+  border-radius: 0 8px 8px 0;
+}
+.alert-error { border-left-color: var(--airmail-red); }
+.alert a { color: inherit; font-weight: 500; text-decoration-color: var(--airmail-red); text-underline-offset: 3px; }
+
+.settings-section { padding-block: 2rem; border-top: 1px solid var(--line); }
+.section-title { margin: 0 0 0.25rem; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
+.section-hint { margin: 0 0 1.5rem; color: var(--muted); }
+
+/* Forms */
+.form { display: grid; gap: 1.25rem; max-width: 24rem; }
+.form .button { justify-self: start; margin-top: 0.5rem; }
+.field { display: grid; gap: 0.4rem; }
+.field-label { font-weight: 500; }
+.field-hint { color: var(--muted); font-size: 0.875rem; }
+.field input {
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--field);
+  color: var(--ink);
+  font: inherit;
+}
+.field input:focus-visible { outline-offset: 0; border-color: var(--airmail-blue); }
+
+/* Login */
+.auth-main {
+  width: 100%;
+  max-width: calc(1120px + 2 * var(--gutter));
+  margin-inline: auto;
+  padding: clamp(2rem, 6vh, 4rem) var(--gutter);
+}
+.auth-main .wordmark { display: inline-block; margin-bottom: clamp(3rem, 10vh, 6rem); }
+
+/* Signed-in app */
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem var(--gutter);
+  border-bottom: 1px solid var(--line);
+}
+.topnav { display: flex; align-items: center; gap: 1.5rem; }
+.topnav form { margin: 0; }
+.topnav a, .link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+.topnav a:hover, .link-button:hover { color: var(--ink); }
+.topnav a[aria-current="page"] { color: var(--ink); text-decoration: underline; text-decoration-color: var(--airmail-red); text-decoration-thickness: 2px; text-underline-offset: 6px; }
+.app-main {
+  max-width: calc(46rem + 2 * var(--gutter));
+  margin-inline: auto;
+  padding: clamp(2rem, 6vh, 3.5rem) var(--gutter);
+}
+
+.facts { display: grid; gap: 0; margin: 0; border-top: 1px solid var(--line); }
+.facts div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.9rem 0; border-bottom: 1px solid var(--line); }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; font-weight: 500; }

@@ -1,0 +1,15 @@
+{% extends "shell.html" %}
+{% block title %}Dashboard | Someless Mail{% endblock %}
+{% block content %}
+<h1 class="page-title">Dashboard</h1>
+{% if g.admin.default_password %}
+<p class="alert alert-error" role="alert">
+  You're still using the default password. Anyone who knows it can log in to your mail server.
+  <a href="{{ url_for('settings.index') }}">Change your password</a>
+</p>
+{% endif %}
+<dl class="facts">
+  <div><dt>Signed in as</dt><dd>{{ g.admin.username }}</dd></div>
+  <div><dt>Version</dt><dd>{{ version }}</dd></div>
+</dl>
+{% endblock %}
