@@ -1,0 +1,108 @@
+{% extends "shell.html" %}
+{% block title %}Senders | Someless Mail{% endblock %}
+
+{% macro icon(name) %}
+  {%- if name == "plus" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  {%- elif name == "search" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+  {%- elif name == "trash" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.9 12.2a1.5 1.5 0 0 0 1.5 1.3h6.2a1.5 1.5 0 0 0 1.5-1.3L17.5 7M10 11v6M14 11v6"/></svg>
+  {%- elif name == "sender" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 19.5a6.5 6.5 0 0 1 10.5-5.1"/><rect x="14" y="12.5" width="7.5" height="6" rx="1.2"/><path d="M14.4 13.2l3.35 2.5 3.35-2.5"/></svg>
+  {%- elif name == "yes" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.2 12.3l2.6 2.6 5-5.2"/></svg>
+  {%- elif name == "no" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
+  {%- elif name == "info" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5"/><path d="M12 7.6v.1"/></svg>
+  {%- endif -%}
+{% endmacro %}
+
+{% block content %}
+<header class="page-header page-header-row">
+  <div>
+    <h1 class="page-title">Senders</h1>
+    <p class="page-subtitle">A sender is the name and address your mail comes from, like Google &lt;no-reply@google.com&gt;. People recognise it in their inbox, and other mail servers trust it because its domain is authenticated.</p>
+  </div>
+  <a class="button add-button" href="{{ url_for('senders.new') }}">{{ icon("plus") }}<span>Add sender</span></a>
+</header>
+
+{% if not authenticated %}
+<p class="smtp-note">{{ icon("info") }}<span>A sender's address has to be at a domain you've authenticated. <a href="{{ url_for('domains.index') }}">Authenticate a domain</a> first, then come back here to add senders.</span></p>
+{% endif %}
+
+{% if senders %}
+{# Filters as you type (senders-page.js); Enter asks the server, which works without JavaScript #}
+<form method="get" class="domain-search" role="search" data-sender-search>
+  <label class="visually-hidden" for="sender-search">Search senders by name or address</label>
+  <span class="input-icon">{{ icon("search") }}</span>
+  <input id="sender-search" name="q" type="search" placeholder="Search senders by name or address" autocomplete="off" value="{{ query }}">
+</form>
+
+<div class="sender-list">
+  {% for sender in senders %}
+  <article class="sender-row" data-sender="{{ (sender.name ~ ' ' ~ sender.email) | lower }}"{% if not sender.shown %} hidden{% endif %}>
+    <div class="sender-head">
+      <span class="sender-avatar" aria-hidden="true">{{ sender.name[:1] | upper }}</span>
+      <h2 class="sender-who"><span class="sender-name">{{ sender.name }}</span> <span class="sender-email">&lt;{{ sender.email }}&gt;</span></h2>
+      {% if sender.ready %}
+      <span class="domain-status is-ok"><span class="status-dot" aria-hidden="true"></span>Ready</span>
+      {% else %}
+      <span class="domain-status"><span class="status-dot" aria-hidden="true"></span>Domain not authenticated
+        <span class="help-dot" tabindex="0" role="img" aria-label="Check {{ sender.domain }} again on its Authenticate page." data-tip="Check {{ sender.domain }} again on its Authenticate page.">?</span>
+      </span>
+      {% endif %}
+      <div class="sender-actions">
+        <a class="button button-quiet sender-edit" href="{{ url_for('senders.edit', sender_id=sender.id) }}">Edit</a>
+        <form method="post" action="{{ url_for('senders.delete', sender_id=sender.id) }}" class="sender-delete">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="icon-button is-danger" data-sender-name="{{ sender.name }} <{{ sender.email }}>" aria-label="Delete {{ sender.name }}" title="Delete">{{ icon("trash") }}</button>
+        </form>
+      </div>
+    </div>
+    <dl class="sender-facts">
+      <div>
+        <dt>Domain</dt>
+        <dd class="{{ 'is-yes' if sender.ready else 'is-no' }}">{{ sender.domain }}{{ icon("yes" if sender.ready else "no") }}</dd>
+      </div>
+      <div>
+        <dt>DKIM signature</dt>
+        <dd class="{{ 'is-yes' if sender.dkim else 'is-no' }}">{{ "Signed" if sender.dkim else "Not set up" }}{{ icon("yes" if sender.dkim else "no") }}</dd>
+      </div>
+      <div>
+        <dt>DMARC</dt>
+        <dd class="{{ 'is-yes' if sender.dmarc else 'is-no' }}">{{ "Set up" if sender.dmarc else "Not set up" }}{{ icon("yes" if sender.dmarc else "no") }}</dd>
+      </div>
+    </dl>
+  </article>
+  {% endfor %}
+  <p class="sender-none"{% if senders | selectattr("shown") | list %} hidden{% endif %}>No senders match “<span data-search-text>{{ query }}</span>”.</p>
+</div>
+{% else %}
+<section class="empty-state" aria-labelledby="no-senders-title">
+  <span class="empty-state-badge" aria-hidden="true">{{ icon("sender") }}</span>
+  <h2 id="no-senders-title" class="empty-state-title">No senders yet</h2>
+  <p class="empty-state-text">Use Add sender above to add the first name and address your mail goes out from.</p>
+</section>
+{% endif %}
+
+{# Deleting asks first (senders-page.js). Without JavaScript the trash button deletes. #}
+<dialog class="rules-dialog domain-dialog is-danger" id="delete-sender-dialog" aria-labelledby="delete-sender-title">
+  <div class="rules-form">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("trash") }}</span>
+      <div>
+        <h2 id="delete-sender-title" class="rules-title">Delete <span data-delete-name></span>?</h2>
+        <p class="rules-hint">Mail can no longer go out from this sender. Its domain stays as it is.</p>
+      </div>
+    </div>
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet" data-dialog-close>Cancel</button>
+      <button type="button" class="button rules-save" data-delete-confirm>Delete</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="{{ url_for('static', filename='js/senders-page.js') }}"></script>
+{% endblock %}

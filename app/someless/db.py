@@ -53,6 +53,32 @@ CREATE TABLE IF NOT EXISTS domain_keys (
     mail_host TEXT,               -- this server's name in the domain (mail, or mx if mail is taken...)
     found TEXT                    -- the mail setup DNS showed at the last look: MX, SPF, DMARC... (JSON)
 );
+-- Sending through this server from apps and websites (the SMTP & API page, smtp.py): the
+-- login they use, one for the server...
+CREATE TABLE IF NOT EXISTS smtp_settings (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    login TEXT NOT NULL
+);
+INSERT OR IGNORE INTO smtp_settings (id, login) VALUES (1, 'smtp-' || lower(hex(randomblob(4))));
+-- ...and the keys that go with it as passwords
+CREATE TABLE IF NOT EXISTS smtp_keys (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    key_hash TEXT NOT NULL,       -- the key's SHA-256: the key itself is shown once, never kept
+    hint TEXT NOT NULL,           -- its last characters, to tell the keys apart
+    variant TEXT NOT NULL,        -- standard (64 characters) or short (15)
+    created_at REAL NOT NULL,
+    expires_at REAL               -- NULL: it never expires
+);
+-- Senders (the Senders page, senders.py): the names and addresses mail goes out from, each at
+-- one of the domains, authenticated when it was added
+CREATE TABLE IF NOT EXISTS senders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,           -- what people see their mail come from: PineLoop INC
+    email TEXT NOT NULL UNIQUE,   -- no-reply@pineloop.online
+    domain_id INTEGER NOT NULL,   -- the domain the address is at (deleting it deletes the sender)
+    created_at REAL NOT NULL
+);
 """
 
 

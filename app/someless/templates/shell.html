@@ -27,7 +27,7 @@
   </svg>
 {% endmacro %}
 
-{% macro nav_item(href, label, current) %}
+{% macro nav_item(href, label, current, soon=false) %}
   <a class="side-menu-item" href="{{ href }}" title="{{ label }}"{% if current %} aria-current="page"{% endif %}>
     <span class="side-menu-glyph">
       {# The current page's icon sits on a pulsing blue hexagon (from pineloop, recoloured).
@@ -38,7 +38,7 @@
             data-lottie-light="{{ url_for('static', filename='lottie/menu-active-on-light.json') }}"></span>
       {{ caller() }}
     </span>
-    <span class="side-menu-label">{{ label }}</span>
+    <span class="side-menu-label">{{ label }}{% if soon %}<span class="side-menu-soon">Soon</span>{% endif %}</span>
   </a>
 {% endmacro %}
 
@@ -78,6 +78,15 @@
       {% endcall %}
       {% call nav_item(url_for('domains.index'), "Domains", request.blueprint == 'domains') %}
         <svg class="side-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.3 2.5 3.5 5.3 3.5 8.5s-1.2 6-3.5 8.5c-2.3-2.5-3.5-5.3-3.5-8.5s1.2-6 3.5-8.5z"/></svg>
+      {% endcall %}
+      {% call nav_item(url_for('senders.index'), "Senders", request.blueprint == 'senders') %}
+        <svg class="side-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 19.5a6.5 6.5 0 0 1 10.5-5.1"/><rect x="14" y="12.5" width="7.5" height="6" rx="1.2"/><path d="M14.4 13.2l3.35 2.5 3.35-2.5"/></svg>
+      {% endcall %}
+      {% call nav_item(url_for('smtp.index'), "SMTP & API", request.blueprint == 'smtp') %}
+        <svg class="side-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 3.5L3.5 10.2l6.9 3 3 6.9z"/><path d="M20.5 3.5l-10.1 9.7"/></svg>
+      {% endcall %}
+      {% call nav_item(url_for('pages.api_keys'), "API keys", here == 'pages.api_keys', soon=true) %}
+        <svg class="side-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15.5" r="4"/><path d="M10.9 12.6l8.6-8.6"/><path d="M16.5 7l2.5 2.5"/><path d="M14.3 9.2l2 2"/></svg>
       {% endcall %}
     </nav>
 
@@ -149,8 +158,11 @@
 <script src="{{ url_for('static', filename='js/busy-button.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/copy-button.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/local-time.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/dropdown.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/lottie_light.min.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/lottie-autoplay.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/page-loader.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/page-flip.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/page-swap.js') }}" defer></script>
 {% endblock %}

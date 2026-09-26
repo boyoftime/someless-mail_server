@@ -1,0 +1,82 @@
+{% extends "shell.html" %}
+{% from "copy-box.html" import copy_box %}
+{% block title %}Send mail from your code | Someless Mail{% endblock %}
+
+{% block content %}
+<header class="page-header">
+  {# turns the page back over to SMTP & API (page-flip.js) #}
+  <a class="back-link" href="{{ url_for('smtp.index') }}" data-page-flip="back">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5.5"/><path d="M11 6l-6 6 6 6"/></svg>
+    <span>Back to SMTP &amp; API</span>
+  </a>
+  <h1 class="page-title">Send mail from your code</h1>
+  <p class="page-subtitle">Any app or website can send mail through this server with your SMTP settings and one of your SMTP keys. Here's a working example in six of the most used languages, filled in with your settings.</p>
+</header>
+
+<section class="smtp-card" aria-labelledby="guide-settings-title">
+  <h2 class="smtp-title" id="guide-settings-title">What every example uses</h2>
+  <dl class="dns-fields smtp-fields">
+    <dt>SMTP server</dt>
+    <dd>{{ copy_box(server, "Copy the SMTP server") }}</dd>
+    <dt>Port</dt>
+    <dd>{{ copy_box(port | string, "Copy the port") }}<span class="dns-full">With STARTTLS</span></dd>
+    <dt>Login</dt>
+    <dd>{{ copy_box(login, "Copy the login") }}</dd>
+    <dt>Password</dt>
+    <dd><span class="dns-box is-placeholder">One of your SMTP keys</span><span class="dns-full">Make one on <a href="{{ url_for('smtp.index') }}" data-page-flip="back">SMTP &amp; API</a>, and keep it in the SOMELESS_SMTP_KEY environment variable where your code runs.</span></dd>
+  </dl>
+</section>
+
+{# One language at a time (smtp-docs.js); without JavaScript, all of them one under another #}
+<section class="guide-code" aria-labelledby="guide-code-title">
+  <h2 class="smtp-title" id="guide-code-title">Examples</h2>
+  <div class="page-tabs code-tabs" role="tablist" aria-label="Language">
+    {% for example in examples %}
+    <button type="button" class="page-tab" role="tab" id="tab-{{ example.key }}" aria-controls="panel-{{ example.key }}" aria-selected="{{ 'true' if loop.first else 'false' }}" tabindex="{{ 0 if loop.first else -1 }}" data-code-tab="{{ example.key }}"><span class="lang-badge" aria-hidden="true"><img src="{{ url_for('static', filename='img/lang/' ~ example.icon ~ '.svg') }}" alt="" width="20" height="20"></span>{{ example.name }}</button>
+    {% endfor %}
+  </div>
+  {% for example in examples %}
+  <div class="code-panel" role="tabpanel" id="panel-{{ example.key }}" aria-labelledby="tab-{{ example.key }}" data-code-panel="{{ example.key }}">
+    {% if example.install %}
+    <p class="code-install"><span class="code-install-label">Install first</span>{{ copy_box(example.install, "Copy the install command") }}</p>
+    {% endif %}
+    <div class="code-window">
+      <div class="code-window-head">
+        <span class="code-file">{{ example.file }}</span>
+        <button type="button" class="copy-button code-copy" data-copy="{{ example.code }}" aria-label="Copy the {{ example.name }} example" title="Copy the {{ example.name }} example">
+          <svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 5.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h.5"/></svg>
+          <svg class="copy-done" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+          <span class="code-copy-label">Copy</span>
+          <span class="code-copy-done" aria-hidden="true">Copied</span>
+        </button>
+      </div>
+      <pre class="code-block" tabindex="0"><code>{{ example.html }}</code></pre>
+    </div>
+  </div>
+  {% endfor %}
+</section>
+
+<section class="guide-notes" aria-labelledby="guide-notes-title">
+  <h2 class="smtp-title" id="guide-notes-title">Good to know</h2>
+  <ul class="guide-list">
+    <li><strong>Keep the key out of your code.</strong> Every example reads it from the SOMELESS_SMTP_KEY environment variable, so it never ends up in a repository or a screenshot.</li>
+    <li><strong>Send from a domain you've authenticated</strong> on the Domains page. Other mail servers check it, and may turn away mail from anywhere else.</li>
+    <li><strong>Port {{ port }} starts plain and switches to encryption</strong> (STARTTLS) before the login goes out: that's why each example turns TLS on first.</li>
+    <li><strong>"535 Authentication failed"</strong> means the login or the key is wrong, or the key has expired. <strong>"Connection refused"</strong> or a timeout means the mail engine isn't in yet, or the network your code runs on blocks port {{ port }}.</li>
+  </ul>
+</section>
+
+<section class="smtp-card guide-apps" aria-labelledby="guide-apps-title">
+  <h2 class="smtp-title" id="guide-apps-title">In apps and plugins</h2>
+  <p class="dns-group-hint">WordPress, a shop, a CRM: any app with an SMTP setting takes the same values, whatever it calls them.</p>
+  <dl class="dns-fields smtp-fields">
+    <dt>Host</dt><dd><code class="guide-value">{{ server }}</code></dd>
+    <dt>Port</dt><dd><code class="guide-value">{{ port }}</code></dd>
+    <dt>Encryption</dt><dd><code class="guide-value">STARTTLS</code><span class="dns-full">Some apps call it TLS</span></dd>
+    <dt>Username</dt><dd><code class="guide-value">{{ login }}</code></dd>
+    <dt>Password</dt><dd><span class="dns-box is-placeholder">One of your SMTP keys</span></dd>
+  </dl>
+</section>
+
+<script src="{{ url_for('static', filename='js/smtp-docs.js') }}"></script>
+{% endblock %}

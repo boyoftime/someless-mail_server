@@ -52,6 +52,8 @@
     // veil would blur it out of sight.
     var form = event.detail && event.detail.form;
     if (form && form.querySelector("button[data-busy-label]")) return;
+    // A page turning over (page-flip.js) is its own show of the wait: no veil over it.
+    if (document.documentElement.classList.contains("is-page-flipping")) return;
     show();
   });
 

@@ -300,10 +300,12 @@
 
   // The page that came back, before it goes in: fill the forms in again and reopen the
   // cards. Returns the sent form, or nothing if something else came back (an error page).
+  // A form the server marks data-swap-fresh starts afresh instead (it went through without
+  // leaving the page, like the one that makes an SMTP key and shows it).
   function putBack(kept, newMain) {
     kept.forms.forEach(function (saved) {
       var form = formIn(newMain, saved.action);
-      if (!form) return;
+      if (!form || form.hasAttribute("data-swap-fresh")) return;
       Array.from(form.elements).filter(typedIn).forEach(function (field) {
         saved.fields.forEach(function (typed) {
           if (typed.name !== field.name) return;

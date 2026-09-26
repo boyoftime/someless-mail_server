@@ -1,0 +1,211 @@
+{% extends "shell.html" %}
+{% from "copy-box.html" import copy_box %}
+{% block title %}SMTP & API | Someless Mail{% endblock %}
+
+{% macro icon(name) %}
+  {%- if name == "plus" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  {%- elif name == "search" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+  {%- elif name == "trash" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.9 12.2a1.5 1.5 0 0 0 1.5 1.3h6.2a1.5 1.5 0 0 0 1.5-1.3L17.5 7M10 11v6M14 11v6"/></svg>
+  {%- elif name == "key" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15.5" r="4"/><path d="M10.9 12.6l8.6-8.6"/><path d="M16.5 7l2.5 2.5"/><path d="M14.3 9.2l2 2"/></svg>
+  {%- elif name == "info" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5"/><path d="M12 7.6v.1"/></svg>
+  {%- endif -%}
+{% endmacro %}
+
+{% block content %}
+<header class="page-header page-header-row">
+  <div>
+    <h1 class="page-title">SMTP &amp; API</h1>
+    <p class="page-subtitle">Send mail from your apps and websites through this server: give them the SMTP settings below, with one of your SMTP keys as the password.</p>
+  </div>
+  <div class="page-header-actions">
+    {# The guide to sending from code: a flash, and the page turns over to it (page-flip.js) #}
+    <a class="docs-button" href="{{ url_for('smtp.docs') }}" data-page-flip aria-label="How to send mail from your code" data-tip="How to send mail from your code: Python, Node.js, PHP, Java, C# and Go">
+      <span class="docs-button-anim" aria-hidden="true" data-lottie="{{ url_for('static', filename='lottie/programming.json') }}"></span>
+      <svg class="docs-button-still" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 8l-4 4 4 4"/><path d="M15 8l4 4-4 4"/><path d="M13 6l-2 12"/></svg>
+    </a>
+    <button type="button" class="button add-button" data-dialog-open="generate-dialog" aria-haspopup="dialog">
+      {{ icon("plus") }}<span>Generate SMTP key</span>
+    </button>
+  </div>
+</header>
+
+<p class="smtp-note">{{ icon("info") }}<span>Sending starts with the mail engine, which comes next. Keys you make now will work as soon as it's in.</span></p>
+
+<section class="smtp-card" aria-labelledby="smtp-settings-title">
+  <h2 class="smtp-title" id="smtp-settings-title">Your SMTP settings</h2>
+  <dl class="dns-fields smtp-fields">
+    <dt>SMTP server</dt>
+    <dd>{{ copy_box(server, "Copy the SMTP server") }}</dd>
+    <dt>Port</dt>
+    <dd>{{ copy_box(port | string, "Copy the port") }}<span class="dns-full">With STARTTLS</span></dd>
+    <dt>Login</dt>
+    <dd>{{ copy_box(login, "Copy the login") }}</dd>
+    <dt>Password</dt>
+    <dd><span class="dns-box is-placeholder">One of your SMTP keys</span></dd>
+  </dl>
+</section>
+
+<section class="smtp-keys" aria-labelledby="smtp-keys-title">
+  <h2 class="smtp-title" id="smtp-keys-title">Your SMTP keys</h2>
+  {% if keys %}
+  {# Filters as you type (smtp-page.js); Enter asks the server, which works without JavaScript #}
+  <form method="get" class="domain-search" role="search" data-key-search>
+    <label class="visually-hidden" for="key-search">Search SMTP keys by name</label>
+    <span class="input-icon">{{ icon("search") }}</span>
+    <input id="key-search" name="q" type="search" placeholder="Search your SMTP keys" autocomplete="off" value="{{ query }}">
+  </form>
+  <div class="domain-table-wrap">
+    <table class="domain-table key-table">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Key</th>
+          <th scope="col">Created</th>
+          <th scope="col">Expires</th>
+          <th scope="col">Status</th>
+          <th scope="col"><span class="visually-hidden">Delete</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for key in keys %}
+        <tr class="domain-row key-row" data-key-name="{{ key.name | lower }}"{% if not key.shown %} hidden{% endif %}>
+          <td class="domain-name">{{ key.name }}<span class="domain-provider">{{ "Standard" if key.variant == "standard" else "Short" }}</span></td>
+          <td><code class="key-hint" title="The key's last characters">…{{ key.hint }}</code></td>
+          {# dates in the admin's own time zone (local-time.js) #}
+          <td><span class="key-label">Created </span><time datetime="{{ key.created_at }}" data-local-date>{{ key.created }}</time></td>
+          <td><span class="key-label">Expires </span>{% if key.expires %}<time datetime="{{ key.expires_at }}" data-local-date>{{ key.expires }}</time>{% else %}Never{% endif %}</td>
+          <td>
+            {% if key.expired %}
+            <span class="domain-status"><span class="status-dot" aria-hidden="true"></span>Expired</span>
+            {% else %}
+            <span class="domain-status is-ok"><span class="status-dot" aria-hidden="true"></span>Active</span>
+            {% endif %}
+          </td>
+          <td class="domain-delete-cell">
+            <form method="post" action="{{ url_for('smtp.delete', key_id=key.id) }}" class="domain-delete">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="icon-button is-danger" data-key-name="{{ key.name }}" aria-label="Delete {{ key.name }}" title="Delete">{{ icon("trash") }}</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+        <tr class="domain-none"{% if keys | selectattr("shown") | list %} hidden{% endif %}>
+          <td colspan="6">No keys match “<span data-search-text>{{ query }}</span>”.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <span class="empty-state-badge" aria-hidden="true">{{ icon("key") }}</span>
+    <h3 class="empty-state-title">No SMTP keys yet</h3>
+    <p class="empty-state-text">Use Generate SMTP key above to make your first one.</p>
+  </div>
+  {% endif %}
+</section>
+
+{# Generate a key (smtp-page.js). It opens again by itself when the server sends it back with
+   a problem (data-open), keeping what was chosen. #}
+<dialog class="rules-dialog domain-dialog is-wide" id="generate-dialog" aria-labelledby="generate-title"{% if generate_error %} data-open{% endif %}>
+  {# once a key is made, the form starts afresh for the next one (page-swap.js) #}
+  <form method="post" action="{{ url_for('smtp.generate') }}" class="rules-form"{% if new_key %} data-swap-fresh{% endif %}>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("key") }}</span>
+      <div>
+        <h2 id="generate-title" class="rules-title">Generate an SMTP key</h2>
+        <p class="rules-hint">A password your apps use to send mail through this server.</p>
+      </div>
+    </div>
+    {% if generate_error %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't generate the key">{{ generate_error }}</p>{% endif %}
+    <div class="field">
+      <label class="field-label" for="key-name">Name</label>
+      <div class="input-wrap">
+        <span class="input-icon">{{ icon("key") }}</span>
+        <input id="key-name" name="name" required maxlength="60" autocomplete="off" placeholder="e.g. Website" value="{{ typed.name }}">
+      </div>
+    </div>
+    <fieldset class="key-choices">
+      <legend class="field-label">Variant</legend>
+      <div class="variant-options">
+        <label class="choice-card">
+          <input type="radio" name="variant" value="standard"{% if typed.variant != "short" %} checked{% endif %}>
+          <span class="choice-tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-8.5"/></svg></span>
+          <span class="choice-title">Standard</span>
+          <span class="choice-text">64 characters. The safest choice.</span>
+        </label>
+        <label class="choice-card">
+          <input type="radio" name="variant" value="short"{% if typed.variant == "short" %} checked{% endif %}>
+          <span class="choice-tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 12.5l4 4 8-8.5"/></svg></span>
+          <span class="choice-title">Short</span>
+          <span class="choice-text">15 characters, for apps that take only short passwords.</span>
+        </label>
+      </div>
+    </fieldset>
+    <div class="field">
+      <label class="field-label" for="key-expiry">Expiry</label>
+      {# a plain list without JavaScript; dropdown.js makes it one in the panel's look, and
+         local-time.js counts each date from the admin's own clock #}
+      <select id="key-expiry" name="expiry" data-dropdown>
+        {% for choice in expiries %}
+        <option value="{{ choice.value }}" data-label="{{ choice.label }}"{% if choice.days %} data-days="{{ choice.days }}"{% endif %}{% if choice.months %} data-months="{{ choice.months }}"{% endif %}{% if choice.value == typed.expiry %} selected{% endif %}>{{ choice.label }}{% if choice.until %} ({{ choice.until }}){% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet" data-dialog-close>Cancel</button>
+      <button class="button rules-save" type="submit" data-busy-label="Generating…">
+        <span class="button-spinner" aria-hidden="true"></span>
+        <span class="button-label">Generate</span>
+      </button>
+    </div>
+  </form>
+</dialog>
+
+{# The new key, shown this once (smtp-page.js takes it off the page when the dialog closes) #}
+{% if new_key %}
+<dialog class="rules-dialog domain-dialog is-success is-wide" id="key-dialog" aria-labelledby="key-title" data-open>
+  <div class="rules-form">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("key") }}</span>
+      <div>
+        <h2 id="key-title" class="rules-title">Your SMTP key</h2>
+        <p class="rules-hint">{{ new_name }}: copy it now and keep it somewhere safe. For your security, it's shown only this once.</p>
+      </div>
+    </div>
+    <div class="field">
+      <span class="field-label">SMTP key</span>
+      {{ copy_box(new_key, "Copy the key") }}
+      <span class="dns-full">Use it as the password, with the login {{ login }}.</span>
+    </div>
+    <div class="rules-actions">
+      <button type="button" class="button rules-save" data-dialog-close>OK</button>
+    </div>
+  </div>
+</dialog>
+{% endif %}
+
+{# Deleting asks first (smtp-page.js). Without JavaScript the trash button deletes. #}
+<dialog class="rules-dialog domain-dialog is-danger" id="delete-key-dialog" aria-labelledby="delete-key-title">
+  <div class="rules-form">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("trash") }}</span>
+      <div>
+        <h2 id="delete-key-title" class="rules-title">Delete <span data-delete-name></span>?</h2>
+        <p class="rules-hint">Apps that use it can no longer send mail through this server.</p>
+      </div>
+    </div>
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet" data-dialog-close>Cancel</button>
+      <button type="button" class="button rules-save" data-delete-confirm>Delete</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="{{ url_for('static', filename='js/smtp-page.js') }}"></script>
+{% endblock %}

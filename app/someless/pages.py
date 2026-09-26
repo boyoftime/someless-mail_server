@@ -18,6 +18,12 @@ def dashboard():
     return render_template("dashboard.html")
 
 
+@bp.get("/api-keys")
+@login_required
+def api_keys():
+    return render_template("api-keys.html")
+
+
 @bp.get("/healthz")
 def healthz():
     return "ok"

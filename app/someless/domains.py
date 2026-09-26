@@ -141,6 +141,7 @@ def delete(domain_id):
     if domain:
         db.execute("DELETE FROM domains WHERE id = ?", (domain_id,))
         db.execute("DELETE FROM domain_keys WHERE domain_id = ?", (domain_id,))
+        db.execute("DELETE FROM senders WHERE domain_id = ?", (domain_id,))  # its addresses go with it
         db.commit()
         flash(f"{domain['name']} was deleted.", "deleted")
     return redirect(url_for("domains.index"))

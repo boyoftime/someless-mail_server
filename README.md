@@ -107,6 +107,23 @@ The summary's **What to remove** lists the records you won't need, and when to d
 
 Services that only send (Brevo, Mailchimp…) can stay: several services can send for one domain.
 
+## Senders
+
+A sender is the name and address your mail comes from, like `Google <no-reply@google.com>`. In **Senders**, click **Add sender**, type the name and the address, and the phone beside the form shows how it will look in an inbox. The address has to be at a domain you've authenticated in **Domains**; for any other domain, authenticate it first and come back. Deleting a domain deletes its senders.
+
+## Send from your apps and websites (SMTP)
+
+In **SMTP & API**, the page shows your SMTP settings: the server, port `587` (with STARTTLS) and your login. Click **Generate SMTP key**, give it a name (like the app that will use it), and choose:
+
+- **Standard** (64 characters, the safest) or **Short** (15 characters, for apps that take only short passwords)
+- when it expires: from 7 days to 1 year, or never
+
+Use the key as the password, with your login. It's shown only once, so copy it then: Someless Mail keeps only its fingerprint, so a lost key can't be shown again, only replaced. Delete a key to stop the apps that use it.
+
+The round button with the animation beside **Generate SMTP key** opens the guide: a working example for Python, Node.js, PHP, Java, C# and Go, filled in with your settings, and what to type into apps and plugins.
+
+Keys start working when the mail engine is added (it's next). **API keys**, for using Someless Mail from your own code, are coming too.
+
 ## Use a domain instead of `ip:17080` (optional)
 
 If you run a reverse proxy such as [Nginx Proxy Manager](https://nginxproxymanager.com/), you can reach Someless Mail at `https://mail.yourdomain.com` with no port number.
@@ -232,3 +249,4 @@ SOMELESS_DATA_DIR=./devdata .venv/bin/python -m flask --app app/someless:create_
 - QR codes for two-factor authentication: [segno](https://github.com/heuer/segno) 1.6.6 (BSD-3-Clause).
 - DKIM signing keys: [cryptography](https://github.com/pyca/cryptography) 50.0.1 (Apache-2.0 or BSD-3-Clause).
 - DNS checks: [dnspython](https://github.com/rthalley/dnspython) 2.8.0 (ISC).
+- Programming language logos in the SMTP guide: [Devicon](https://github.com/devicons/devicon) 2.16.0 (MIT). The logos belong to their owners.

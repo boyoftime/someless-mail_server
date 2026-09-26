@@ -73,6 +73,33 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
+
+/* Scrollbars, on every part that scrolls: a slim glowing blue line (a bright core fading out
+   to the sides, like the page tabs' underline) on a faint rail. Chrome, Edge and Safari draw
+   it in full; Firefox takes the colours. */
+:root { --scroll-core: #5cb6ff; --scroll-rail: rgba(15, 26, 61, 0.1); }
+:root[data-theme="dark"] { --scroll-core: #c8ecff; --scroll-rail: rgba(123, 150, 255, 0.14); }
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track:vertical { background: linear-gradient(90deg, transparent 5px, var(--scroll-rail) 5px 7px, transparent 7px); }
+::-webkit-scrollbar-track:horizontal { background: linear-gradient(180deg, transparent 5px, var(--scroll-rail) 5px 7px, transparent 7px); }
+::-webkit-scrollbar-thumb { border-radius: 999px; }
+::-webkit-scrollbar-thumb:vertical {
+  background: linear-gradient(90deg, transparent 5%, rgba(1, 149, 251, 0.3) 20%, #0195fb 36%, var(--scroll-core) 50%, #0195fb 64%, rgba(1, 149, 251, 0.3) 80%, transparent 95%);
+}
+::-webkit-scrollbar-thumb:horizontal {
+  background: linear-gradient(180deg, transparent 5%, rgba(1, 149, 251, 0.3) 20%, #0195fb 36%, var(--scroll-core) 50%, #0195fb 64%, rgba(1, 149, 251, 0.3) 80%, transparent 95%);
+}
+::-webkit-scrollbar-thumb:vertical:hover, ::-webkit-scrollbar-thumb:vertical:active {
+  background: linear-gradient(90deg, rgba(1, 149, 251, 0.15) 0, rgba(1, 149, 251, 0.5) 16%, #0195fb 30%, var(--scroll-core) 50%, #0195fb 70%, rgba(1, 149, 251, 0.5) 84%, rgba(1, 149, 251, 0.15) 100%);
+}
+::-webkit-scrollbar-thumb:horizontal:hover, ::-webkit-scrollbar-thumb:horizontal:active {
+  background: linear-gradient(180deg, rgba(1, 149, 251, 0.15) 0, rgba(1, 149, 251, 0.5) 16%, #0195fb 30%, var(--scroll-core) 50%, #0195fb 70%, rgba(1, 149, 251, 0.5) 84%, rgba(1, 149, 251, 0.15) 100%);
+}
+::-webkit-scrollbar-button { display: none; }
+::-webkit-scrollbar-corner { background: transparent; }
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; scrollbar-color: #0195fb transparent; }
+}
 /* hidden means hidden, whatever display a class gives the element (.form is a grid...) */
 [hidden] { display: none !important; }
 
@@ -425,7 +452,7 @@ body.is-playing .splash-title span:nth-child(5) { animation-delay: 0.78s; }
 }
 .page-tab svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .page-tab:hover { color: var(--ink); background: rgba(1, 149, 251, 0.06); }
-.page-tab[aria-current="page"] {
+.page-tab[aria-current="page"], .page-tab[aria-selected="true"] {
   color: var(--ink);
   background: linear-gradient(180deg, rgba(1, 149, 251, 0.2), rgba(20, 99, 243, 0.1));
   box-shadow: inset 0 0 0 1px rgba(1, 149, 251, 0.55), 0 0 22px rgba(1, 149, 251, 0.22);
@@ -435,7 +462,7 @@ body.is-playing .splash-title span:nth-child(5) { animation-delay: 0.78s; }
 :root { --tab-line-core: #5cb6ff; }
 :root[data-theme="dark"] { --tab-line-core: #c8ecff; }
 .page-tab { position: relative; }
-.page-tab[aria-current="page"]::after {
+.page-tab[aria-current="page"]::after, .page-tab[aria-selected="true"]::after {
   content: "";
   position: absolute;
   left: 14%;
@@ -449,7 +476,7 @@ body.is-playing .splash-title span:nth-child(5) { animation-delay: 0.78s; }
 }
 @keyframes tab-line-in { from { opacity: 0; transform: scaleX(0.15); } }
 @media (prefers-reduced-motion: reduce) {
-  .page-tab[aria-current="page"]::after { animation: none; }
+  .page-tab[aria-current="page"]::after, .page-tab[aria-selected="true"]::after { animation: none; }
 }
 
 /* Settings cards: full width, one under another, with a glowing divider between them.
@@ -747,6 +774,7 @@ html:not(.js) .rules-button { display: none; } /* the dialog needs JavaScript */
 .rules-dialog.is-closing::backdrop { animation: fade-out 0.18s ease both; }
 @keyframes dialog-in { from { opacity: 0; transform: translateY(14px) scale(0.97); } }
 @keyframes dialog-out { to { opacity: 0; transform: translateY(8px) scale(0.98); } }
+.rules-dialog.is-wide { width: min(calc(100vw - 2rem), 36rem); } /* more to choose in it */
 .rules-form { display: grid; gap: 1.35rem; padding: 1.5rem clamp(1.1rem, 4vw, 1.75rem); }
 .rules-head { display: flex; align-items: center; gap: 0.9rem; }
 .rules-title { margin: 0; font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; }
@@ -2202,7 +2230,29 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
 }
 .dns-record.is-found { border-color: rgba(34, 197, 94, 0.45); box-shadow: var(--card-shadow), 0 0 26px -14px rgba(34, 197, 94, 0.9); }
 .dns-record.is-different { border-color: rgba(245, 158, 11, 0.5); }
-.dns-record-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+/* the head: the record's number, its title and hint, and the check's pill */
+.dns-record-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 0.35rem 0.9rem; }
+/* the number: glowing in a rounded square, blue until the check finds the record, then green */
+.dns-step {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #1463f3, #0195fb);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), 0 0 18px -3px rgba(1, 149, 251, 0.95);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.75);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+.dns-record.is-found .dns-step {
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), 0 0 18px -3px rgba(34, 197, 94, 0.95);
+}
+.dns-record-titles { min-width: 0; padding-top: 0.2rem; }
 .dns-record-title { margin: 0; font-size: 1.05rem; font-weight: 700; }
 .dns-record-hint { margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem; }
 .dns-status {
@@ -2259,8 +2309,37 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
 @media (max-width: 640px) {
   .dns-fields { grid-template-columns: minmax(0, 1fr); gap: 0.2rem; }
   .dns-fields dd { margin-bottom: 0.4rem; }
-  .dns-record-head { flex-direction: column; }
+  .dns-record-head { grid-template-columns: auto minmax(0, 1fr); }
+  .dns-record-head .dns-status { grid-column: 2; justify-self: start; }
   .dns-actions .button { flex: 1 1 100%; }
+}
+
+/* Back to the list, above a page's title: a small pill whose arrow leans the way it goes */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 1rem;
+  padding: 0.4rem 0.9rem 0.4rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s ease, border-color 0.2s ease, box-shadow 0.25s ease, background-color 0.2s ease;
+}
+.back-link svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.25s var(--menu-ease); }
+.back-link:hover {
+  border-color: #0195fb;
+  background: rgba(1, 149, 251, 0.08);
+  color: var(--ink);
+  box-shadow: 0 0 18px -6px rgba(1, 149, 251, 0.8);
+}
+.back-link:hover svg { transform: translateX(-3px); }
+.back-link:focus-visible { outline: 3px solid var(--airmail-blue); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .back-link svg { transition: none; }
 }
 
 /* Fitting in with the mail the domain has already (Zoho Mail, Brevo...). Blue: do this;
@@ -2455,4 +2534,453 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
   .dns-found-title { margin-top: 0; }
   .dns-delete-row { grid-template-columns: auto minmax(0, 1fr); }
   .dns-delete-value, .dns-delete-note { grid-column: 1 / -1; }
+}
+
+/* A menu row for a page that's on its way: "Soon" beside its name */
+.side-menu-soon {
+  margin-left: 0.5rem;
+  padding: 0.08rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(1, 149, 251, 0.14);
+  color: #4db3ff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: 0.1em;
+}
+:root:not([data-theme="dark"]) .side-menu-soon { color: var(--brand); }
+
+/* SMTP & API (smtp.html): the settings apps send with, and the keys they log in with */
+.smtp-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0 0 1.5rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--airmail-blue) 40%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--airmail-blue) 9%, transparent);
+  font-size: 0.92rem;
+}
+.smtp-note svg { flex: none; width: 19px; height: 19px; margin-top: 0.1rem; fill: none; stroke: var(--airmail-blue); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.smtp-card {
+  display: grid;
+  gap: 1rem;
+  margin: 0 0 2rem;
+  padding: 1.2rem 1.4rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+}
+.smtp-title { margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; }
+.smtp-fields { grid-template-columns: 7.5rem minmax(0, 1fr); }
+.smtp-keys { display: grid; gap: 1rem; }
+.smtp-keys .domain-search { margin: 0; }
+.key-hint { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 0.9rem; color: var(--muted); }
+.key-label { display: none; color: var(--muted); }
+
+/* the new key, in a green dialog */
+.domain-dialog.is-success {
+  --accent: #22c55e;
+  --badge: linear-gradient(135deg, #16a34a, #22c55e);
+  border-color: rgba(34, 197, 94, 0.5);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35), 0 0 48px -12px rgba(34, 197, 94, 0.8);
+}
+.domain-dialog.is-success .field { display: grid; gap: 0.45rem; }
+.domain-dialog.is-success .copy-box { width: 100%; }
+.domain-dialog.is-success .copy-box-text { word-break: break-all; }
+
+/* Choosing a key's length: cards that light up when chosen */
+.key-choices { display: grid; gap: 0.55rem; min-width: 0; margin: 0; padding: 0; border: 0; }
+.key-choices legend { padding: 0; margin-bottom: 0.55rem; }
+.variant-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; }
+.choice-card {
+  position: relative;
+  display: grid;
+  gap: 0.2rem;
+  border: 1px solid var(--line);
+  background: var(--input-bg);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.25s ease, background-color 0.2s ease;
+}
+.choice-card { align-content: start; padding: 0.8rem 0.9rem; border-radius: 14px; }
+.choice-card input { position: absolute; opacity: 0; pointer-events: none; }
+.choice-card:hover { border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); }
+.choice-card:has(input:checked) {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  box-shadow: 0 0 0 1px var(--accent), 0 0 30px -4px color-mix(in srgb, var(--accent) 85%, transparent),
+    inset 0 0 22px -8px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+/* the tick in the corner: an empty ring, filled and glowing on the chosen card */
+.choice-card { padding-right: 2.6rem; }
+.choice-tick {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--line);
+  border-radius: 50%;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.25s ease;
+}
+.choice-tick svg { width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transform: scale(0.4); transition: opacity 0.2s ease, transform 0.3s var(--menu-ease); }
+.choice-card:has(input:checked) .choice-tick {
+  border-color: transparent;
+  background: var(--badge);
+  box-shadow: 0 0 14px -1px var(--accent);
+}
+.choice-card:has(input:checked) .choice-tick svg { opacity: 1; transform: none; }
+.choice-card:has(input:focus-visible) { outline: 3px solid var(--airmail-blue); outline-offset: 2px; }
+.choice-title { font-weight: 700; }
+.choice-card:has(input:checked) .choice-title { color: var(--accent); }
+.choice-text { color: var(--muted); font-size: 0.84rem; line-height: 1.4; }
+
+/* Dropdowns (dropdown.js): a button showing the choice, and a list in a card of its own
+   that drops down (or up, when there's more room there). Without JavaScript, the plain list. */
+select[data-dropdown] {
+  width: 100%;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--input-bg);
+  color: var(--ink);
+  font: inherit;
+}
+select[data-dropdown-ready] { display: none; }
+.dropdown { position: relative; }
+.dropdown-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--input-bg);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.25s ease;
+}
+.dropdown-button:hover { border-color: color-mix(in srgb, var(--accent, #0195fb) 60%, var(--line)); }
+.dropdown-button:focus-visible, .dropdown.is-open .dropdown-button {
+  outline: none;
+  border-color: var(--accent, #0195fb);
+  box-shadow: 0 0 0 4px rgba(1, 149, 251, 0.22);
+}
+.dropdown-button svg { flex: none; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.25s var(--menu-ease); }
+.dropdown.is-open .dropdown-button svg { transform: rotate(180deg); }
+.dropdown-list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  max-height: 20rem;
+  margin: 0;
+  padding: 0.35rem;
+  overflow: auto;
+  list-style: none;
+  border: 1px solid var(--tip-edge);
+  border-radius: 14px;
+  background: var(--dialog-bg);
+  box-shadow: var(--tip-shadow);
+  outline: none;
+  animation: dropdown-down 0.2s var(--menu-ease) both;
+}
+.dropdown-list[data-side="below"] { top: calc(100% + 6px); }
+.dropdown-list[data-side="above"] { bottom: calc(100% + 6px); animation-name: dropdown-up; }
+@keyframes dropdown-down { from { opacity: 0; transform: translateY(-6px); } }
+@keyframes dropdown-up { from { opacity: 0; transform: translateY(6px); } }
+.dropdown-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.dropdown-option.is-active { background: color-mix(in srgb, var(--accent, #0195fb) 14%, transparent); }
+.dropdown-option[aria-selected="true"] { color: var(--accent, #0195fb); font-weight: 700; }
+.dropdown-option svg { flex: none; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; visibility: hidden; }
+.dropdown-option[aria-selected="true"] svg { visibility: visible; }
+.dropdown-list:focus-visible .dropdown-option.is-active { box-shadow: inset 0 0 0 2px var(--accent, #0195fb); }
+@media (prefers-reduced-motion: reduce) {
+  .dropdown-list { animation: none; }
+  .dropdown-button svg { transition: none; }
+}
+@media (max-width: 640px) {
+  .smtp-card { padding: 1.1rem; }
+  .smtp-fields { grid-template-columns: minmax(0, 1fr); }
+  .key-row .domain-delete-cell { grid-row: 1 / span 5; }
+  .key-row .key-label { display: inline; }
+  .variant-options { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* The guide button on SMTP & API: the coding animation in a glowing blue ring. A click
+   flashes it, and the page turns over (page-flip.js). */
+/* the header's buttons stay together on the right (not the text block's flexible width) */
+.page-header-row > .page-header-actions { flex: 0 0 auto; max-width: none; margin-left: auto; }
+.page-header-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 1.1rem; }
+.docs-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 72px;
+  height: 72px;
+  padding: 5px;
+  border: 2px solid rgba(1, 149, 251, 0.75);
+  border-radius: 50%;
+  background: var(--dialog-bg); /* a face of its own, so the whole animation sits inside the ring */
+  box-shadow: 0 0 22px -4px rgba(1, 149, 251, 0.9), inset 0 0 16px -4px rgba(1, 149, 251, 0.6);
+  transition: transform 0.3s var(--menu-ease), box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.docs-button:hover { transform: scale(1.06); border-color: #4db3ff; box-shadow: 0 0 32px -2px rgba(1, 149, 251, 1), inset 0 0 18px -4px rgba(1, 149, 251, 0.8); }
+.docs-button:focus-visible { outline: 3px solid var(--airmail-blue); outline-offset: 4px; }
+.docs-button-anim, .docs-button-still { grid-area: 1 / 1; }
+.docs-button-anim { width: 100%; height: 100%; overflow: hidden; border-radius: 50%; }
+.docs-button-still { width: 30px; height: 30px; fill: none; stroke: #0195fb; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.docs-button-anim.is-playing + .docs-button-still { display: none; }
+.docs-button::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(200, 236, 255, 0.95), 0 0 34px 10px rgba(1, 149, 251, 0.9);
+  opacity: 0;
+  pointer-events: none;
+}
+.docs-button.is-flashing { animation: docs-pop 0.45s ease-out; }
+.docs-button.is-flashing::after { animation: docs-flash 0.55s ease-out; }
+@keyframes docs-pop { 35% { transform: scale(1.14); filter: brightness(1.45) drop-shadow(0 0 14px #4db3ff); } }
+@keyframes docs-flash { 0% { opacity: 1; transform: scale(0.95); } 100% { opacity: 0; transform: scale(1.9); } }
+.back-link.is-flashing { animation: back-flash 0.45s ease-out; }
+@keyframes back-flash { 35% { box-shadow: 0 0 0 2px rgba(200, 236, 255, 0.8), 0 0 26px rgba(1, 149, 251, 0.9); color: var(--ink); } }
+
+/* Page flips (page-flip.js): the main area turns about the middle of the screen until
+   edge-on, and the next page turns in from the other side */
+html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip-in-back) { overflow-x: clip; }
+#app-main.flip-out { animation: page-flip-out 0.34s cubic-bezier(0.5, 0, 0.75, 0) forwards; }
+#app-main.flip-out-back { animation: page-flip-out-back 0.34s cubic-bezier(0.5, 0, 0.75, 0) forwards; }
+#app-main.flip-in { animation: page-flip-in 0.46s cubic-bezier(0.22, 1, 0.36, 1) both; }
+#app-main.flip-in-back { animation: page-flip-in-back 0.46s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes page-flip-out { to { transform: perspective(1800px) rotateY(-90deg); opacity: 0.3; } }
+@keyframes page-flip-out-back { to { transform: perspective(1800px) rotateY(90deg); opacity: 0.3; } }
+@keyframes page-flip-in { from { transform: perspective(1800px) rotateY(90deg); opacity: 0.3; } }
+@keyframes page-flip-in-back { from { transform: perspective(1800px) rotateY(-90deg); opacity: 0.3; } }
+
+/* The SMTP guide (smtp-docs.html): language tabs, and each example in a code window, dark in
+   both themes, with its file name and a copy button */
+.guide-code, .guide-notes { display: grid; gap: 1rem; margin: 0 0 2rem; }
+.code-tabs { margin: 0; }
+.code-tabs .page-tab { flex: 1 1 0; min-width: 5.5rem; padding: 0.6rem 0.9rem; border: 0; background: none; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; }
+/* each language's logo in a round white badge, which lights up with its tab */
+.code-tabs .page-tab { gap: 0.6rem; }
+.lang-badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(123, 150, 255, 0.3), 0 2px 8px rgba(0, 0, 0, 0.25);
+  transition: box-shadow 0.25s ease, transform 0.3s var(--menu-ease);
+}
+.lang-badge img { width: 22px; height: 22px; object-fit: contain; }
+.page-tab:hover .lang-badge { transform: scale(1.06); }
+.page-tab[aria-selected="true"] .lang-badge { box-shadow: 0 0 0 2px #0195fb, 0 0 16px -2px rgba(1, 149, 251, 0.95); }
+.code-panel { display: grid; gap: 0.85rem; }
+.code-install { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 0.9rem; margin: 0; }
+.code-install-label { color: var(--muted); font-size: 0.9rem; font-weight: 600; }
+.code-window {
+  overflow: hidden;
+  border: 1px solid rgba(123, 150, 255, 0.28);
+  border-radius: 16px;
+  background: #0a1030;
+  box-shadow: var(--card-shadow), 0 0 30px -14px rgba(1, 149, 251, 0.7);
+}
+.code-window-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 0.6rem 0.55rem 1.1rem;
+  border-bottom: 1px solid rgba(123, 150, 255, 0.2);
+  background: rgba(255, 255, 255, 0.03);
+}
+.code-file { color: #98a2c2; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 0.85rem; }
+.copy-button.code-copy {
+  display: inline-grid;
+  grid-template-columns: 18px auto;
+  align-items: center;
+  column-gap: 0.4rem;
+  width: auto;
+  height: auto;
+  padding: 0.4rem 0.75rem;
+  border-color: rgba(123, 150, 255, 0.3);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04); /* the code window is dark in both themes */
+  color: #c8d2f0;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.copy-button.code-copy:hover { background: rgba(1, 149, 251, 0.16); color: #fff; }
+.copy-button.code-copy::after { display: none; } /* the window would cut the bubble off: the label says it */
+.code-copy-label, .code-copy-done { grid-area: 1 / 2; }
+.code-copy-done { visibility: hidden; color: #2dd4bf; }
+.copy-button.code-copy.is-copied .code-copy-label { visibility: hidden; }
+.copy-button.code-copy.is-copied .code-copy-done { visibility: visible; }
+.code-block {
+  margin: 0;
+  padding: 1.1rem 1.25rem 1.25rem;
+  overflow-x: auto;
+  color: #e6ebff;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  tab-size: 4;
+}
+.code-block:focus-visible { outline: 2px solid #4db3ff; outline-offset: -2px; }
+.code-comment { color: #7d8bb5; font-style: italic; }
+.code-string { color: #7ee0b8; }
+.code-keyword { color: #c4a1ff; }
+.code-number { color: #ffb86b; }
+.guide-list { display: grid; gap: 0.75rem; margin: 0; padding: 0 0 0 1.2rem; }
+.guide-list li { padding-left: 0.2rem; line-height: 1.55; }
+.guide-list li::marker { color: #0195fb; }
+.guide-value { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 0.92rem; }
+.smtp-card .dns-full a { color: var(--airmail-blue); }
+@media (max-width: 640px) {
+  .page-header-actions { width: 100%; }
+  .page-header-actions .add-button { flex: 1 1 auto; }
+  .code-block { font-size: 0.8rem; padding: 0.9rem 1rem 1rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .docs-button, .docs-button::after, .back-link { animation: none !important; transition: none; }
+}
+
+/* Senders (senders.html): a card per sender, its name and address with a round initial, and
+   what makes other mail servers trust it (its domain, DKIM, DMARC) */
+.sender-list { display: grid; gap: 0.9rem; margin-top: 1.25rem; }
+.sender-row {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  transition: border-color 0.25s ease, box-shadow 0.3s ease;
+}
+.sender-row:hover { border-color: rgba(1, 149, 251, 0.45); box-shadow: var(--card-shadow), 0 0 26px -12px rgba(1, 149, 251, 0.8); }
+.sender-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; padding: 1rem 1.25rem; }
+.sender-avatar, .phone-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1463f3, #0195fb 60%, #4db3ff);
+  box-shadow: 0 0 14px -3px rgba(1, 149, 251, 0.9);
+  color: #fff;
+  font-weight: 800;
+}
+.sender-avatar { width: 38px; height: 38px; font-size: 1rem; }
+.sender-who { flex: 1 1 16rem; min-width: 0; margin: 0; font-size: 1rem; font-weight: 400; overflow-wrap: anywhere; }
+.sender-name { font-weight: 700; }
+.sender-email { color: var(--muted); }
+.sender-actions { display: flex; align-items: center; gap: 0.5rem; margin-left: auto; }
+.sender-edit { padding: 0.5rem 1.1rem; font-size: 0.92rem; }
+.sender-delete { display: inline-flex; margin: 0; }
+.sender-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem 1.5rem;
+  margin: 0;
+  padding: 0.9rem 1.25rem 1rem;
+  border-top: 1px solid var(--line);
+}
+.sender-facts dt { color: var(--muted); font-size: 0.8rem; font-weight: 600; }
+.sender-facts dd { display: flex; align-items: center; gap: 0.4rem; margin: 0.2rem 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.sender-facts dd svg { flex: none; width: 18px; height: 18px; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.sender-facts dd.is-yes svg { stroke: #22c55e; filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.7)); }
+.sender-facts dd.is-no svg { stroke: #ff5d6e; }
+.sender-none { margin: 0; color: var(--muted); }
+.smtp-note a { color: var(--airmail-blue); font-weight: 600; }
+.empty-state-action { margin-top: 0.4rem; }
+
+/* Adding a sender (sender-form.html): the form, and beside it a phone showing the sender as an
+   inbox will, filled in as you type (sender-form.js) */
+.sender-layout { display: grid; grid-template-columns: minmax(0, 1fr) 19rem; align-items: start; gap: 2rem 3rem; max-width: 64rem; }
+.sender-form { display: grid; gap: 1.4rem; }
+.sender-form .field input { background: var(--input-bg); transition: border-color 0.2s ease, box-shadow 0.25s ease; }
+.sender-form .field input:focus { outline: none; border-color: #0195fb; box-shadow: 0 0 0 4px rgba(1, 149, 251, 0.22), 0 8px 24px -10px #0195fb; }
+.sender-form .field:focus-within .input-icon { color: #0195fb; }
+.sender-form .field-hint { margin: -0.1rem 0 0.15rem; line-height: 1.5; transition: color 0.2s ease; }
+.sender-form .field-hint a { color: var(--airmail-blue); font-weight: 600; }
+.sender-form .field-hint.is-off { color: #f59e0b; } /* the address is at a domain that can't send yet */
+.sender-form-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 0.4rem; }
+.sender-form-actions .button { padding: 0.8rem 1.5rem; }
+.phone {
+  position: relative;
+  margin: 0;
+  padding: 10px 10px 0;
+  border: 2px solid rgba(123, 150, 255, 0.45);
+  border-bottom: 0;
+  border-radius: 44px 44px 0 0;
+  background: linear-gradient(180deg, rgba(123, 150, 255, 0.14), transparent 70%);
+  box-shadow: 0 0 40px -18px rgba(1, 149, 251, 0.9);
+  -webkit-mask-image: linear-gradient(180deg, #000 78%, transparent);
+  mask-image: linear-gradient(180deg, #000 78%, transparent);
+}
+.phone-screen { display: grid; gap: 0.7rem; padding: 0.8rem 1.1rem 2.2rem; border-radius: 34px 34px 0 0; background: var(--dialog-bg); }
+.phone-status { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 0.78rem; font-weight: 600; }
+.phone-notch { width: 5.2rem; height: 1.15rem; border-radius: 999px; background: #000; box-shadow: inset 0 0 0 1px rgba(123, 150, 255, 0.25); }
+.phone-signal { display: flex; align-items: flex-end; gap: 2px; height: 0.7rem; }
+.phone-signal i { width: 3px; border-radius: 1px; background: var(--muted); }
+.phone-signal i:nth-child(1) { height: 40%; }
+.phone-signal i:nth-child(2) { height: 70%; }
+.phone-signal i:nth-child(3) { height: 100%; }
+.phone-toolbar { display: flex; align-items: center; gap: 0.9rem; color: var(--muted); }
+.phone-toolbar span { flex: 1; }
+.phone-toolbar svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.phone-folder { display: flex; align-items: center; gap: 0.5rem; margin: 0.3rem 0 0; font-weight: 700; }
+.phone-dot { width: 9px; height: 9px; border: 1.5px solid var(--muted); border-radius: 50%; }
+.phone-when { margin: -0.45rem 0 0 1.15rem; color: var(--muted); font-size: 0.8rem; }
+.phone-from { display: flex; align-items: center; gap: 0.5rem; }
+.phone-from-label { color: var(--muted); font-size: 0.85rem; }
+.phone-sender {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.4rem 0.8rem 0.4rem 0.4rem;
+  border: 1px solid rgba(1, 149, 251, 0.45);
+  border-radius: 999px;
+  background: color-mix(in srgb, #0195fb 10%, transparent);
+  box-shadow: 0 0 22px -10px #0195fb;
+}
+.phone-avatar { width: 32px; height: 32px; font-size: 0.85rem; }
+.phone-sender-text { display: grid; min-width: 0; line-height: 1.25; }
+.phone-name { overflow: hidden; font-weight: 700; font-size: 0.9rem; text-overflow: ellipsis; white-space: nowrap; }
+.phone-email { overflow: hidden; color: var(--muted); font-size: 0.78rem; text-overflow: ellipsis; white-space: nowrap; }
+.phone-lines { display: grid; gap: 0.45rem; margin-top: 0.4rem; }
+.phone-lines i { height: 0.5rem; border-radius: 999px; background: var(--line); }
+.phone-lines i:nth-child(2) { width: 85%; }
+.phone-lines i:nth-child(3) { width: 60%; }
+@media (max-width: 900px) {
+  .sender-layout { grid-template-columns: minmax(0, 1fr); }
+  .phone { width: min(19rem, 100%); justify-self: center; }
+}
+@media (max-width: 640px) {
+  .sender-facts { grid-template-columns: minmax(0, 1fr); }
+  .sender-actions { margin-left: 0; }
+  .sender-form-actions .button { flex: 1 1 auto; }
 }

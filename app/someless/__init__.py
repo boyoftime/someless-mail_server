@@ -42,7 +42,15 @@ SIGNED_IN_PAGE_FILES = [
     "js/two-factor.js",
     "js/copy-button.js",
     "js/tooltip.js",
+    "js/local-time.js",
+    "js/dropdown.js",
     "js/domains-page.js",
+    "js/senders-page.js",
+    "js/sender-form.js",
+    "js/smtp-page.js",
+    "js/smtp-docs.js",
+    "js/page-flip.js",
+    "lottie/programming.json",
     "js/collapsible-cards.js",
     "lottie/page-loader.json",
     "lottie/menu-on-dark.json",
@@ -95,12 +103,14 @@ def create_app(test_config=None):
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     csrf.init_app(app)
 
-    from . import auth, db, domains, errors, pages, settings, two_factor
+    from . import auth, db, domains, errors, pages, senders, settings, smtp, two_factor
     db.init_app(app)
     app.cli.add_command(two_factor.cli)
     app.register_blueprint(auth.bp)
     app.register_blueprint(pages.bp)
     app.register_blueprint(domains.bp)
+    app.register_blueprint(senders.bp)
+    app.register_blueprint(smtp.bp)
     app.register_blueprint(settings.bp)
     app.register_blueprint(errors.bp)
 

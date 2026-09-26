@@ -34,11 +34,12 @@
 
 {# One record to add: its type, host and value (each ready to copy), a line on what to do
    when the domain has that record already and, after a check, what DNS holds for it #}
-{% macro dns_record(record, result) %}
+{% macro dns_record(record, result, step) %}
 <article class="dns-record{% if result %} is-{{ result.state }}{% endif %}" aria-labelledby="record-{{ record.key }}">
   <div class="dns-record-head">
-    <div>
-      <h3 class="dns-record-title" id="record-{{ record.key }}">{{ record.title }}</h3>
+    <span class="dns-step" aria-hidden="true">{{ step }}</span>
+    <div class="dns-record-titles">
+      <h3 class="dns-record-title" id="record-{{ record.key }}"><span class="visually-hidden">Step {{ step }}: </span>{{ record.title }}</h3>
       <p class="dns-record-hint">{{ record.hint }}</p>
       {% if record.advice and record.advice.short %}<p class="dns-action is-{{ record.advice.kind }}">{{ icon(record.advice.kind) }}<span>{{ record.advice.short }}</span></p>{% endif %}
     </div>
@@ -67,6 +68,10 @@
 
 {% block content %}
 <header class="page-header">
+  <a class="back-link" href="{{ url_for('domains.index') }}">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5.5"/><path d="M11 6l-6 6 6 6"/></svg>
+    <span>Back to domains</span>
+  </a>
   <h1 class="page-title">Authenticate {{ domain.name }}</h1>
   <p class="page-subtitle">
     {%- if provider %}Your domain's DNS is at <strong>{{ provider }}</strong>. Add these records there, in the DNS settings for {{ domain.name }}, then check them here.
@@ -96,13 +101,13 @@
     {% if checked_ago %}<p class="dns-checked">Last checked {{ checked_ago }}</p>{% endif %}
   </div>
   <p class="dns-group-hint">Safe to add now: they don't change where your mail goes.</p>
-  {% for record in records %}{{ dns_record(record, checks.get(record.key)) }}{% endfor %}
+  {% for record in records %}{{ dns_record(record, checks.get(record.key), loop.index) }}{% endfor %}
 </section>
 
 <section class="dns-group dns-group-receive" aria-labelledby="receive-title">
   <h2 class="dns-group-title" id="receive-title">Receive mail here</h2>
   <p class="dns-warning">{{ receive_note }}</p>
-  {{ dns_record(receiving, checks.get(receiving.key)) }}
+  {{ dns_record(receiving, checks.get(receiving.key), records | length + 1) }}
 </section>
 
 {# The end of the page: what other mail services have on the domain (Zoho Mail, Brevo...),

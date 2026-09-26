@@ -1,0 +1,94 @@
+{% extends "shell.html" %}
+{% set editing = sender is not none %}
+{% block title %}{{ "Edit sender" if editing else "Add sender" }} | Someless Mail{% endblock %}
+
+{% macro icon(name) %}
+  {%- if name == "person" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
+  {%- elif name == "mail" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><path d="M4 7l8 6 8-6"/></svg>
+  {%- elif name == "globe" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.3 2.5 3.5 5.3 3.5 8.5s-1.2 6-3.5 8.5c-2.3-2.5-3.5-5.3-3.5-8.5s1.2-6 3.5-8.5z"/></svg>
+  {%- endif -%}
+{% endmacro %}
+
+{% block content %}
+<header class="page-header">
+  <a class="back-link" href="{{ url_for('senders.index') }}">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5.5"/><path d="M11 6l-6 6 6 6"/></svg>
+    <span>Back to senders</span>
+  </a>
+  <h1 class="page-title">{{ "Edit sender" if editing else "Add sender" }}</h1>
+  <p class="page-subtitle">What people see when mail from this sender reaches them.</p>
+</header>
+
+{% if not domains %}
+{# Only an authenticated domain's addresses can send: none yet #}
+<section class="empty-state" aria-labelledby="no-domain-title">
+  <span class="empty-state-badge" aria-hidden="true">{{ icon("globe") }}</span>
+  <h2 id="no-domain-title" class="empty-state-title">Authenticate a domain first</h2>
+  <p class="empty-state-text">A sender's address has to be at a domain you've authenticated, so other mail servers trust its mail. Authenticate one on the Domains page, then come back here to add senders.</p>
+  <a class="button add-button empty-state-action" href="{{ url_for('domains.index') }}">Go to Domains</a>
+</section>
+{% else %}
+<div class="sender-layout">
+  <form method="post" action="{{ url_for('senders.update', sender_id=sender.id) if editing else url_for('senders.add') }}" class="sender-form" novalidate data-sender-form data-domains="{{ domains | join(' ') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if problem %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="{{ "Couldn't save the sender" if editing else "Couldn't add the sender" }}">{{ problem }}</p>{% endif %}
+    <div class="field">
+      <label class="field-label" for="sender-name">From name</label>
+      <p class="field-hint" id="sender-name-hint">What people see their mail come from.</p>
+      <div class="input-wrap">
+        <span class="input-icon">{{ icon("person") }}</span>
+        <input id="sender-name" name="name" required maxlength="70" autocomplete="off" placeholder="Your company" value="{{ typed.name }}" aria-describedby="sender-name-hint">
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="sender-email">From email</label>
+      <p class="field-hint" id="sender-email-hint" data-domain-hint>
+        An address at {% for domain in domains %}<strong>{{ domain }}</strong>{% if not loop.last %}{{ " or " if loop.revindex == 2 else ", " }}{% endif %}{% endfor %}.
+        For another domain, authenticate it on the <a href="{{ url_for('domains.index') }}">Domains</a> page first, then come back.
+      </p>
+      <div class="input-wrap">
+        <span class="input-icon">{{ icon("mail") }}</span>
+        <input id="sender-email" name="email" type="email" required autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="no-reply@{{ domains[0] }}" value="{{ typed.email }}" aria-describedby="sender-email-hint">
+      </div>
+    </div>
+    <div class="sender-form-actions">
+      <a class="button button-quiet" href="{{ url_for('senders.index') }}">Cancel</a>
+      <button class="button add-button" type="submit" data-busy-label="{{ 'Saving…' if editing else 'Adding…' }}">
+        <span class="button-spinner" aria-hidden="true"></span>
+        <span class="button-label">{{ "Save sender" if editing else "Add sender" }}</span>
+      </button>
+    </div>
+  </form>
+
+  {# How it looks in an inbox: filled in as you type (sender-form.js) #}
+  <figure class="phone" aria-label="How the sender looks in an inbox">
+    <div class="phone-screen">
+      <div class="phone-status"><span>9:41</span><span class="phone-notch" aria-hidden="true"></span><span class="phone-signal" aria-hidden="true"><i></i><i></i><i></i></span></div>
+      <div class="phone-toolbar" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M19 12H5.5"/><path d="M11 6l-6 6 6 6"/></svg>
+        <span></span>
+        <svg viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.9 12.2a1.5 1.5 0 0 0 1.5 1.3h6.2a1.5 1.5 0 0 0 1.5-1.3L17.5 7"/></svg>
+      </div>
+      <p class="phone-folder"><span class="phone-dot" aria-hidden="true"></span>Inbox</p>
+      <p class="phone-when">Today, 9:41</p>
+      <div class="phone-from">
+        <span class="phone-from-label">From:</span>
+        <span class="phone-sender">
+          <span class="phone-avatar" data-preview-initial>{{ (typed.name or "Your company")[:1] | upper }}</span>
+          <span class="phone-sender-text">
+            <span class="phone-name" data-preview-name>{{ typed.name or "Your company" }}</span>
+            <span class="phone-email" data-preview-email>{{ typed.email or "no-reply@" ~ domains[0] }}</span>
+          </span>
+        </span>
+      </div>
+      <div class="phone-lines" aria-hidden="true"><i></i><i></i><i></i></div>
+    </div>
+  </figure>
+</div>
+<script src="{{ url_for('static', filename='js/sender-form.js') }}"></script>
+{% endif %}
+{% endblock %}

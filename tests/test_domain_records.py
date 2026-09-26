@@ -712,3 +712,19 @@ def test_older_databases_get_the_domain_keys_columns(tmp_path):
 
 def test_the_authenticate_page_needs_login(client):
     assert client.get("/domains/1").headers["Location"] == "/login"
+
+
+def test_the_authenticate_page_has_a_way_back_at_the_top(client, login):
+    page = authenticate_page(client, login)
+
+    back = page.index('class="back-link"')
+    assert back < page.index('<h1 class="page-title"')
+    assert re.match(r'<a class="back-link" href="/domains"', page[page.rindex("<a", 0, back):])
+
+
+def test_the_record_cards_are_numbered_in_order(client, login):
+    page = authenticate_page(client, login)
+
+    assert re.findall(r'<span class="dns-step"[^>]*>(\d+)</span>', page) == ["1", "2", "3", "4", "5", "6"]
+    assert "Step 1: Someless code" in plain(record(page, "code"))  # screen readers hear the step too
+    assert "Step 6: MX record" in plain(record(page, "mx"))
