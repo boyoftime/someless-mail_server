@@ -10,6 +10,7 @@ import re
 import smtplib
 import ssl
 import time
+from email.headerregistry import Address
 from email.message import EmailMessage
 from email.utils import formatdate, make_msgid
 
@@ -37,12 +38,21 @@ def events_url():
     return current_app.config.get("ENGINE_EVENTS_URL", EVENTS_URL)
 
 
-def send_test(from_address, sender_id, to, subject, text):
+def build_message(from_name, from_address, to, subject, text):
+    """The test email: from the sender's name and address (Cloudnix <support@cloudnix.net>),
+    so the inbox shows the name, as it will for mail from the admin's apps."""
     message = EmailMessage()
-    message["From"], message["To"], message["Subject"] = from_address, to, subject
+    local, domain = from_address.rsplit("@", 1)
+    message["From"] = Address(display_name=from_name, username=local, domain=domain) if from_name else from_address
+    message["To"], message["Subject"] = to, subject
     message["Date"] = formatdate(localtime=True)
-    message["Message-ID"] = make_msgid(domain=from_address.rsplit("@", 1)[1])
+    message["Message-ID"] = make_msgid(domain=domain)
     message.set_content(text)
+    return message
+
+
+def send_test(from_address, sender_id, to, subject, text, from_name=""):
+    message = build_message(from_name, from_address, to, subject, text)
     context = ssl._create_unverified_context()   # loopback inside the container
     try:
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as smtp:

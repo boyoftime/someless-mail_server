@@ -123,7 +123,7 @@ def test_a_test_email_is_followed_to_its_end(app, live):
         with app.app_context():
             _live_domain_and_key(app)
             assert sync.run(), engine_module.state()["sync_error"]
-            queue_id = deliveries.send_test("shop@example.com", 1, "nobody@example.invalid", "Live test", "Hello")
+            queue_id = deliveries.send_test("shop@example.com", 1, "nobody@example.invalid", "Live test", "Hello", from_name="Shop")
             assert queue_id
             for _ in range(30):   # .invalid never resolves: a bounce report has to come
                 found = deliveries.status(queue_id)

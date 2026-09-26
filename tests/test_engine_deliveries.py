@@ -113,8 +113,8 @@ def test_sending_a_test_uses_the_panels_account(app, client, login, engine, monk
     a_sender(app, authenticated_domain(app), "no-reply@pineloop.online")
     sent = {}
 
-    def fake_send(from_address, sender_id, to, subject, text):
-        sent.update(from_address=from_address, to=to)
+    def fake_send(from_address, sender_id, to, subject, text, from_name=""):
+        sent.update(from_address=from_address, to=to, from_name=from_name)
         return "abc1"
     monkeypatch.setattr(deliveries, "send_test", fake_send)
     monkeypatch.setattr("someless.senders.ready_to_send", lambda: True)
@@ -123,7 +123,7 @@ def test_sending_a_test_uses_the_panels_account(app, client, login, engine, monk
     response = client.post("/senders/1/test", json={"to": "you@gmail.com", "subject": "Test", "text": "Hi"})
 
     assert response.get_json() == {"queue_id": "abc1"}
-    assert sent == {"from_address": "no-reply@pineloop.online", "to": "you@gmail.com"}
+    assert sent == {"from_address": "no-reply@pineloop.online", "to": "you@gmail.com", "from_name": "S"}   # the sender's name
 
 
 def test_a_test_waits_for_the_engine_to_be_ready(app, client, login, engine):
@@ -171,3 +171,20 @@ def test_the_reports_go_where_the_panel_is(app, engine):
 
     (hook,) = engine.objects["WebHook"].values()
     assert hook["url"] == "http://127.0.0.1:18080/engine/events"
+
+
+def test_a_test_email_comes_from_the_senders_name():
+    """What the inbox shows: Cloudnix, not support@cloudnix.net."""
+    message = deliveries.build_message("Cloudnix", "support@cloudnix.net", "you@gmail.com", "Test", "Hi")
+
+    assert message["From"] == "Cloudnix <support@cloudnix.net>"
+    assert message["To"] == "you@gmail.com" and message["Subject"] == "Test"
+    assert message["Message-ID"].endswith("@cloudnix.net>")
+
+
+def test_a_name_in_any_language_or_with_punctuation_is_kept_whole():
+    message = deliveries.build_message("Café \"Lumière\", Paris", "hello@cafe.example", "you@gmail.com", "Test", "Hi")
+
+    assert message["From"].addresses[0].display_name == 'Café "Lumière", Paris'
+    assert message["From"].addresses[0].addr_spec == "hello@cafe.example"
+    assert b"=?utf-8?" in bytes(message)   # encoded for the way to Gmail

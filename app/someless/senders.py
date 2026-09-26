@@ -193,7 +193,7 @@ def send_test(sender_id):
     try:
         queue_id = deliveries.send_test(sender["email"], sender_id, to,
                                         (data.get("subject") or "Test from Someless Mail").strip()[:200],
-                                        (data.get("text") or "It works!").strip()[:5000])
+                                        (data.get("text") or "It works!").strip()[:5000], from_name=sender["name"])
     except deliveries.SendFailed as error:
         return {"problem": f"The mail engine refused it: {error}"}, 502
     return {"queue_id": queue_id}
