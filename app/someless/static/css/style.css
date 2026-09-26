@@ -2670,6 +2670,9 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
 .server-name-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.75rem; }
 .mail-server-form { display: grid; gap: 1.1rem; margin-top: 1.25rem; }
 .mail-server-needs { display: grid; gap: 0.6rem; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
+.proxy-fields { grid-column: 2; grid-template-columns: 8.5rem minmax(0, 1fr); margin-top: 0.6rem; padding: 0.9rem 1rem; border: 1px solid var(--line); border-radius: 12px; background: var(--input-bg); }
+.proxy-fields .dns-full { word-break: normal; overflow-wrap: break-word; }   /* words, not a record value */
+@media (max-width: 640px) { .proxy-fields { grid-template-columns: minmax(0, 1fr); padding: 0.8rem; } }
 .mail-server-empty { display: grid; justify-items: center; gap: 0.5rem; padding: 0.5rem 0 0.75rem; text-align: center; }
 .mail-server-empty .empty-state-title, .mail-server-empty .empty-state-text { margin: 0; }
 .switch-list { display: grid; gap: 0.6rem; margin: 0; padding-left: 1.2rem; color: var(--muted); }

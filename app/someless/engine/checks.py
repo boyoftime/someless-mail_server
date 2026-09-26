@@ -94,12 +94,13 @@ def name_checks(address):
                            f"Add its A record on the domain's Authenticate page, pointing to {address}."))
     else:
         found.append(Check("server-name", "Points to this server", "ok", f"{name} leads to this server."))
-    proxy = f"{name} → someless-mail, port 17081, with SSL off (Someless Mail gets this certificate itself)."
     if _cached(f"relay {name}", lambda: relay_reached(name)):
-        found.append(Check("proxy-host", "Proxy host", "ok", proxy))
-    else:
+        found.append(Check("proxy-host", "Proxy host", "ok",
+                           f"{name} → http://someless-mail:17081, SSL off: Let's Encrypt's check gets through."))
+    else:   # the page lists the proxy host's settings under it
         found.append(Check("proxy-host", "Proxy host", "missing",
-                           f"In Nginx Proxy Manager, add a proxy host: {proxy} Without a proxy, map port 80 to 17081."))
+                           "In Nginx Proxy Manager, add a proxy host with these settings. "
+                           "Without a proxy, map port 80 to 17081 instead."))
     if address:
         ptr = _cached(f"ptr {address}", lambda: reverse_name(address))
         found.append(Check("reverse-dns", "Reverse DNS", "ok", f"{address} answers with {name}.") if ptr == name else Check(
@@ -135,9 +136,9 @@ def run_checks(address):
         found.append(Check("server-name", "Server name points here", "ok", name))
     has_certificate = _has_certificate(name, certificates)
     found.append(Check("certificate", "Certificate", "ok" if has_certificate else "missing", "" if has_certificate else (
-        f"Let's Encrypt checks {name or 'the server name'} on port 80. In Nginx Proxy Manager, add a proxy host for it "
-        "pointing to someless-mail on port 17081, with SSL left off (Someless Mail gets this certificate itself); "
-        "without a proxy, map port 80 to 17081.")))
+        f"Let's Encrypt checks {name or 'the server name'} on port 80. In Nginx Proxy Manager, add a proxy host for it: "
+        "scheme http, forward hostname someless-mail, forward port 17081, SSL left off (Someless Mail gets this "
+        "certificate itself). Without a proxy, map port 80 to 17081.")))
     found.append(_cached("port25", lambda: Check("port25", "Outgoing port 25", "ok", "") if port25_open() else Check(
         "port25", "Outgoing port 25", "warning",
         "Your VPS provider blocks outgoing port 25. Ask them to open it; mail can't reach other servers until then.")))

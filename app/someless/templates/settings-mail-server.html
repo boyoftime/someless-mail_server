@@ -88,6 +88,21 @@
                 <span class="ready-mark" aria-hidden="true"></span>
                 <span class="ready-title">{{ check.title }}<span class="visually-hidden">: {{ {"ok": "done", "missing": "to do", "warning": "warning"}[check.state] }}</span></span>
                 {% if check.detail %}<span class="ready-detail">{{ check.detail }}</span>{% endif %}
+                {% if check.key == "proxy-host" and check.state != "ok" %}
+                {# field by field, as Nginx Proxy Manager's "Add proxy host" asks for them #}
+                <dl class="dns-fields proxy-fields">
+                  <dt>Domain names</dt>
+                  <dd>{{ copy_box(server_name, "Copy the domain name") }}</dd>
+                  <dt>Scheme</dt>
+                  <dd><span class="dns-box">http</span></dd>
+                  <dt>Forward hostname</dt>
+                  <dd>{{ copy_box("someless-mail", "Copy the forward hostname") }}</dd>
+                  <dt>Forward port</dt>
+                  <dd>{{ copy_box("17081", "Copy the forward port") }}</dd>
+                  <dt>SSL</dt>
+                  <dd><span class="dns-box">None</span><span class="dns-full">Leave SSL and Force SSL off: Someless Mail gets this certificate itself.</span></dd>
+                </dl>
+                {% endif %}
               </li>
               {% endfor %}
             </ul>
@@ -111,7 +126,7 @@
     </div>
     <ul class="switch-list">
       <li>Apps and websites connecting to {{ server_name }} must use <strong data-new-name></strong> instead.</li>
-      <li>In Nginx Proxy Manager, add a proxy host for <strong data-new-name></strong>: someless-mail, port 17081, SSL off.</li>
+      <li>In Nginx Proxy Manager, add a proxy host for <strong data-new-name></strong>: scheme http, someless-mail, port 17081, SSL off.</li>
       <li>At your VPS provider, set your server's reverse DNS to <strong data-new-name></strong>.</li>
     </ul>
     <div class="rules-actions">

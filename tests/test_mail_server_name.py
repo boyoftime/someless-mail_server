@@ -143,3 +143,19 @@ def test_the_proxy_host_doesnt_count_when_something_else_answers():
         assert not checks.relay_answers("http://127.0.0.1:9/.well-known/acme-challenge/someless-check")   # nothing there
     finally:
         other.shutdown()
+
+
+def test_a_missing_proxy_host_lists_its_settings(app, client, login, engine):
+    """Field by field, as Nginx Proxy Manager asks for them, the scheme included."""
+    authenticated_domain(app)
+    login()
+
+    page = text(client.get("/settings/mail-server"))
+
+    fields = page[page.index('proxy-fields"'):]
+    fields = fields[:fields.index("</dl>")]
+    for label, value in (("Domain names", "mail.pineloop.online"), ("Scheme", "http"),
+                         ("Forward hostname", "someless-mail"), ("Forward port", "17081")):
+        assert re.search(rf"<dt>{label}</dt>\s*<dd>.*?{re.escape(value)}", fields, re.S), label
+    assert 'data-copy="someless-mail"' in fields and 'data-copy="17081"' in fields
+    assert "SSL" in plain(fields) and "Force SSL" in plain(fields)
