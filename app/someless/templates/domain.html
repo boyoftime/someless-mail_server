@@ -2,8 +2,38 @@
 {% from "copy-box.html" import copy_box %}
 {% block title %}Authenticate {{ domain.name }} | Someless Mail{% endblock %}
 
-{# One record to add: its type, host and value (each ready to copy) and, after a check, what
-   DNS holds for it #}
+{% macro icon(name) %}
+  {%- if name == "edit" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 19.5h4l10-10a2.8 2.8 0 0 0-4-4l-10 10v4z"/><path d="M13 7l4 4"/></svg>
+  {%- elif name == "keep" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.2 12.3l2.6 2.6 5-5.2"/></svg>
+  {%- elif name == "moved" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12h14"/><path d="M13.5 6.5l5.5 5.5-5.5 5.5"/></svg>
+  {%- elif name == "move" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
+  {%- elif name == "link" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4.2 4.2 0 0 0 6 0l3-3a4.2 4.2 0 0 0-6-6l-1 1"/><path d="M14 10a4.2 4.2 0 0 0-6 0l-3 3a4.2 4.2 0 0 0 6 6l1-1"/></svg>
+  {%- elif name == "delete" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.9 12.2a1.5 1.5 0 0 0 1.5 1.3h6.2a1.5 1.5 0 0 0 1.5-1.3L17.5 7M10 11v6M14 11v6"/></svg>
+  {%- endif -%}
+{% endmacro %}
+
+{# Records to delete: type, name and value, as the domain provider lists them #}
+{% macro delete_rows(rows) %}
+<ul class="dns-delete-rows">
+  {% for row in rows %}
+  <li class="dns-delete-row">
+    <span class="dns-box">{{ row.type }}</span>
+    <code class="dns-delete-host">{{ row.host }}</code>
+    <code class="dns-delete-value" title="{{ row.value }}">{{ row.value }}</code>
+    {% if row.note %}<p class="dns-delete-note">{{ row.note }}{% if row.code %} <code>{{ row.code }}</code>{% endif %}</p>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endmacro %}
+
+{# One record to add: its type, host and value (each ready to copy), how it fits with what
+   the domain has now and, after a check, what DNS holds for it #}
 {% macro dns_record(record, result) %}
 <article class="dns-record{% if result %} is-{{ result.state }}{% endif %}" aria-labelledby="record-{{ record.key }}">
   <div class="dns-record-head">
@@ -12,9 +42,18 @@
       <p class="dns-record-hint">{{ record.hint }}</p>
     </div>
     {% if result %}
-    <span class="dns-status is-{{ result.state }}">{{ {"found": "Found", "missing": "Not found yet", "different": "Doesn't match"}[result.state] }}</span>
+    <span class="dns-status is-{{ result.state }}">{{ {"found": "Found", "missing": "Not found yet", "different": "Doesn't match", "elsewhere": "Not moved yet"}[result.state] }}</span>
     {% endif %}
   </div>
+  {% if record.advice %}
+  <div class="dns-advice is-{{ record.advice.kind }}">
+    <span class="dns-advice-icon">{{ icon(record.advice.kind) }}</span>
+    <div class="dns-advice-body">
+      <p>{{ record.advice.text }}</p>
+      {% if record.now %}<p class="dns-now"><span class="dns-now-label">Now:</span> {% for value in record.now %}<code>{{ value }}</code>{% endfor %}</p>{% endif %}
+    </div>
+  </div>
+  {% endif %}
   <dl class="dns-fields">
     <dt>Type</dt>
     <dd><span class="dns-box">{{ record.type }}</span></dd>
@@ -43,6 +82,44 @@
     {%- endif %} New records can take a few minutes, sometimes a few hours, to show up.</p>
 </header>
 
+{# What the domain has for mail already (Zoho Mail, Brevo...), and how the records below fit
+   around it: each point leads to its record #}
+{% set fitted = (records + [receiving]) | selectattr("advice") | list %}
+{% set to_delete = clean.now or clean.moving or clean.unused %}
+{% if services or fitted or to_delete %}
+<section class="dns-found" aria-labelledby="found-title">
+  <span class="dns-found-badge" aria-hidden="true">{{ icon("link") }}</span>
+  <div class="dns-found-body">
+    <h2 class="dns-found-title" id="found-title">
+      {%- if services %}{{ domain.name }} already uses {% for service in services %}{{ service.name }}{% if not loop.last %}{{ " and " if loop.revindex == 2 else ", " }}{% endif %}{% endfor %}
+      {%- else %}{{ domain.name }} has records already{% endif -%}
+    </h2>
+    {% if services %}
+    <ul class="dns-services">
+      {% for service in services %}
+      <li class="dns-service">
+        <span class="dns-service-name">{{ service.name }}</span>
+        {% if service.receives %}<span class="dns-role">Receives mail</span>{% endif %}
+        {% if service.sends %}<span class="dns-role">Sends mail</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if fitted or to_delete %}
+    <p class="dns-found-text">The records below are set to work alongside {{ "what's there" if not services else "it" if services | length == 1 else "them" }}, so your mail keeps working as it does now:</p>
+    <ul class="dns-fits">
+      {% for record in fitted %}
+      <li><a class="dns-fit is-{{ record.advice.kind }}" href="#record-{{ record.key }}">{{ icon(record.advice.kind) }}<span>{{ record.advice.short }}</span></a></li>
+      {% endfor %}
+      {% if to_delete %}
+      <li><a class="dns-fit is-delete" href="#clean-up">{{ icon("delete") }}<span>{{ "Delete what gets in the way now, and the rest when your mail moves." if clean.now and clean.moving else "Delete what gets in the way now." if clean.now else "See what to delete when your mail moves here." if clean.moving else "See what to delete if you no longer use it." }}</span></a></li>
+      {% endif %}
+    </ul>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
 <section class="dns-group" aria-labelledby="authenticate-title">
   <div class="dns-group-head">
     <h2 class="dns-group-title" id="authenticate-title">Records that authenticate the domain</h2>
@@ -54,9 +131,42 @@
 
 <section class="dns-group dns-group-receive" aria-labelledby="receive-title">
   <h2 class="dns-group-title" id="receive-title">Receive mail here</h2>
-  <p class="dns-warning">Add this one only when you're ready to move {{ domain.name }}'s mail to Someless Mail: from then on, all new mail for the domain comes here. Until the mail engine is ready, keep your current MX records.</p>
+  <p class="dns-warning">{{ receive_note }}</p>
   {{ dns_record(receiving, checks.get(receiving.key)) }}
 </section>
+
+{# What Someless Mail won't need, and when to delete it: now, when the mail moves, or once a
+   service is no longer used #}
+{% if to_delete %}
+<section class="dns-group dns-delete" id="clean-up" aria-labelledby="clean-up-title">
+  <h2 class="dns-group-title" id="clean-up-title">What to remove</h2>
+  <p class="dns-group-hint">Records {{ domain.name }} won't need with Someless Mail, and when to delete each, so its DNS ends up clean, with its mail going one way only.</p>
+  {% if clean.now %}
+  <div class="dns-delete-group is-now">
+    <h3 class="dns-delete-title">{{ icon("delete") }}Delete now</h3>
+    <p class="dns-delete-hint">These get in the way today.</p>
+    {{ delete_rows(clean.now) }}
+  </div>
+  {% endif %}
+  {% for name, rows in clean.moving %}
+  <div class="dns-delete-group is-moving">
+    <h3 class="dns-delete-title">{{ icon("move") }}Delete when your mail moves here: {{ name }}</h3>
+    <p class="dns-delete-hint">Keep these until then: they're how {{ name }} gets {{ domain.name }}'s mail now.</p>
+    {{ delete_rows(rows) }}
+  </div>
+  {% endfor %}
+  {% for name, sends, rows in clean.unused %}
+  <div class="dns-delete-group">
+    <h3 class="dns-delete-title">{{ icon("delete") }}If you no longer use {{ name }}</h3>
+    <p class="dns-delete-hint">{{ name }} doesn't receive {{ domain.name }}'s mail{% if sends %}, but it can still send for it{% endif %}. If you've stopped using it, delete these.</p>
+    {{ delete_rows(rows) }}
+  </div>
+  {% endfor %}
+  {% if clean.keep %}
+  <p class="dns-keep">{{ icon("keep") }}<span>Keep {% for name in clean.keep %}{{ name }}'s{% if not loop.last %}{{ " and " if loop.revindex == 2 else ", " }}{% endif %}{% endfor %} records: several services can send for one domain at once.</span></p>
+  {% endif %}
+</section>
+{% endif %}
 
 <div class="dns-actions">
   <a class="button button-quiet" href="{{ url_for('domains.index') }}">Back to domains</a>

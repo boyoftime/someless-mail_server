@@ -49,13 +49,15 @@ CREATE TABLE IF NOT EXISTS domain_keys (
     dkim_private TEXT NOT NULL,   -- signs the domain's mail (PEM); never leaves the server
     dkim_public TEXT NOT NULL,    -- published in DNS, for others to check the signature
     checks TEXT,                  -- the last DNS check, record by record (JSON)
-    checked_at REAL
+    checked_at REAL,
+    mail_host TEXT,               -- this server's name in the domain (mail, or mx if mail is taken...)
+    found TEXT                    -- the mail setup DNS showed at the last look: MX, SPF, DMARC... (JSON)
 );
 """
 
 
 # Columns that came after their table first shipped: databases from before get them on start
-LATER_COLUMNS = [("domains", "provider", "TEXT")]
+LATER_COLUMNS = [("domains", "provider", "TEXT"), ("domain_keys", "mail_host", "TEXT"), ("domain_keys", "found", "TEXT")]
 
 
 def _add_later_columns(db):

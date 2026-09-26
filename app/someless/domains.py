@@ -96,13 +96,22 @@ def add():
 def authenticate(domain_id):
     """The DNS records to add at the domain provider, and how the last check of them went."""
     domain = _domain(domain_id)
+    address = domain_records.server_address(request.host)
     keys = domain_records.keys_for(domain_id)
     # domains added before providers were noted (or when DNS didn't answer) find out now
     provider = domain["provider"] or _note_provider(domain_id, domain["name"])
-    authenticating, receiving = domain_records.records(
-        domain["name"], keys, domain_records.server_address(request.host))
+    if keys["found"] is None:  # the first visit: see what the domain has for mail already
+        host, found, results = domain_records.look(domain["name"], keys, address)
+        # a domain checked before this page knew what it has is checked again, so what the
+        # check says fits the records the page shows now
+        domain_records.save(domain_id, host, found, results if keys["checks"] else None)
+        keys = domain_records.keys_for(domain_id)
+    authenticating, receiving = domain_records.records(domain["name"], keys, address)
     return render_template(
         "domain.html", domain=domain, provider=provider, records=authenticating, receiving=receiving,
+        receive_note=domain_records.receive_note(domain["name"], keys),
+        services=domain_records.services(domain["name"], keys),
+        clean=domain_records.cleanup(domain["name"], keys, address),
         checks=json.loads(keys["checks"]) if keys["checks"] else {}, checked_ago=_ago(keys["checked_at"]),
     )
 
@@ -112,9 +121,9 @@ def authenticate(domain_id):
 def check(domain_id):
     """Look the records up in DNS ("Authenticate this email domain")."""
     domain = _domain(domain_id)
-    results = domain_records.check(
+    host, found, results = domain_records.look(
         domain["name"], domain_records.keys_for(domain_id), domain_records.server_address(request.host))
-    domain_records.save_check(domain_id, results)
+    domain_records.save(domain_id, host, found, results)
     _note_provider(domain_id, domain["name"])  # it may have moved its DNS since
     if domain_records.authenticated(results):
         flash(f"{domain['name']} is authenticated.", "authenticated")

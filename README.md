@@ -82,13 +82,30 @@ In **Domains**, click **Add domain** and type the part of your email address aft
 |---|---|
 | Someless code (TXT) | Shows that the domain is yours |
 | A (host `mail`) | Points `mail.example.com` at your server |
-| SPF (TXT) | Lets your server send the domain's mail. A domain can have only one SPF record: if yours already has one, add `a:mail.example.com` to it instead |
+| SPF (TXT) | Lets your server send the domain's mail |
 | DKIM (TXT) | Signs your mail so nobody can fake it. The private key never leaves your server (it's in `data/`) |
 | DMARC (TXT) | Tells other mail servers what to do with mail that fails these checks |
 
 Then click **Authenticate this email domain**. Someless Mail looks the records up and marks each one found, missing or different; once all five are right, the domain shows as **Authenticated**. New records can take a few minutes, sometimes a few hours, to show up.
 
 The page also shows the **MX** record, which sends all new mail for the domain to your server. Add it only when you're ready to move the domain's mail here: until the mail engine is added, keep your current MX records.
+
+### A domain that already has mail
+
+If the domain already uses a mail service (Zoho Mail, Google Workspace, Microsoft 365, Namecheap Private Email, Brevo…), the page names it at the top and fits the records around it:
+
+- **SPF:** a domain can have only one SPF record, so you get your own record with your server added (like `v=spf1 include:zohomail.com a:mail.example.com ~all`). Edit your record to match it; don't add a second one. If the record is near SPF's limit of 10 DNS lookups, your server goes in by its IP address instead.
+- **DMARC:** a domain can have only one, so yours stays.
+- **MX:** keep your current MX records until you move the domain's mail here. Then replace them; don't keep both, or some mail would go to the old service and some here.
+- **`mail.example.com` in use** (by webmail or an old mail server): your server takes a free name instead, like `mx.example.com`, and every record follows it.
+
+**What to remove** lists the records you won't need, and when to delete each:
+
+- **Now:** what gets in the way, like a second SPF or DMARC record.
+- **When your mail moves here:** the old service's MX records, its part of your SPF record, its verification code, its DKIM keys and the names that lead mail apps to it.
+- **If you no longer use it:** what's left of services that no longer handle your mail.
+
+Services that only send (Brevo, Mailchimp…) can stay: several services can send for one domain.
 
 ## Use a domain instead of `ip:17080` (optional)
 

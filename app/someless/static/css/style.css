@@ -2208,3 +2208,160 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
   .dns-record-head { flex-direction: column; }
   .dns-actions .button { flex: 1 1 100%; }
 }
+
+/* Fitting in with the mail the domain has already (Zoho Mail, Brevo...). Blue: do this;
+   green: keep yours; grey: wait until the mail moves; red: delete now. */
+:root { --ok-text: #15803d; }
+:root[data-theme="dark"] { --ok-text: #4ade80; }
+/* where the summary's links lead: a card's title (the card's padding above it, and some air) */
+.dns-record-title { scroll-margin-top: 2.1rem; }
+.dns-delete { scroll-margin-top: 1rem; }
+.dns-status.is-elsewhere { background: color-mix(in srgb, var(--airmail-blue) 14%, transparent); color: var(--airmail-blue); }
+
+/* The summary: what the domain uses already, framed like an airmail envelope (red and blue
+   stripes along the top), with a line per record that works around it */
+.dns-found {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1rem 1.1rem;
+  margin: 0 0 1.75rem;
+  padding: 1.5rem 1.4rem 1.25rem;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+}
+.dns-found::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: repeating-linear-gradient(-45deg,
+    var(--airmail-red) 0 12px, transparent 12px 18px, var(--airmail-blue) 18px 30px, transparent 30px 36px);
+}
+.dns-found-badge {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1463f3, #0195fb);
+  color: #fff;
+  box-shadow: 0 0 16px -3px rgba(1, 149, 251, 0.8);
+}
+.dns-found-badge svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.dns-found-body { display: grid; gap: 0.75rem; min-width: 0; }
+.dns-found-title { margin: 0.55rem 0 0; font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.3; }
+.dns-found-text { margin: 0; color: var(--muted); font-size: 0.92rem; }
+.dns-services { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.dns-service {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.45rem 0.35rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--input-bg);
+}
+.dns-service-name { font-weight: 700; font-size: 0.92rem; margin-right: 0.15rem; }
+.dns-role {
+  padding: 0.12rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--airmail-blue) 12%, transparent);
+  color: var(--airmail-blue);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.dns-fits { display: grid; gap: 0.15rem; margin: 0; padding: 0; list-style: none; }
+.dns-fit {
+  --tone: var(--airmail-blue);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.4rem 0.55rem;
+  margin: 0 -0.55rem;
+  border-radius: 10px;
+  color: var(--ink);
+  font-size: 0.93rem;
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+}
+.dns-fit:hover { background: color-mix(in srgb, var(--tone) 9%, transparent); }
+.dns-fit:hover span { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--tone) 55%, transparent); text-underline-offset: 3px; }
+.dns-fit:focus-visible { outline: 2px solid var(--tone); outline-offset: 1px; }
+.dns-fit svg { flex: none; width: 18px; height: 18px; margin-top: 0.12rem; fill: none; stroke: var(--tone); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.dns-fit.is-keep { --tone: var(--ok-text); }
+.dns-fit.is-move { --tone: var(--muted); }
+.dns-fit.is-delete { --tone: var(--airmail-red); }
+
+/* On a record's card: how it fits with the domain's own record, and that record now */
+.dns-advice {
+  --tone: var(--airmail-blue);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.7rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--tone) 35%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--tone) 8%, transparent);
+  font-size: 0.92rem;
+}
+.dns-advice.is-keep { --tone: var(--ok-text); }
+.dns-advice.is-move { --tone: var(--muted); }
+.dns-advice-icon svg { display: block; width: 20px; height: 20px; fill: none; stroke: var(--tone); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.dns-advice-body { display: grid; gap: 0.5rem; min-width: 0; }
+.dns-advice-body p { margin: 0; }
+.dns-now { display: grid; gap: 0.3rem; }
+.dns-now-label { color: var(--muted); font-size: 0.82rem; font-weight: 600; }
+.dns-now code {
+  padding: 0.35rem 0.6rem;
+  border-radius: 8px;
+  background: var(--input-bg);
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
+/* What to remove: a group per moment (now, when the mail moves, if a service is no longer
+   used), each record as the domain provider lists it */
+.dns-delete-group {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem 1.25rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+}
+.dns-delete-group.is-now { border-color: color-mix(in srgb, var(--airmail-red) 50%, transparent); }
+.dns-delete-title { display: flex; align-items: center; gap: 0.5rem; margin: 0; font-size: 1rem; font-weight: 700; }
+.dns-delete-title svg { flex: none; width: 18px; height: 18px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.dns-delete-group.is-now .dns-delete-title svg { stroke: var(--airmail-red); }
+.dns-delete-hint { margin: 0 0 0.3rem; color: var(--muted); font-size: 0.9rem; }
+.dns-delete-rows { margin: 0; padding: 0; list-style: none; }
+.dns-delete-row {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(4rem, max-content) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.3rem 0.9rem;
+  padding: 0.65rem 0;
+  border-top: 1px solid var(--line);
+}
+.dns-delete-row .dns-box { padding: 0.2rem 0.55rem; font-size: 0.8rem; }
+.dns-delete-host, .dns-delete-value { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 0.86rem; }
+.dns-delete-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dns-delete-note { grid-column: 2 / -1; margin: 0; color: var(--muted); font-size: 0.85rem; overflow-wrap: anywhere; }
+.dns-delete-note code { color: var(--ink); font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 0.82rem; }
+.dns-keep { display: flex; align-items: flex-start; gap: 0.55rem; margin: 0.2rem 0 0; font-size: 0.92rem; }
+.dns-keep svg { flex: none; width: 18px; height: 18px; margin-top: 0.12rem; fill: none; stroke: var(--ok-text); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 640px) {
+  .dns-found { grid-template-columns: minmax(0, 1fr); padding: 1.4rem 1.1rem 1.1rem; }
+  .dns-found-title { margin-top: 0; }
+  .dns-delete-row { grid-template-columns: auto minmax(0, 1fr); }
+  .dns-delete-value, .dns-delete-note { grid-column: 1 / -1; }
+}

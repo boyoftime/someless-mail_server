@@ -54,6 +54,21 @@
     go(link.href, "GET", null, null, null);
   });
 
+  // A link to a place on this page glides there rather than jumping (and the address stays
+  // as it is). Keyboard users carry on from there.
+  document.addEventListener("click", function (event) {
+    if (event.defaultPrevented || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    var link = event.target.closest("a[href^='#']");
+    var target = link && link.hash.length > 1 && document.getElementById(decodeURIComponent(link.hash.slice(1)));
+    if (!target) return;
+    event.preventDefault();
+    var smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    target.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
+    if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");
+    target.focus({ preventScroll: true });
+  });
+
   // Forms in the main area (the settings forms). The loading bar has started already.
   document.addEventListener("submit", function (event) {
     var form = event.target;
