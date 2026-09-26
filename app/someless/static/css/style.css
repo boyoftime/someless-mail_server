@@ -2244,7 +2244,12 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
   box-shadow: var(--card-shadow);
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
-.dns-record.is-found { border-color: rgba(34, 197, 94, 0.45); box-shadow: var(--card-shadow), 0 0 26px -14px rgba(34, 197, 94, 0.9); }
+/* a record the check found: a green glow all round, and a faint green light in its corner */
+.dns-record.is-found {
+  border-color: rgba(34, 197, 94, 0.7);
+  background: radial-gradient(120% 90% at 0% 0%, rgba(34, 197, 94, 0.1), transparent 55%), var(--card-bg);
+  box-shadow: var(--card-shadow), inset 0 0 0 1px rgba(34, 197, 94, 0.18), 0 0 42px -12px rgba(34, 197, 94, 0.95);
+}
 .dns-record.is-different { border-color: rgba(245, 158, 11, 0.5); }
 /* the head: the record's number, its title and hint, and the check's pill */
 .dns-record-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 0.35rem 0.9rem; }
@@ -2279,7 +2284,21 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
   font-weight: 700;
   white-space: nowrap;
 }
-.dns-status.is-found { background: rgba(34, 197, 94, 0.16); color: #22c55e; box-shadow: 0 0 14px -4px rgba(34, 197, 94, 0.8); }
+/* Found: bigger, with a glowing green tick */
+.dns-status.is-found {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.38rem 0.95rem 0.38rem 0.45rem;
+  border: 1px solid rgba(34, 197, 94, 0.55);
+  background: rgba(34, 197, 94, 0.16);
+  color: var(--ok-text);
+  font-size: 0.92rem;
+  box-shadow: 0 0 20px -4px rgba(34, 197, 94, 0.85);
+}
+.dns-status-tick { flex: none; width: 20px; height: 20px; filter: drop-shadow(0 0 5px rgba(34, 197, 94, 0.9)); }
+.dns-status-tick circle { fill: #22c55e; }
+.dns-status-tick path { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .dns-status.is-missing { background: rgba(152, 162, 194, 0.16); color: var(--muted); }
 .dns-status.is-different { background: rgba(245, 158, 11, 0.16); color: #f59e0b; }
 .dns-fields {

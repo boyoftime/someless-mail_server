@@ -44,7 +44,9 @@
       {% if record.advice and record.advice.short %}<p class="dns-action is-{{ record.advice.kind }}">{{ icon(record.advice.kind) }}<span>{{ record.advice.short }}</span></p>{% endif %}
     </div>
     {% if result %}
-    <span class="dns-status is-{{ result.state }}">{{ {"found": "Found", "missing": "Not found yet", "different": "Doesn't match", "elsewhere": "Not moved yet"}[result.state] }}</span>
+    <span class="dns-status is-{{ result.state }}">
+      {%- if result.state == "found" %}<svg class="dns-status-tick" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.4l3 3 6-6.3"/></svg>{% endif -%}
+      {{ {"found": "Found", "missing": "Not found yet", "different": "Doesn't match", "elsewhere": "Not moved yet"}[result.state] }}</span>
     {% endif %}
   </div>
   <dl class="dns-fields">

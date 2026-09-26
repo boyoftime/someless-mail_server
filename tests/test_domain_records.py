@@ -728,3 +728,17 @@ def test_the_record_cards_are_numbered_in_order(client, login):
     assert re.findall(r'<span class="dns-step"[^>]*>(\d+)</span>', page) == ["1", "2", "3", "4", "5", "6"]
     assert "Step 1: Someless code" in plain(record(page, "code"))  # screen readers hear the step too
     assert "Step 6: MX record" in plain(record(page, "mx"))
+
+
+def test_a_found_record_says_so_with_a_tick(client, login, app, dns):
+    login()
+    domain_id = add_domain(client)
+    dns[("example.com", "TXT")] = [f"someless-code:{keys(app, domain_id)['code']}"]
+
+    client.post(f"/domains/{domain_id}/check")
+
+    page = text(client.get(f"/domains/{domain_id}"))
+    found = re.search(r'<span class="dns-status is-found">(.*?)</span>', record(page, "code"), re.S).group(1)
+    assert '<svg class="dns-status-tick"' in found and "Found" in found
+    missing = re.search(r'<span class="dns-status is-missing">(.*?)</span>', record(page, "spf"), re.S).group(1)
+    assert "dns-status-tick" not in missing   # only a found record gets the tick
