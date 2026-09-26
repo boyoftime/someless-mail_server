@@ -4,6 +4,7 @@ from collections import namedtuple
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from . import two_factor
 from .auth import login_required
 from .db import get_db
 
@@ -46,7 +47,9 @@ def password_checks(rules):
 
 def _settings_page(status=200, **context):
     rules = password_rules()
-    return render_template("settings.html", rules=rules, checks=password_checks(rules), **context), status
+    return render_template(
+        "settings.html", rules=rules, checks=password_checks(rules), tf=two_factor.state(), **context
+    ), status
 
 
 def _current_password_ok():
@@ -96,6 +99,62 @@ def change_password():
     )
     db.commit()
     flash("Password changed.", "success")
+    return redirect(url_for("settings.index"))
+
+
+# Two-factor authentication: the password is always asked; "Use PIN" adds the PIN from an
+# authenticator app (two_factor.py).
+_PIN_ERRORS = {
+    "wrong": "That PIN didn't match. Check the app and try again.",
+    "locked": "Too many wrong PINs. Try again in 5 minutes.",
+}
+
+
+def _pin_error(result, **context):
+    return _settings_page(429 if result == "locked" else 400, two_factor_error=_PIN_ERRORS[result], **context)
+
+
+@bp.post("/two-factor/setup")
+@login_required
+def two_factor_setup():
+    """"Use PIN" switched on: a new secret to scan, which counts once a PIN confirms it."""
+    if two_factor.secret() is None:
+        two_factor.start_setup()
+    return redirect(url_for("settings.index"))
+
+
+@bp.post("/two-factor/cancel")
+@login_required
+def two_factor_cancel():
+    two_factor.cancel_setup()
+    return redirect(url_for("settings.index"))
+
+
+@bp.post("/two-factor/enable")
+@login_required
+def two_factor_enable():
+    pending = two_factor.pending_secret()
+    if pending is None:
+        return redirect(url_for("settings.index"))
+    result = two_factor.check(request.form.get("pin", ""), pending)
+    if result != "ok":
+        return _pin_error(result)
+    two_factor.finish_setup()
+    flash("Two-factor authentication is on.", "success")
+    return redirect(url_for("settings.index"))
+
+
+@bp.post("/two-factor/disable")
+@login_required
+def two_factor_disable():
+    secret = two_factor.secret()
+    if secret is None:
+        return redirect(url_for("settings.index"))
+    result = two_factor.check(request.form.get("pin", ""), secret)
+    if result != "ok":
+        return _pin_error(result, turning_off=True)
+    two_factor.switch_off()
+    flash("Two-factor authentication is off.", "success")
     return redirect(url_for("settings.index"))
 
 

@@ -73,6 +73,8 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
+/* hidden means hidden, whatever display a class gives the element (.form is a grid...) */
+[hidden] { display: none !important; }
 
 body {
   margin: 0;
@@ -399,10 +401,10 @@ body.is-playing .splash-title span:nth-child(5) { animation-delay: 0.78s; }
 /* Tabs for the sections of a page (Settings > Account, ...) */
 .page-tabs {
   display: flex;
+  flex-wrap: wrap; /* more tabs than fit: a second row (no scrolling, so the glow isn't cut off) */
   gap: 0.4rem;
   margin: 0 0 1.5rem;
   padding: 0.3rem;
-  overflow-x: auto;
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--tabs-bg);
@@ -428,6 +430,27 @@ body.is-playing .splash-title span:nth-child(5) { animation-delay: 0.78s; }
   background: linear-gradient(180deg, rgba(1, 149, 251, 0.2), rgba(20, 99, 243, 0.1));
   box-shadow: inset 0 0 0 1px rgba(1, 149, 251, 0.55), 0 0 22px rgba(1, 149, 251, 0.22);
 }
+/* The chosen tab's glowing underline, lying on the tab bar's bottom edge. It grows out
+   from the middle whenever the tab's page comes in (a tap on it included). */
+:root { --tab-line-core: #5cb6ff; }
+:root[data-theme="dark"] { --tab-line-core: #c8ecff; }
+.page-tab { position: relative; }
+.page-tab[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: calc(-0.3rem - 2px); /* the bar's padding and border below the tab */
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, rgba(1, 149, 251, 0), #0195fb 22%, var(--tab-line-core) 50%, #0195fb 78%, rgba(1, 149, 251, 0));
+  filter: drop-shadow(0 0 5px rgba(1, 149, 251, 0.95)) drop-shadow(0 0 12px rgba(1, 149, 251, 0.55));
+  animation: tab-line-in 0.55s var(--menu-ease) both;
+}
+@keyframes tab-line-in { from { opacity: 0; transform: scaleX(0.15); } }
+@media (prefers-reduced-motion: reduce) {
+  .page-tab[aria-current="page"]::after { animation: none; }
+}
 
 /* Settings cards: full width, one under another, with a glowing divider between them.
    Each card has its own accent colour (blue, or violet for the password card). */
@@ -449,6 +472,14 @@ body.is-playing .splash-title span:nth-child(5) { animation-delay: 0.78s; }
   --accent-edge: rgba(139, 92, 246, 0.32);
   --accent-ring: rgba(139, 92, 246, 0.22);
   --badge: linear-gradient(135deg, #6d28d9, #a855f7);
+}
+.settings-card-teal {
+  --accent: #14b8a6;
+  --accent-edge: rgba(20, 184, 166, 0.34);
+  --accent-ring: rgba(20, 184, 166, 0.22);
+  --badge: linear-gradient(135deg, #0f766e, #2dd4bf);
+  --switch-on: linear-gradient(90deg, #0f766e, #2dd4bf);
+  --switch-glow: rgba(45, 212, 191, 0.55);
 }
 .card-heading { margin: 0; }
 /* the header is the button that opens and closes the card */
@@ -544,7 +575,8 @@ html.js .settings-card:not(.is-open) .card-body-content { opacity: 0; transform:
   align-items: start;
 }
 .card-actions { display: flex; justify-content: flex-end; }
-.settings-card .card-form .card-button {
+.settings-card .card-form .card-button,
+.settings-card .factor-form .card-button {
   min-width: 12rem;
   margin-top: 0;
   background: var(--badge);
@@ -864,9 +896,28 @@ html:not(.js) .rules-button { display: none; } /* the dialog needs JavaScript */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   transition: transform 0.3s var(--menu-ease);
 }
-.rule-toggle input:checked + .switch { background: linear-gradient(90deg, #6d28d9, #a855f7); box-shadow: 0 0 14px rgba(168, 85, 247, 0.6); }
-.rule-toggle input:checked + .switch .switch-knob { transform: translateX(18px); }
+.rule-toggle input:checked + .switch,
+.switch.is-on {
+  background: var(--switch-on, linear-gradient(90deg, #6d28d9, #a855f7));
+  box-shadow: 0 0 14px var(--switch-glow, rgba(168, 85, 247, 0.6));
+}
+.rule-toggle input:checked + .switch .switch-knob,
+.switch.is-on .switch-knob { transform: translateX(18px); }
 .rule-toggle input:focus-visible + .switch { outline: 3px solid var(--airmail-blue); outline-offset: 3px; }
+/* a switch that is itself a button (two-factor authentication) */
+button.switch { padding: 0; border: 0; cursor: pointer; }
+/* switched on but not finished (two-factor setup waiting for a PIN): grey, no glow */
+:root { --switch-pending: #9aa3b2; }
+:root[data-theme="dark"] { --switch-pending: #5f6a80; }
+.switch.is-on.is-pending { background: var(--switch-pending); box-shadow: none; }
+/* on, but it is asking for a PIN before turning off: shown as off until then */
+.switch.is-on[aria-expanded="true"] { background: var(--dot-idle); box-shadow: none; }
+.switch.is-on[aria-expanded="true"] .switch-knob { transform: none; }
+/* always on (the password): dimmed, with a small lock on the knob */
+.switch.is-locked { opacity: 0.65; cursor: not-allowed; }
+.switch.is-locked .switch-knob {
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f766e' stroke-width='3' stroke-linecap='round'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V8a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E") center / 11px no-repeat;
+}
 
 .rules-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.6rem; }
 .rules-actions .button { padding: 0.75rem 1.5rem; font-size: 1rem; }
@@ -879,6 +930,192 @@ html:not(.js) .rules-button { display: none; } /* the dialog needs JavaScript */
   .rules-dialog.is-closing, .rules-dialog.is-closing::backdrop { animation: none; }
   .length-line::after, .length-dot::before, .switch, .switch-knob,
   .length-track input[type="range"]::-webkit-slider-thumb { transition: none; }
+}
+
+/* Two-factor authentication card (teal). Two rows: the password (always on, locked) and
+   the PIN from an authenticator app. Setting the PIN up shows a QR code, the key to type
+   in by hand and a PIN box; turning it off asks for a PIN in a box that slides open. */
+.factors { display: grid; gap: 0.6rem; }
+.factor {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--input-bg);
+}
+.factor-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(20, 184, 166, 0.14);
+  color: var(--accent);
+}
+.factor-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.factor-text { display: grid; flex: 1; gap: 0.1rem; min-width: 0; }
+.factor-label { font-weight: 600; }
+.factor-hint { color: var(--muted); font-size: 0.875rem; }
+.switch-form { display: flex; margin: 0; }
+
+.factor-setup {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1.25rem 1.5rem;
+  align-items: start;
+  margin-top: 1rem;
+  padding: 1.1rem;
+  border: 1px dashed var(--accent-edge);
+  border-radius: 16px;
+  animation: reveal-in 0.35s var(--menu-ease) both;
+  scroll-margin: 1.5rem; /* room around it when the page glides down to it */
+}
+.factor-qr {
+  width: 176px;
+  padding: 8px;
+  border-radius: 14px;
+  background: #fff; /* dark on light, as scanners expect, in either theme */
+  box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.4), 0 0 28px -6px rgba(45, 212, 191, 0.75);
+}
+.factor-qr svg { display: block; width: 100%; height: auto; }
+.factor-list { display: grid; gap: 0.45rem; margin: 0 0 1rem; padding-left: 1.2rem; }
+.factor-list li::marker { color: var(--accent); font-weight: 700; }
+/* the key in a box, with its copy button inside at the end; the box glows once copied */
+.factor-key-box {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 0.4rem;
+  padding: 0.25rem 0.3rem 0.25rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--input-bg);
+  transition: border-color 0.25s ease, box-shadow 0.3s ease;
+}
+.factor-key-box:has(.is-copied) { border-color: rgba(45, 212, 191, 0.7); box-shadow: 0 0 18px -4px rgba(45, 212, 191, 0.7); }
+.factor-key {
+  min-width: 0;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; /* 0 and O, 1 and I told apart */
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  word-break: break-all;
+  user-select: all;
+}
+.factor-key-box .copy-button { width: 32px; height: 32px; border-color: transparent; background: transparent; }
+.factor-key-box .copy-button:hover { background: rgba(20, 184, 166, 0.14); border-color: transparent; }
+.factor-key-box .copy-button.is-copied { border-color: transparent; box-shadow: none; }
+@media (max-width: 640px) {
+  .factor-setup { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+}
+
+/* A button that copies text (copy-button.js): the copy icon turns into a tick that draws
+   itself, the button glows, and "Copied" pops up above it for a moment. */
+.copy-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, box-shadow 0.3s ease;
+}
+.copy-button:hover { color: var(--ink); border-color: var(--accent-edge, var(--line)); }
+.copy-button svg {
+  grid-area: 1 / 1;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: opacity 0.2s ease, transform 0.3s var(--menu-ease);
+}
+.copy-button .copy-done { opacity: 0; stroke: #2dd4bf; stroke-width: 2.6; stroke-dasharray: 22; stroke-dashoffset: 22; }
+.copy-button::after {
+  content: "Copied";
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #0f766e;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 0 14px rgba(45, 212, 191, 0.6);
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.25s var(--menu-ease);
+}
+.copy-button.is-copied { color: #2dd4bf; border-color: rgba(45, 212, 191, 0.7); box-shadow: 0 0 18px -2px rgba(45, 212, 191, 0.75); }
+.copy-button.is-copied .copy-icon { opacity: 0; transform: scale(0.5) rotate(-20deg); }
+.copy-button.is-copied .copy-done { opacity: 1; animation: tick-draw 0.45s var(--menu-ease) 0.05s forwards; }
+.copy-button.is-copied::after { opacity: 1; transform: translate(-50%, 0); }
+@keyframes tick-draw { to { stroke-dashoffset: 0; } }
+html:not(.js) .copy-button { display: none; } /* it needs JavaScript */
+@media (prefers-reduced-motion: reduce) {
+  .copy-button.is-copied .copy-done { animation: none; stroke-dashoffset: 0; }
+}
+
+.factor-form { display: grid; gap: 0.45rem; }
+.factor-form-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+.settings-card .factor-form-row .card-button { margin-top: 0; }
+/* six digits, spaced out and centred (the padding makes up for the space after the last) */
+.pin-input {
+  width: 11rem;
+  padding: 0.65rem 0.9rem 0.65rem calc(0.9rem + 0.35em);
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.35em;
+  text-align: center;
+  transition: border-color 0.2s ease, box-shadow 0.25s ease;
+}
+.pin-input::placeholder { color: var(--muted); opacity: 0.45; }
+.settings-card .pin-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-ring), 0 8px 24px -10px var(--accent);
+}
+.factor-off {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(255, 93, 110, 0.4);
+  border-radius: 14px;
+  background: rgba(255, 93, 110, 0.06);
+}
+html.js .reveal-panel:not(.is-open) { display: none; }
+.reveal-panel.is-open { animation: reveal-in 0.3s var(--menu-ease) both; }
+@keyframes reveal-in { from { opacity: 0; transform: translateY(-6px); } }
+
+/* Login with two-factor authentication: the PIN step takes the login form's place */
+.auth-card .form-head { text-align: center; }
+.auth-card .form-head .auth-hint { margin-bottom: 0.25rem; }
+.auth-card .pin-input { width: 100%; font-size: 1.6rem; }
+.pin-back { justify-self: center; }
+.auth-card .form.is-entering { animation: step-in 0.4s var(--menu-ease) both; }
+@keyframes step-in { from { opacity: 0; transform: translateX(18px); } }
+@media (prefers-reduced-motion: reduce) {
+  .factor-setup, .reveal-panel.is-open, .auth-card .form.is-entering { animation: none; }
 }
 
 /* Forms */

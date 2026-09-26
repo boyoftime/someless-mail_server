@@ -13,6 +13,10 @@
   <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>
   {%- elif name == "sliders" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
+  {%- elif name == "shield" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2l7 2.8v5.3c0 4.4-2.9 8-7 9.5-4.1-1.5-7-5.1-7-9.5V6z"/><path d="M9 12l2.2 2.2L15.2 10"/></svg>
+  {%- elif name == "phone" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.8" width="11" height="18.4" rx="2.6"/><path d="M10.8 17.6h2.4"/></svg>
   {%- endif -%}
 {% endmacro %}
 
@@ -136,6 +140,92 @@
       </div>
     </form>
   {% endcall %}
+
+  <div class="glow-divider" aria-hidden="true"></div>
+
+  {# Two-factor authentication (two_factor.py). The password is always asked; "Use PIN"
+     adds the 6-digit PIN from an authenticator app. Switching it on shows a QR code for the
+     app, and a PIN from the app confirms it; switching it off also takes a PIN. #}
+  {% call card("two-factor", "Two-factor authentication", "Log in with your password and a PIN from an authenticator app.", "shield", open=tf.pending or two_factor_error or turning_off, accent="settings-card-teal") %}
+    {% if two_factor_error %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Two-factor authentication">{{ two_factor_error }}</p>{% endif %}
+    <div class="factors">
+      <div class="factor is-locked">
+        <span class="factor-icon">{{ icon("lock") }}</span>
+        <span class="factor-text">
+          <span class="factor-label">Use password</span>
+          <span class="factor-hint">Always asked when logging in</span>
+        </span>
+        <span class="switch is-on is-locked" role="switch" aria-checked="true" aria-disabled="true" aria-label="Use password (always on)" title="Always on"><span class="switch-knob"></span></span>
+      </div>
+      <div class="factor">
+        <span class="factor-icon">{{ icon("phone") }}</span>
+        <span class="factor-text">
+          <span class="factor-label">Use PIN</span>
+          <span class="factor-hint">
+            {%- if tf.on %}On: logging in also asks for the 6-digit PIN from your app
+            {%- elif tf.pending %}Scan the QR code below with your app to finish
+            {%- else %}From Google Authenticator, Microsoft Authenticator, Authy or any authenticator app{% endif -%}
+          </span>
+        </span>
+        {% if tf.on %}
+        <button type="button" class="switch is-on" role="switch" aria-checked="true" aria-label="Use PIN" aria-controls="two-factor-off" aria-expanded="{{ 'true' if turning_off else 'false' }}" data-reveal><span class="switch-knob"></span></button>
+        {% else %}
+        <form method="post" action="{{ url_for('settings.two_factor_cancel' if tf.pending else 'settings.two_factor_setup') }}" class="switch-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {# while setting up: switched, but grey until a PIN from the app confirms it #}
+          <button type="submit" class="switch{% if tf.pending %} is-on is-pending{% endif %}" role="switch" aria-checked="{{ 'true' if tf.pending else 'false' }}" aria-label="Use PIN"><span class="switch-knob"></span></button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if tf.pending %}
+    {# data-swap-reveal: page-swap.js glides down to it once the page comes in #}
+    <div class="factor-setup" data-swap-reveal>
+      <div class="factor-qr" role="img" aria-label="QR code for your authenticator app">{{ tf.qr | safe }}</div>
+      <div class="factor-steps">
+        <ol class="factor-list">
+          <li>Open your authenticator app and add an account.</li>
+          <li>Scan this QR code. Can't scan it? Type in this key instead:
+            <span class="factor-key-box">
+              <code class="factor-key">{{ tf.key }}</code>
+              <button type="button" class="copy-button" data-copy="{{ tf.key | replace(' ', '') }}" aria-label="Copy the key" title="Copy the key">
+                <svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 5.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h.5"/></svg>
+                <svg class="copy-done" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+              </button>
+            </span></li>
+          <li>Enter the 6-digit PIN the app shows.</li>
+        </ol>
+        <form method="post" action="{{ url_for('settings.two_factor_enable') }}" class="factor-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label class="field-label" for="setup-pin">PIN from the app</label>
+          <div class="factor-form-row">
+            <input id="setup-pin" name="pin" class="pin-input" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required placeholder="000000">
+            <button class="button card-button" type="submit" data-busy-label="Turning on…">
+              <span class="button-spinner" aria-hidden="true"></span>
+              <span class="button-label">Turn on</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if tf.on %}
+    <form method="post" action="{{ url_for('settings.two_factor_disable') }}" class="factor-form factor-off reveal-panel{% if turning_off %} is-open{% endif %}" id="two-factor-off">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="field-label" for="off-pin">To turn the PIN off, enter the 6-digit PIN from your app</label>
+      <div class="factor-form-row">
+        <input id="off-pin" name="pin" class="pin-input" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required placeholder="000000">
+        <button type="button" class="button button-quiet" data-reveal-close>Keep it on</button>
+        <button class="button card-button" type="submit" data-busy-label="Turning off…">
+          <span class="button-spinner" aria-hidden="true"></span>
+          <span class="button-label">Turn off</span>
+        </button>
+      </div>
+    </form>
+    {% endif %}
+  {% endcall %}
 </div>
 
 {# "Password rules": the minimum length on a glowing line of dots, and which kinds of
@@ -200,4 +290,5 @@
 <script src="{{ url_for('static', filename='js/password-toggle.js') }}"></script>
 <script src="{{ url_for('static', filename='js/password-rules.js') }}"></script>
 <script src="{{ url_for('static', filename='js/password-rules-dialog.js') }}"></script>
+<script src="{{ url_for('static', filename='js/two-factor.js') }}"></script>
 {% endblock %}

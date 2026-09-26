@@ -243,7 +243,7 @@ def test_settings_cards_start_closed(client, login):
     html = settings_page(client, login)
     toggles = re.findall(r'<button [^>]*data-card-toggle[^>]*>', html)
 
-    assert len(toggles) == 2
+    assert len(toggles) == 3  # username, password, two-factor authentication
     assert all('aria-expanded="false"' in toggle for toggle in toggles)
     assert not any("is-open" in tag for tag in card_tags(html))
     assert 'src="/static/js/collapsible-cards.js?v=' in html
@@ -253,7 +253,8 @@ def test_a_card_with_an_error_opens_by_itself(client, login):
     login()
 
     html = change_password(client, current="wrong").get_data(as_text=True)
-    username_card, password_card = card_tags(html)
+    username_card, password_card, two_factor_card = card_tags(html)
 
-    assert "is-open" in password_card and "is-open" not in username_card
+    assert "is-open" in password_card
+    assert "is-open" not in username_card and "is-open" not in two_factor_card
     assert re.search(r'data-card-toggle aria-controls="password-body" aria-expanded="true"', html)

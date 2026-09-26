@@ -23,6 +23,16 @@ CREATE TABLE IF NOT EXISTS password_rules (
     require_special INTEGER NOT NULL DEFAULT 1
 );
 INSERT OR IGNORE INTO password_rules (id) VALUES (1);
+-- Two-factor authentication (Settings > Two-factor authentication, two_factor.py)
+CREATE TABLE IF NOT EXISTS two_factor (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    secret TEXT,                            -- shared with the authenticator app; set = on
+    pending_secret TEXT,                    -- shown as a QR code until a PIN confirms it
+    last_step INTEGER NOT NULL DEFAULT 0,   -- the newest PIN used: none works twice
+    failures INTEGER NOT NULL DEFAULT 0,    -- wrong PINs in a row
+    locked_until REAL NOT NULL DEFAULT 0    -- after too many, no PIN is taken until then
+);
+INSERT OR IGNORE INTO two_factor (id) VALUES (1);
 """
 
 

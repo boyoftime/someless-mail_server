@@ -62,6 +62,18 @@ Go to `http://your-server-ip:17080` in your browser. You'll see a short welcome 
 
 Change both right after your first login in **Settings**. Until you change the password, the dashboard shows a warning — anyone who knows the default can log in.
 
+## Two-factor authentication
+
+In **Settings → Two-factor authentication**, switch on **Use PIN**. Scan the QR code with any authenticator app (Google Authenticator, Microsoft Authenticator, Authy…), or copy the key into it, then enter the 6-digit PIN the app shows. From then on, logging in asks for your password and then the PIN. The password is always required.
+
+After 5 wrong PINs in a row, no PIN is accepted for 5 minutes.
+
+**Lost your phone?** Switch the PIN off from the server, then log in with just your password:
+
+```
+docker exec -u someless someless-mail flask --app someless two-factor off
+```
+
 ## Use a domain instead of `ip:17080` (optional)
 
 If you run a reverse proxy such as [Nginx Proxy Manager](https://nginxproxymanager.com/), you can reach Someless Mail at `https://mail.yourdomain.com` with no port number.
@@ -184,3 +196,4 @@ SOMELESS_DATA_DIR=./devdata .venv/bin/python -m flask --app app/someless:create_
 - Font: [Google Sans](https://github.com/googlefonts/googlesans), SIL Open Font License 1.1 (`app/someless/static/fonts/OFL.txt`).
 - Animation player: [lottie-web](https://github.com/airbnb/lottie-web) 5.13.0 (MIT).
 - Login background: [PixiJS](https://github.com/pixijs/pixijs) 8.21.0 (MIT).
+- QR codes for two-factor authentication: [segno](https://github.com/heuer/segno) 1.6.6 (BSD-3-Clause).

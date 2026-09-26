@@ -23,14 +23,16 @@
       <section class="auth-card face face-back" aria-labelledby="login-title">
         <button type="button" class="link-button face-back-link" data-flip-to-welcome hidden>Back</button>
         <img class="auth-logo" src="{{ url_for('static', filename='img/logo.webp') }}" alt="Someless Mail" width="96" height="96">
-        <h2 id="login-title" class="auth-title">Log in</h2>
-        <p class="auth-hint">Manage your domains and inboxes.</p>
-        <p class="alert alert-error" role="alert" data-login-error{% if not error %} hidden{% endif %}>{{ error or '' }}</p>
-        <form method="post" class="form" data-login-form>
+        <form method="post" class="form" data-login-form{% if pin_step %} hidden{% endif %}>
+          <div class="form-head">
+            <h2 id="login-title" class="auth-title">Log in</h2>
+            <p class="auth-hint">Manage your domains and inboxes.</p>
+          </div>
+          <p class="alert alert-error" role="alert" data-login-error{% if not error or pin_step %} hidden{% endif %}>{{ error or '' }}</p>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <label class="field">
             <span class="field-label">Username</span>
-            <span class="control"><input name="username" autocomplete="username" required{% if flipped %} autofocus{% endif %} value="{{ username or '' }}"></span>
+            <span class="control"><input name="username" autocomplete="username" required{% if flipped and not pin_step %} autofocus{% endif %} value="{{ username or '' }}"></span>
           </label>
           <div class="field">
             <label class="field-label" for="password">Password</label>
@@ -46,6 +48,24 @@
             <span class="button-spinner" aria-hidden="true"></span>
             <span class="button-label">Log in</span>
           </button>
+        </form>
+        {# Two-factor authentication on: after the right password, the PIN from the app #}
+        <form method="post" action="{{ url_for('auth.login_pin') }}" class="form" data-pin-form{% if not pin_step %} hidden{% endif %}>
+          <div class="form-head">
+            <h2 class="auth-title">Enter your PIN</h2>
+            <p class="auth-hint">Open your authenticator app and type the 6-digit PIN for Someless Mail.</p>
+          </div>
+          {% if pin_step and error %}<p class="alert alert-error" role="alert">{{ error }}</p>{% endif %}
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label class="field">
+            <span class="field-label">PIN</span>
+            <span class="control"><input name="pin" class="pin-input" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required placeholder="000000"{% if pin_step %} autofocus{% endif %}></span>
+          </label>
+          <button class="button button-block" type="submit" data-busy-label="Checking…">
+            <span class="button-spinner" aria-hidden="true"></span>
+            <span class="button-label">Log in</span>
+          </button>
+          <button type="button" class="link-button pin-back" data-pin-back>Back to password</button>
         </form>
       </section>
 

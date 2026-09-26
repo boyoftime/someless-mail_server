@@ -169,7 +169,10 @@
     // focus leaves the old form first: taking out a focused field makes the browser lay the
     // page out while the main area is empty, and the scroll jumps to the top.
     var form = kept ? putBack(kept, newMain) : null;
-    if (form && main.contains(document.activeElement)) document.activeElement.blur();
+    // A switch's form can come back as a different form (on becomes off): then the card it
+    // sits in is what stays in place.
+    var card = kept && kept.card ? newMain.querySelector("[data-card][aria-labelledby='" + kept.card + "']") : null;
+    if ((form || card) && main.contains(document.activeElement)) document.activeElement.blur();
     document.title = doc.title;
     main.className = newMain.className;
     main.replaceChildren.apply(main, Array.from(document.adoptNode(newMain).childNodes));
@@ -199,19 +202,33 @@
     if (window.somelessBoard) window.somelessBoard.fromPage(main);
     document.dispatchEvent(new CustomEvent("someless:swap", { detail: { main: main } }));
     done();
-    if (!form) return false;
+    if (!form && !card) return false; // something else came back (an error page, say)
 
     // Everything stays at the same place on the screen, with the focus where it was.
-    if (kept.top !== null && visible(form)) window.scrollBy(0, form.getBoundingClientRect().top - kept.top);
+    if (form && kept.top !== null && visible(form)) window.scrollBy(0, form.getBoundingClientRect().top - kept.top);
+    else if (card && kept.cardTop !== null) window.scrollBy(0, card.getBoundingClientRect().top - kept.cardTop);
     else window.scrollTo(0, kept.scrollY);
-    focusAgain(kept, form);
+    focusAgain(kept, form, card);
+    reveal();
     return true;
+  }
+
+  // Something new the page wants seen (data-swap-reveal, like the QR code once the PIN is
+  // switched on): glide down just enough to show it.
+  function reveal() {
+    var target = main.querySelector("[data-swap-reveal]");
+    if (!target || !visible(target)) return;
+    var smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    requestAnimationFrame(function () {
+      target.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "nearest" });
+    });
   }
 
   // The main area as the admin left it: what was typed in each form (the server never
   // sends that back, least of all passwords), except in the form that just went through;
   // the open cards; the focus; where the sent form sits on the screen.
   function keep(sent, wentThrough) {
+    var sentCard = sent.closest("[data-card]");
     return {
       forms: Array.from(main.querySelectorAll("form")).filter(function (form) {
         return !(wentThrough && form === sent); // that one starts afresh
@@ -229,6 +246,9 @@
       }),
       focus: wentThrough ? "" : focusIn(sent),
       top: visible(sent) ? sent.getBoundingClientRect().top : null,
+      label: sent.querySelector("[type=submit][aria-label]") ? sent.querySelector("[type=submit][aria-label]").getAttribute("aria-label") : "",
+      card: sentCard ? sentCard.getAttribute("aria-labelledby") : null,
+      cardTop: sentCard ? sentCard.getBoundingClientRect().top : null,
       scrollY: window.scrollY,
     };
   }
@@ -283,12 +303,18 @@
   }
 
   // Back to the field that had the focus, or the send button. A form in a dialog that has
-  // closed hands it to the button that opens the dialog, as closing a dialog does.
-  function focusAgain(kept, form) {
-    var target = kept.focus === "submit" ? form.querySelector("[type=submit]") : document.getElementById(kept.focus);
-    if (!target || !form.contains(target) || !visible(target)) {
-      var dialog = form.closest("dialog");
-      target = dialog ? main.querySelector("[data-dialog-open='" + dialog.id + "']") : form.querySelector("[type=submit]");
+  // closed hands it to the button that opens the dialog, as closing a dialog does. A form
+  // that came back as another one (a switch) hands it to the switch with the same name.
+  function focusAgain(kept, form, card) {
+    var target = null;
+    if (form) {
+      target = kept.focus === "submit" ? form.querySelector("[type=submit]") : document.getElementById(kept.focus);
+      if (!target || !form.contains(target) || !visible(target)) {
+        var dialog = form.closest("dialog");
+        target = dialog ? main.querySelector("[data-dialog-open='" + dialog.id + "']") : form.querySelector("[type=submit]");
+      }
+    } else if (card) {
+      target = (kept.label && card.querySelector("[aria-label='" + kept.label + "']")) || card.querySelector("[data-card-toggle]");
     }
     if (target && visible(target)) target.focus({ preventScroll: true });
   }
