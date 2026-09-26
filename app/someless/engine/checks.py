@@ -9,10 +9,10 @@ import urllib.request
 from collections import namedtuple
 from datetime import datetime, timezone
 
-import dns.resolver
 import dns.reversename
 
 from ..db import get_db
+from ..domain_records import fresh_lookup
 from . import client, enabled
 from .client import EngineError, EngineUnavailable
 from .names import server_name
@@ -32,18 +32,20 @@ def port25_open():
 
 
 def reverse_name(ip):
+    """The name the IP address answers with (PTR), from the VPS provider's own name servers:
+    a change at the provider shows at once."""
     try:
-        answer = dns.resolver.resolve(dns.reversename.from_address(ip), "PTR", lifetime=4)
-        return str(answer[0]).rstrip(".").lower()
+        name = dns.reversename.from_address(ip).to_text(omit_final_dot=True)
     except Exception:
         return None
+    found = fresh_lookup(name, "PTR")
+    return found[0].rstrip(".").lower() if found else None
 
 
 def addresses_of(name):
-    try:
-        return [item.to_text() for item in dns.resolver.resolve(name, "A", lifetime=4)]
-    except Exception:
-        return []
+    """Where the name points (A), from its domain's own name servers: a record just added
+    shows at once."""
+    return fresh_lookup(name, "A")
 
 
 def relay_answers(url):

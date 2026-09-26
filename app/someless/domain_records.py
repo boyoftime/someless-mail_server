@@ -527,6 +527,13 @@ def _zone_addresses(domain):
     return list(dict.fromkeys(address for server in servers for address in answers[(server, "A")]))
 
 
+def fresh_lookup(name, rdtype):
+    """lookup(), asked of the name servers holding the name's zone, so an answer changed a
+    minute ago shows now; the usual DNS keeps old ones (or "no such name") for up to their
+    TTL, often a day for reverse DNS. The usual DNS when they don't answer."""
+    return _answers(name, rdtype, _zone_addresses(name))
+
+
 def _answers(name, rdtype, servers=None):
     """lookup(), asking the given name servers first. Never fails: no answer is []."""
     try:
