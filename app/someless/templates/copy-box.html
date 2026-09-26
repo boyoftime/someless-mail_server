@@ -1,0 +1,11 @@
+{# A piece of text in a box with a button inside that copies it (copy-button.js). `copy`:
+   what to copy, when it differs from what is shown (a key shown in groups of four). #}
+{% macro copy_box(text, label, copy=none) %}
+<span class="copy-box">
+  <code class="copy-box-text">{{ text }}</code>
+  <button type="button" class="copy-button" data-copy="{{ text if copy is none else copy }}" aria-label="{{ label }}" title="{{ label }}">
+    <svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 5.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h.5"/></svg>
+    <svg class="copy-done" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+  </button>
+</span>
+{% endmacro %}

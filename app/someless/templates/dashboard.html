@@ -8,8 +8,11 @@
   <a href="{{ url_for('settings.index') }}">Change your password</a>
 </p>
 {% endif %}
-<dl class="facts">
-  <div><dt>Signed in as</dt><dd>{{ g.admin.username }}</dd></div>
-  <div><dt>Version</dt><dd>{{ version }}</dd></div>
-</dl>
+<section class="empty-state" aria-labelledby="dashboard-soon-title">
+  <span class="empty-state-badge" aria-hidden="true">
+    <svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg>
+  </span>
+  <h2 id="dashboard-soon-title" class="empty-state-title">Coming soon</h2>
+  <p class="empty-state-text">Your mail server at a glance: domains, inboxes and the mail going in and out.</p>
+</section>
 {% endblock %}

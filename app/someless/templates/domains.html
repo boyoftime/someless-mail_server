@@ -1,16 +1,131 @@
 {% extends "shell.html" %}
 {% block title %}Domains | Someless Mail{% endblock %}
+
+{% macro icon(name) %}
+  {%- if name == "globe" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.3 2.5 3.5 5.3 3.5 8.5s-1.2 6-3.5 8.5c-2.3-2.5-3.5-5.3-3.5-8.5s1.2-6 3.5-8.5z"/></svg>
+  {%- elif name == "plus" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  {%- elif name == "search" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+  {%- elif name == "trash" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.9 12.2a1.5 1.5 0 0 0 1.5 1.3h6.2a1.5 1.5 0 0 0 1.5-1.3L17.5 7M10 11v6M14 11v6"/></svg>
+  {%- endif -%}
+{% endmacro %}
+
 {% block content %}
-<header class="page-header">
-  <h1 class="page-title">Domains</h1>
-  <p class="page-subtitle">Connect your own domains to send and receive mail with them.</p>
+<header class="page-header page-header-row">
+  <div>
+    <h1 class="page-title">Domains</h1>
+    <p class="page-subtitle">A mail domain is the part of an email address after the @. Connect yours here to send and receive mail with it. Authenticating it shows other mail servers that your mail is really yours, so it doesn't land in spam.</p>
+  </div>
+  <button type="button" class="button add-button" data-dialog-open="add-domain-dialog" aria-haspopup="dialog">
+    {{ icon("plus") }}<span>Add domain</span>
+  </button>
 </header>
 
+{% if domains %}
+{# Filters as you type (domains-page.js); Enter asks the server, which works without JavaScript #}
+<form method="get" class="domain-search" role="search" data-domain-search>
+  <label class="visually-hidden" for="domain-search">Search domains by name</label>
+  <span class="input-icon">{{ icon("search") }}</span>
+  <input id="domain-search" name="q" type="search" placeholder="Search domain by name" autocomplete="off" value="{{ query }}">
+</form>
+
+<div class="domain-table-wrap">
+  <table class="domain-table">
+    <thead>
+      <tr>
+        <th scope="col">Domain name</th>
+        <th scope="col">Authentication status</th>
+        <th scope="col"><span class="visually-hidden">Next step</span></th>
+        <th scope="col"><span class="visually-hidden">Delete</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for domain in domains %}
+      <tr class="domain-row" data-domain="{{ domain.name }}"{% if not domain.shown %} hidden{% endif %}>
+        <td class="domain-name">{{ domain.name }}</td>
+        <td>
+          {% if domain.authenticated %}
+          <span class="domain-status is-ok"><span class="status-dot" aria-hidden="true"></span>Authenticated</span>
+          {% else %}
+          <span class="domain-status"><span class="status-dot" aria-hidden="true"></span>Not authenticated
+            <span class="help-dot" tabindex="0" role="img" aria-label="Add its DNS records at your domain provider, then check them on its Authenticate page." title="Add its DNS records at your domain provider, then check them on its Authenticate page.">?</span>
+          </span>
+          {% endif %}
+        </td>
+        <td>
+          <a class="domain-action" href="{{ url_for('domains.authenticate', domain_id=domain.id) }}" data-for="{{ domain.name }}">{{ "View configuration" if domain.authenticated else "Authenticate" }}</a>
+        </td>
+        <td class="domain-delete-cell">
+          <form method="post" action="{{ url_for('domains.delete', domain_id=domain.id) }}" class="domain-delete">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="icon-button is-danger" data-domain-name="{{ domain.name }}" aria-label="Delete {{ domain.name }}" title="Delete">{{ icon("trash") }}</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+      <tr class="domain-none"{% if domains | selectattr("shown") | list %} hidden{% endif %}>
+        <td colspan="4">No domains match “<span data-search-text>{{ query }}</span>”.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{% else %}
 <section class="empty-state" aria-labelledby="no-domains-title">
-  <span class="empty-state-badge" aria-hidden="true">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.3 2.5 3.5 5.3 3.5 8.5s-1.2 6-3.5 8.5c-2.3-2.5-3.5-5.3-3.5-8.5s1.2-6 3.5-8.5z"/></svg>
-  </span>
+  <span class="empty-state-badge" aria-hidden="true">{{ icon("globe") }}</span>
   <h2 id="no-domains-title" class="empty-state-title">No domains yet</h2>
-  <p class="empty-state-text">Domains you connect will be listed here, with their inboxes.</p>
+  <p class="empty-state-text">Use Add domain above to connect your first one.</p>
 </section>
+{% endif %}
+
+{# Add a domain (domains-page.js). It opens again by itself when the server sends it back
+   with a problem (data-open), keeping what was typed. #}
+<dialog class="rules-dialog domain-dialog" id="add-domain-dialog" aria-labelledby="add-domain-title"{% if add_error %} data-open{% endif %}>
+  <form method="post" action="{{ url_for('domains.add') }}" class="rules-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("globe") }}</span>
+      <div>
+        <h2 id="add-domain-title" class="rules-title">Add a domain</h2>
+        <p class="rules-hint">The part of your email address after the @.</p>
+      </div>
+    </div>
+    {% if add_error %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't add the domain">{{ add_error }}</p>{% endif %}
+    <div class="field">
+      <label class="field-label" for="new-domain">Domain</label>
+      <div class="input-wrap">
+        <span class="input-icon">{{ icon("globe") }}</span>
+        <input id="new-domain" name="name" required autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="example.com" value="{{ add_value or '' }}">
+      </div>
+    </div>
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet" data-dialog-close>Cancel</button>
+      <button class="button rules-save" type="submit" data-busy-label="Adding…">
+        <span class="button-spinner" aria-hidden="true"></span>
+        <span class="button-label">Add domain</span>
+      </button>
+    </div>
+  </form>
+</dialog>
+
+{# Deleting asks first (domains-page.js). Without JavaScript the trash button deletes. #}
+<dialog class="rules-dialog domain-dialog is-danger" id="delete-domain-dialog" aria-labelledby="delete-domain-title">
+  <div class="rules-form">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("trash") }}</span>
+      <div>
+        <h2 id="delete-domain-title" class="rules-title">Delete <span data-delete-name></span>?</h2>
+        <p class="rules-hint">It's removed from Someless Mail. Nothing changes at your domain provider.</p>
+      </div>
+    </div>
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet" data-dialog-close>Cancel</button>
+      <button type="button" class="button rules-save" data-delete-confirm>Delete</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="{{ url_for('static', filename='js/domains-page.js') }}"></script>
 {% endblock %}

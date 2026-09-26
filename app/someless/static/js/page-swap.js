@@ -202,7 +202,14 @@
     if (window.somelessBoard) window.somelessBoard.fromPage(main);
     document.dispatchEvent(new CustomEvent("someless:swap", { detail: { main: main } }));
     done();
-    if (!form && !card) return false; // something else came back (an error page, say)
+    if (!form && !card) {
+      // An error page came back: shown like a new page. A form that went through and was
+      // sent back to the same page (a deleted row's) keeps the place on the screen.
+      if (!kept || !kept.wentThrough) return false;
+      window.scrollTo(0, kept.scrollY);
+      focusHeading();
+      return true;
+    }
 
     // Everything stays at the same place on the screen, with the focus where it was.
     if (form && kept.top !== null && visible(form)) window.scrollBy(0, form.getBoundingClientRect().top - kept.top);
@@ -241,6 +248,7 @@
         };
       }),
       sent: sent.getAttribute("action"),
+      wentThrough: wentThrough,
       openCards: Array.from(main.querySelectorAll("[data-card-toggle][aria-expanded='true']")).map(function (toggle) {
         return toggle.getAttribute("aria-controls");
       }),

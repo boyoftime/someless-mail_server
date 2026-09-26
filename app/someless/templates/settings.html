@@ -1,4 +1,5 @@
 {% extends "shell.html" %}
+{% from "copy-box.html" import copy_box %}
 {% block title %}Settings | Someless Mail{% endblock %}
 
 {# The sections of Settings, shown as tabs. To add one, add a line here (and its page). #}
@@ -187,13 +188,7 @@
         <ol class="factor-list">
           <li>Open your authenticator app and add an account.</li>
           <li>Scan this QR code. Can't scan it? Type in this key instead:
-            <span class="factor-key-box">
-              <code class="factor-key">{{ tf.key }}</code>
-              <button type="button" class="copy-button" data-copy="{{ tf.key | replace(' ', '') }}" aria-label="Copy the key" title="Copy the key">
-                <svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 5.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h.5"/></svg>
-                <svg class="copy-done" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
-              </button>
-            </span></li>
+            {{ copy_box(tf.key, "Copy the key", copy=tf.key | replace(' ', '')) }}</li>
           <li>Enter the 6-digit PIN the app shows.</li>
         </ol>
         <form method="post" action="{{ url_for('settings.two_factor_enable') }}" class="factor-form">

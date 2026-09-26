@@ -128,9 +128,11 @@
 {# Moving between the signed-in pages swaps just this part (page-swap.js) #}
 <main class="app-main" id="app-main">
   {# board.js shows these on a green notice board; without JavaScript they stay here #}
-  {% set board_titles = {"success": "Saved", "welcome": "Welcome back"} %}
+  {% set board_titles = {"success": "Saved", "welcome": "Welcome back", "added": "Added", "deleted": "Deleted",
+                          "authenticated": "Authenticated", "not-authenticated": "Not authenticated yet"} %}
+  {% set red_boards = ["not-authenticated"] %}
   {% for category, message in get_flashed_messages(with_categories=true) %}
-  <p class="alert" role="status" data-board="success" data-board-title="{{ board_titles.get(category, 'Done') }}">{{ message }}</p>
+  <p class="alert" role="status" data-board="{{ 'error' if category in red_boards else 'success' }}" data-board-title="{{ board_titles.get(category, 'Done') }}">{{ message }}</p>
   {% endfor %}
   {% block content %}{% endblock %}
 </main>

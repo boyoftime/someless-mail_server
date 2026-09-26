@@ -1,0 +1,68 @@
+{% extends "shell.html" %}
+{% from "copy-box.html" import copy_box %}
+{% block title %}Authenticate {{ domain.name }} | Someless Mail{% endblock %}
+
+{# One record to add: its type, host and value (each ready to copy) and, after a check, what
+   DNS holds for it #}
+{% macro dns_record(record, result) %}
+<article class="dns-record{% if result %} is-{{ result.state }}{% endif %}" aria-labelledby="record-{{ record.key }}">
+  <div class="dns-record-head">
+    <div>
+      <h3 class="dns-record-title" id="record-{{ record.key }}">{{ record.title }}</h3>
+      <p class="dns-record-hint">{{ record.hint }}</p>
+    </div>
+    {% if result %}
+    <span class="dns-status is-{{ result.state }}">{{ {"found": "Found", "missing": "Not found yet", "different": "Doesn't match"}[result.state] }}</span>
+    {% endif %}
+  </div>
+  <dl class="dns-fields">
+    <dt>Type</dt>
+    <dd><span class="dns-box">{{ record.type }}</span></dd>
+    <dt>Host</dt>
+    <dd>{{ copy_box(record.host, "Copy the host") }}<span class="dns-full">Full name: {{ record.full_host }}</span></dd>
+    <dt>Value</dt>
+    <dd>
+      {%- if record.value %}{{ copy_box(record.value, "Copy the value") }}
+      {%- else %}<span class="dns-box is-placeholder">Use your server's public IP address</span>{% endif -%}
+    </dd>
+    {% if record.priority %}
+    <dt>Priority</dt>
+    <dd><span class="dns-box">{{ record.priority }}</span></dd>
+    {% endif %}
+  </dl>
+  {% if result and result.detail %}<p class="dns-detail">{{ result.detail }}</p>{% endif %}
+</article>
+{% endmacro %}
+
+{% block content %}
+<header class="page-header">
+  <h1 class="page-title">Authenticate {{ domain.name }}</h1>
+  <p class="page-subtitle">Add these records in the DNS settings at your domain provider (where you bought {{ domain.name }}, like Namecheap or Cloudflare), then check them here. New records can take a few minutes, sometimes a few hours, to show up.</p>
+</header>
+
+<section class="dns-group" aria-labelledby="authenticate-title">
+  <div class="dns-group-head">
+    <h2 class="dns-group-title" id="authenticate-title">Records that authenticate the domain</h2>
+    {% if checked_ago %}<p class="dns-checked">Last checked {{ checked_ago }}</p>{% endif %}
+  </div>
+  <p class="dns-group-hint">Safe to add now: they don't change where your mail goes.</p>
+  {% for record in records %}{{ dns_record(record, checks.get(record.key)) }}{% endfor %}
+</section>
+
+<section class="dns-group dns-group-receive" aria-labelledby="receive-title">
+  <h2 class="dns-group-title" id="receive-title">Receive mail here</h2>
+  <p class="dns-warning">Add this one only when you're ready to move {{ domain.name }}'s mail to Someless Mail: from then on, all new mail for the domain comes here. Until the mail engine is ready, keep your current MX records.</p>
+  {{ dns_record(receiving, checks.get(receiving.key)) }}
+</section>
+
+<div class="dns-actions">
+  <a class="button button-quiet" href="{{ url_for('domains.index') }}">Back to domains</a>
+  <form method="post" action="{{ url_for('domains.check', domain_id=domain.id) }}" class="dns-check">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="button add-button" type="submit" data-busy-label="Checking the records…">
+      <span class="button-spinner" aria-hidden="true"></span>
+      <span class="button-label">Authenticate this email domain</span>
+    </button>
+  </form>
+</div>
+{% endblock %}

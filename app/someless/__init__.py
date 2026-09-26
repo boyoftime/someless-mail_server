@@ -41,6 +41,7 @@ SIGNED_IN_PAGE_FILES = [
     "js/password-rules-dialog.js",
     "js/two-factor.js",
     "js/copy-button.js",
+    "js/domains-page.js",
     "js/collapsible-cards.js",
     "lottie/page-loader.json",
     "lottie/menu-on-dark.json",

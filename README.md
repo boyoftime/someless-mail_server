@@ -4,7 +4,7 @@ Welcome to **Someless Mail Server** — your own mail server in a single Docker 
 
 **Version:** 1.0.0
 
-> **Status: in development.** The web interface works today (welcome page, login, settings). Connecting domains, inboxes, and sending and receiving mail are being built next.
+> **Status: in development.** The web interface works today: login with optional two-factor authentication, settings, and adding and authenticating your domains. Inboxes, and sending and receiving mail, are being built next.
 
 ## What you need
 
@@ -73,6 +73,22 @@ After 5 wrong PINs in a row, no PIN is accepted for 5 minutes.
 ```
 docker exec -u someless someless-mail flask --app someless two-factor off
 ```
+
+## Connect your mail domain
+
+In **Domains**, click **Add domain** and type the part of your email address after the @ (like `example.com`). Then click **Authenticate** next to it. The page lists the DNS records to add at your domain provider (Namecheap, Cloudflare…), each with copy buttons:
+
+| Record | What it does |
+|---|---|
+| Someless code (TXT) | Shows that the domain is yours |
+| A (host `mail`) | Points `mail.example.com` at your server |
+| SPF (TXT) | Lets your server send the domain's mail. A domain can have only one SPF record: if yours already has one, add `a:mail.example.com` to it instead |
+| DKIM (TXT) | Signs your mail so nobody can fake it. The private key never leaves your server (it's in `data/`) |
+| DMARC (TXT) | Tells other mail servers what to do with mail that fails these checks |
+
+Then click **Authenticate this email domain**. Someless Mail looks the records up and marks each one found, missing or different; once all five are right, the domain shows as **Authenticated**. New records can take a few minutes, sometimes a few hours, to show up.
+
+The page also shows the **MX** record, which sends all new mail for the domain to your server. Add it only when you're ready to move the domain's mail here: until the mail engine is added, keep your current MX records.
 
 ## Use a domain instead of `ip:17080` (optional)
 
@@ -197,3 +213,5 @@ SOMELESS_DATA_DIR=./devdata .venv/bin/python -m flask --app app/someless:create_
 - Animation player: [lottie-web](https://github.com/airbnb/lottie-web) 5.13.0 (MIT).
 - Login background: [PixiJS](https://github.com/pixijs/pixijs) 8.21.0 (MIT).
 - QR codes for two-factor authentication: [segno](https://github.com/heuer/segno) 1.6.6 (BSD-3-Clause).
+- DKIM signing keys: [cryptography](https://github.com/pyca/cryptography) 50.0.1 (Apache-2.0 or BSD-3-Clause).
+- DNS checks: [dnspython](https://github.com/rthalley/dnspython) 2.8.0 (ISC).
