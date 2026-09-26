@@ -69,6 +69,7 @@
         item.setAttribute("aria-selected", index === select.selectedIndex ? "true" : "false");
       });
     }
+    select.addEventListener("change", showChoice); // chosen by a script too (sender-form.js)
 
     function light(index) {
       active = Math.max(0, Math.min(items.length - 1, index));

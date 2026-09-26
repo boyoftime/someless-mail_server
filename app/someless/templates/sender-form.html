@@ -32,7 +32,7 @@
 </section>
 {% else %}
 <div class="sender-layout">
-  <form method="post" action="{{ url_for('senders.update', sender_id=sender.id) if editing else url_for('senders.add') }}" class="sender-form" novalidate data-sender-form data-domains="{{ domains | join(' ') }}">
+  <form method="post" action="{{ url_for('senders.update', sender_id=sender.id) if editing else url_for('senders.add') }}" class="sender-form" novalidate data-sender-form>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     {% if problem %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="{{ "Couldn't save the sender" if editing else "Couldn't add the sender" }}">{{ problem }}</p>{% endif %}
     <div class="field">
@@ -44,14 +44,23 @@
       </div>
     </div>
     <div class="field">
-      <label class="field-label" for="sender-email">From email</label>
-      <p class="field-hint" id="sender-email-hint" data-domain-hint>
-        An address at {% for domain in domains %}<strong>{{ domain }}</strong>{% if not loop.last %}{{ " or " if loop.revindex == 2 else ", " }}{% endif %}{% endfor %}.
+      <label class="field-label" for="sender-local">From email</label>
+      <p class="field-hint" id="sender-email-hint">
+        Type the part before the @, and pick the domain: one of those you've authenticated.
         For another domain, authenticate it on the <a href="{{ url_for('domains.index') }}">Domains</a> page first, then come back.
       </p>
-      <div class="input-wrap">
-        <span class="input-icon">{{ icon("mail") }}</span>
-        <input id="sender-email" name="email" type="email" required autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="no-reply@{{ domains[0] }}" value="{{ typed.email }}" aria-describedby="sender-email-hint">
+      {# the address in two parts: typed before the @, the domain picked (dropdown.js) #}
+      <div class="email-parts">
+        <div class="input-wrap">
+          <span class="input-icon">{{ icon("mail") }}</span>
+          <input id="sender-local" name="local" required autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="no-reply" value="{{ typed.local }}" aria-describedby="sender-email-hint">
+        </div>
+        <label class="visually-hidden" for="sender-domain">Domain</label>
+        <select id="sender-domain" name="domain" data-dropdown>
+          {% for domain in domains %}
+          <option value="{{ domain }}"{% if domain == typed.domain %} selected{% endif %}>@{{ domain }}</option>
+          {% endfor %}
+        </select>
       </div>
     </div>
     <div class="sender-form-actions">
@@ -81,7 +90,7 @@
           <span class="phone-avatar" data-preview-initial>{{ (typed.name or "Your company")[:1] | upper }}</span>
           <span class="phone-sender-text">
             <span class="phone-name" data-preview-name>{{ typed.name or "Your company" }}</span>
-            <span class="phone-email" data-preview-email>{{ typed.email or "no-reply@" ~ domains[0] }}</span>
+            <span class="phone-email" data-preview-email>{{ (typed.local or "no-reply") ~ "@" ~ (typed.domain if typed.domain in domains else domains[0]) }}</span>
           </span>
         </span>
       </div>

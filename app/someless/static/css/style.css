@@ -3073,14 +3073,16 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
 
 /* Adding a sender (sender-form.html): the form, and beside it a phone showing the sender as an
    inbox will, filled in as you type (sender-form.js) */
-.sender-layout { display: grid; grid-template-columns: minmax(0, 1fr) 19rem; align-items: start; gap: 2rem 3rem; max-width: 64rem; }
+.sender-layout { display: grid; grid-template-columns: minmax(0, 1fr) 22rem; align-items: start; gap: 2rem 3rem; max-width: 64rem; }
 .sender-form { display: grid; gap: 1.4rem; }
 .sender-form .field input { background: var(--input-bg); transition: border-color 0.2s ease, box-shadow 0.25s ease; }
 .sender-form .field input:focus { outline: none; border-color: #0195fb; box-shadow: 0 0 0 4px rgba(1, 149, 251, 0.22), 0 8px 24px -10px #0195fb; }
 .sender-form .field:focus-within .input-icon { color: #0195fb; }
 .sender-form .field-hint { margin: -0.1rem 0 0.15rem; line-height: 1.5; transition: color 0.2s ease; }
 .sender-form .field-hint a { color: var(--airmail-blue); font-weight: 600; }
-.sender-form .field-hint.is-off { color: #f59e0b; } /* the address is at a domain that can't send yet */
+/* the address: typed before the @, the domain picked beside it */
+.email-parts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(11rem, auto); gap: 0.6rem; align-items: stretch; }
+.email-parts .dropdown, .email-parts .dropdown-button { height: 100%; }
 .sender-form-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 0.4rem; }
 .sender-form-actions .button { padding: 0.8rem 1.5rem; }
 .phone {
@@ -3133,10 +3135,11 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
 .phone-lines i:nth-child(3) { width: 60%; }
 @media (max-width: 900px) {
   .sender-layout { grid-template-columns: minmax(0, 1fr); }
-  .phone { width: min(19rem, 100%); justify-self: center; }
+  .phone { width: min(22rem, 100%); justify-self: center; }
 }
 @media (max-width: 640px) {
   .sender-facts { grid-template-columns: minmax(0, 1fr); }
   .sender-actions { margin-left: 0; }
   .sender-form-actions .button { flex: 1 1 auto; }
+  .email-parts { grid-template-columns: minmax(0, 1fr); }
 }

@@ -70,7 +70,7 @@ def test_without_an_authenticated_domain_there_is_no_form(client, login, app):
 
     assert "Authenticate a domain first" in plain(page)
     assert 'href="/domains"' in page[page.index('class="page-header'):]
-    assert 'name="email"' not in page
+    assert 'name="local"' not in page and 'name="domain"' not in page
 
 
 def test_the_add_sender_page_shows_how_it_looks(client, login, app):
@@ -80,7 +80,7 @@ def test_the_add_sender_page_shows_how_it_looks(client, login, app):
     page = text(client.get("/senders/new"))
 
     assert "<title>Add sender | Someless Mail</title>" in page
-    assert 'name="name"' in page and 'name="email"' in page
+    assert 'name="name"' in page and 'name="local"' in page and 'name="domain"' in page
     assert "data-preview-name" in page and "data-preview-email" in page  # the phone, filled in as you type
     assert "pineloop.online" in plain(page)  # where addresses can be
 
@@ -111,13 +111,13 @@ def test_a_sender_at_a_domain_not_authenticated_yet_is_turned_away(client, login
     assert response.status_code == 400
     page = text(response)
     assert "cloudnix.net isn't authenticated yet" in page and "come back" in page
-    assert 'value="hello@cloudnix.net"' in page  # kept as typed
+    assert re.search(r'name="local"[^>]*value="hello"', page)  # kept as typed
     assert senders_in_db(app) == []
 
 
 @pytest.mark.parametrize("name, email, problem", [
     ("Shop", "hello@elsewhere.com", "elsewhere.com isn't one of your domains"),
-    ("Shop", "not an address", "Type an email address"),
+    ("Shop", "not an address", "Type the part of the address before the @"),
     ("", "hello@pineloop.online", "Give the sender a name"),
 ])
 def test_a_sender_needs_a_name_and_an_address_at_one_of_the_domains(client, login, app, name, email, problem):
@@ -195,3 +195,69 @@ def test_a_sender_whose_domain_is_no_longer_authenticated_says_so(client, login,
     row = plain(text(client.get("/senders")))
 
     assert "Domain not authenticated" in row
+
+
+def domain_choices(page):
+    select = re.search(r'<select[^>]*name="domain"[^>]*>(.*?)</select>', page, re.S)
+    return re.findall(r'<option value="([^"]+)"([^>]*)>([^<]*)</option>', select.group(1)) if select else None
+
+
+def test_the_address_is_typed_before_the_at_and_the_domain_is_picked(client, login, app):
+    """Only the authenticated domains are offered: nothing else could send."""
+    a_domain(app, "pineloop.online")
+    a_domain(app, "cloudnix.net")
+    a_domain(app, "notyet.org", authenticated=False)
+    login()
+
+    page = text(client.get("/senders/new"))
+
+    assert [(value, label.strip()) for value, _, label in domain_choices(page)] == [
+        ("cloudnix.net", "@cloudnix.net"), ("pineloop.online", "@pineloop.online")]
+    assert re.search(r'<input[^>]*name="local"', page)
+
+
+def test_a_sender_is_added_from_its_name_and_the_picked_domain(client, login, app):
+    domain_id = a_domain(app)
+    login()
+
+    response = client.post("/senders", data={"name": "PineLoop", "local": "News", "domain": "pineloop.online"})
+
+    assert response.headers["Location"] == "/senders"
+    sender = senders_in_db(app)[0]
+    assert (sender["email"], sender["domain_id"]) == ("News@pineloop.online", domain_id)
+
+
+def test_a_whole_address_typed_before_the_at_still_counts(client, login, app):
+    """Someone pastes no-reply@pineloop.online into the first box: that's the address."""
+    a_domain(app)
+    a_domain(app, "cloudnix.net")
+    login()
+
+    client.post("/senders", data={"name": "PineLoop", "local": "no-reply@pineloop.online", "domain": "cloudnix.net"})
+
+    assert senders_in_db(app)[0]["email"] == "no-reply@pineloop.online"
+
+
+def test_a_picked_domain_that_isnt_authenticated_is_turned_away(client, login, app):
+    a_domain(app)
+    a_domain(app, "notyet.org", authenticated=False)
+    login()
+
+    response = client.post("/senders", data={"name": "PineLoop", "local": "hello", "domain": "notyet.org"})
+
+    assert response.status_code == 400
+    assert "notyet.org isn't authenticated yet" in text(response)
+    assert senders_in_db(app) == []
+
+
+def test_editing_shows_the_address_in_its_two_parts(client, login, app):
+    a_domain(app, "pineloop.online")
+    a_domain(app, "cloudnix.net")
+    login()
+    client.post("/senders", data={"name": "Cloudnix", "local": "no-reply", "domain": "cloudnix.net"})
+    sender_id = senders_in_db(app)[0]["id"]
+
+    page = text(client.get(f"/senders/{sender_id}/edit"))
+
+    assert re.search(r'<input[^>]*name="local"[^>]*value="no-reply"', page)
+    assert [value for value, attributes, _ in domain_choices(page) if "selected" in attributes] == ["cloudnix.net"]

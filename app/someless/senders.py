@@ -38,7 +38,7 @@ def _checked(typed, sender_id=None):
     if len(name) > NAME_LIMIT:
         return None, None, None, f"Keep the name to {NAME_LIMIT} characters or fewer."
     if not at or not LOCAL_PART.fullmatch(local) or "." not in domain:
-        return None, None, None, "Type an email address, like no-reply@yourdomain.com."
+        return None, None, None, "Type the part of the address before the @, like no-reply."
     row = db.execute("SELECT id, authenticated FROM domains WHERE name = ?", (domain,)).fetchone()
     if row is None:
         return None, None, None, (f"{domain} isn't one of your domains. Add it on the Domains page and "
@@ -52,9 +52,23 @@ def _checked(typed, sender_id=None):
     return name, email, row["id"], None
 
 
+def _typed(name=None, email=None):
+    """The form as typed: the name, and the address in its two parts, the part before the @
+    and the domain picked from the list. An address typed whole in the first part (or sent
+    whole, as email) counts as it is."""
+    if name is None:
+        name = request.form.get("name", "")
+        local = request.form.get("local", "").strip()
+        email = request.form.get("email", "").strip() or (local if "@" in local else "")
+        if not email and local:
+            email = f"{local}@{request.form.get('domain', '').strip()}"
+    local, _, domain = (email or "").rpartition("@") if "@" in (email or "") else (email or "", "", "")
+    return {"name": name, "email": email or "", "local": local, "domain": domain.lower()}
+
+
 def _form(status=200, sender=None, typed=None, problem=None):
     return render_template(
-        "sender-form.html", sender=sender, typed=typed or {"name": "", "email": ""}, problem=problem,
+        "sender-form.html", sender=sender, typed=typed or _typed("", ""), problem=problem,
         domains=_authenticated_domains(),
     ), status
 
@@ -112,7 +126,7 @@ def new():
 @bp.post("")
 @login_required
 def add():
-    typed = {"name": request.form.get("name", ""), "email": request.form.get("email", "")}
+    typed = _typed()
     name, email, domain_id, problem = _checked(typed)
     if problem:
         return _form(400, typed=typed, problem=problem)
@@ -129,14 +143,14 @@ def add():
 @login_required
 def edit(sender_id):
     sender = _sender(sender_id)
-    return _form(sender=sender, typed={"name": sender["name"], "email": sender["email"]})
+    return _form(sender=sender, typed=_typed(sender["name"], sender["email"]))
 
 
 @bp.post("/<int:sender_id>")
 @login_required
 def update(sender_id):
     sender = _sender(sender_id)
-    typed = {"name": request.form.get("name", ""), "email": request.form.get("email", "")}
+    typed = _typed()
     name, email, domain_id, problem = _checked(typed, sender_id)
     if problem:
         return _form(400, sender=sender, typed=typed, problem=problem)
