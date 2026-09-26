@@ -4,7 +4,7 @@ from collections import namedtuple
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from . import engine, two_factor
+from . import domain_checks, engine, two_factor
 from .auth import login_required
 from .db import get_db
 from .domain_records import server_address
@@ -209,3 +209,48 @@ def check_mail_server():
     checks.forget()
     engine_sync.ask_for_certificate()
     return redirect(url_for("settings.mail_server"))
+
+
+# Miscellaneous: the settings that fit nowhere else. Automatic domain checks, for now.
+
+def _misc_page(status=200, problem=None, typed=None):
+    row = domain_checks.settings()
+    every = row["every_hours"]
+    return render_template(
+        "settings-misc.html", checks=row, presets=[(hours, domain_checks.describe(hours)) for hours in domain_checks.PRESETS],
+        every=every, every_text=domain_checks.describe(every), custom=every not in domain_checks.PRESETS,
+        custom_days=every % 24 == 0 and every >= 24, problem=problem, typed=typed or {},
+        last_run=row["last_run"] and _moment(row["last_run"]), longest_days=domain_checks.LONGEST // 24,
+    ), status
+
+
+def _moment(when):
+    import datetime
+    return datetime.datetime.fromtimestamp(when, datetime.timezone.utc).isoformat(timespec="seconds")
+
+
+@bp.get("/miscellaneous")
+@login_required
+def misc():
+    return _misc_page()
+
+
+@bp.post("/miscellaneous/domain-checks")
+@login_required
+def save_domain_checks():
+    enabled = request.form.get("enabled") == "on"
+    every = request.form.get("every", "")
+    if every == "custom":
+        amount, unit = request.form.get("amount", "").strip(), request.form.get("unit", "hours")
+        hours = int(amount) * (24 if unit == "days" else 1) if amount.isdigit() else 0
+        if not 1 <= hours <= domain_checks.LONGEST:
+            return _misc_page(400, typed={"amount": amount, "unit": unit, "enabled": enabled},
+                              problem=f"Choose a time between 1 hour and {domain_checks.LONGEST // 24} days, in whole hours or days.")
+    elif every.isdigit() and int(every) in domain_checks.PRESETS:
+        hours = int(every)
+    else:
+        return _misc_page(400, typed={"enabled": enabled}, problem="Choose how often to check.")
+    domain_checks.save(enabled, hours)
+    flash(f"Automatic domain checks are on: every {domain_checks.describe(hours)}." if enabled
+          else "Automatic domain checks are off.", "success")
+    return redirect(url_for("settings.misc"))

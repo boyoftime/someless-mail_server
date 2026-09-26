@@ -6,7 +6,7 @@ import time
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 
-from . import domain_records
+from . import domain_checks, domain_records
 from .auth import login_required
 from .db import get_db
 from .engine import sync as engine_sync
@@ -98,6 +98,7 @@ def authenticate(domain_id):
     """The DNS records to add at the domain provider, and how the last check of them went."""
     domain = _domain(domain_id)
     address = domain_records.server_address(request.host)
+    domain_checks.remember_address(address)   # for the automatic checks, which have no page to ask
     keys = domain_records.keys_for(domain_id)
     # domains added before providers were noted (or when DNS didn't answer) find out now
     provider = domain["provider"] or _note_provider(domain_id, domain["name"])
@@ -123,8 +124,9 @@ def authenticate(domain_id):
 def check(domain_id):
     """Look the records up in DNS ("Authenticate this email domain")."""
     domain = _domain(domain_id)
-    host, found, results = domain_records.look(
-        domain["name"], domain_records.keys_for(domain_id), domain_records.server_address(request.host))
+    address = domain_records.server_address(request.host)
+    domain_checks.remember_address(address)
+    host, found, results = domain_records.look(domain["name"], domain_records.keys_for(domain_id), address)
     domain_records.save(domain_id, host, found, results)
     engine_sync.after_change()
     _note_provider(domain_id, domain["name"])  # it may have moved its DNS since

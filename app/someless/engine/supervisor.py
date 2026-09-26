@@ -1,8 +1,11 @@
 """The container's main process (docker/someless-run): runs Stalwart and the panel side by side.
-- Stalwart first: its first-time setup (setup.py), or a normal start, then a sync
-- then the panel (gunicorn), even when Stalwart didn't come up: the panel says so on SMTP & API
+- the panel (gunicorn) first, so there's a page at once: on the very first start it says
+  "Preparing your Someless Mail server" until Stalwart is set up (pages.py, preparing.js)
+- then Stalwart: its first-time setup (setup.py), or a normal start, then a sync; when it
+  doesn't come up, the panel says so on SMTP & API
 - Stalwart started again whenever it stops, waiting longer each time it keeps stopping
-- a sync every hour (keys expiring, anything that drifted)
+- a sync every hour (keys expiring, anything that drifted), and the automatic domain
+  checks when they're switched on (Settings > Miscellaneous)
 - the Let's Encrypt relay on 17081: only /.well-known/acme-challenge/<token>, answered by
   Stalwart's own HTTP side on 127.0.0.1:17880, which is never published
 - SIGTERM stops both; if the panel stops, so does everything (Docker starts the container again)"""
@@ -95,6 +98,16 @@ def bring_up(app, stalwart):
     return True
 
 
+def check_domains_if_due(app):
+    """The automatic domain checks, when switched on and their time has come (domain_checks.py)."""
+    from .. import domain_checks
+    with app.app_context():
+        if domain_checks.due():
+            changed = domain_checks.run()
+            for name, now in changed:
+                _say(f"{name} is {'authenticated' if now else 'no longer authenticated'} (automatic domain check)")
+
+
 def main():
     from someless import create_app
 
@@ -109,11 +122,11 @@ def main():
     signal.signal(signal.SIGTERM, lambda *_: stopping.set())
     signal.signal(signal.SIGINT, lambda *_: stopping.set())
 
-    up = bring_up(app, stalwart)
     panel = subprocess.Popen(GUNICORN)
+    up = bring_up(app, stalwart)
     restarts = 0 if up else 1
     retry_at = time.monotonic() + (0 if up else backoff(0))
-    up_since = next_sync = time.monotonic()
+    up_since = next_sync = next_look = time.monotonic()
     next_sync += SYNC_EVERY
     while not stopping.is_set() and panel.poll() is None:
         now = time.monotonic()
@@ -130,6 +143,9 @@ def main():
                 up_since = time.monotonic()
             retry_at = time.monotonic() + backoff(restarts)
             restarts += 1
+        if now >= next_look:   # the automatic domain checks' time, looked at every minute
+            check_domains_if_due(app)
+            next_look = now + 60
         stopping.wait(1)
 
     # docker stop gives ten seconds: both are asked to stop at once

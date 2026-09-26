@@ -74,7 +74,8 @@ def login():
         if _wants_json():
             return jsonify(error=error), 401
         return render_template("login.html", error=error, username=username, flipped=True), 401
-    return render_template("login.html")
+    from .pages import preparing_page   # (pages imports this module)
+    return preparing_page() or render_template("login.html")
 
 
 @bp.post("/login/pin")

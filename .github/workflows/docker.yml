@@ -96,12 +96,18 @@ jobs:
           # a data folder owned by root, like the one Docker makes next to docker-compose.yml
           sudo mkdir smoke-data
           docker run -d --name smoke -p 17080:17080 -p 17587:17587 -v "$PWD/smoke-data:/data" someless-mail:test
-          # the first start sets the mail engine up before the panel starts
-          for i in $(seq 1 120); do
+          # the panel answers at once; on this first start it says it's preparing the server
+          # while the mail engine sets itself up, then shows the welcome page
+          for i in $(seq 1 60); do
             curl -fsS http://127.0.0.1:17080/healthz && break
             sleep 1
           done
           curl -fsS http://127.0.0.1:17080/healthz | grep -qx ok
+          curl -fsS http://127.0.0.1:17080/ | grep -Eq "Preparing your Someless Mail server|Welcome to"
+          for i in $(seq 1 120); do
+            docker exec -u someless smoke flask --app someless engine status > /dev/null 2>&1 && break
+            sleep 1
+          done
           curl -fsS http://127.0.0.1:17080/ | grep -q "Welcome to"
           curl -fsS -o /dev/null http://127.0.0.1:17080/login
           # the data lands in the folder, written by the app's own user, and the server
@@ -112,7 +118,7 @@ jobs:
           # the mail engine: set up, running as the app's user, its data in data/stalwart
           docker exec -u someless smoke flask --app someless engine status
           sudo test -f smoke-data/stalwart/config.json
-          docker exec smoke sh -c 'grep -l "^Name:[[:space:]]*stalwart$" /proc/[0-9]*/status | xargs grep -h "^Uid:"'             | grep -Eq '^Uid:[[:space:]]+2001[[:space:]]'
+          docker exec smoke sh -c 'grep -l "^Name:[[:space:]]*stalwart$" /proc/[0-9]*/status | xargs grep -h "^Uid:"' | grep -Eq '^Uid:[[:space:]]+2001[[:space:]]'
           # a key logs in on the submission port (published, as on a server) and may send as
           # a Sender, and as nothing else; no Let's Encrypt from here
           docker exec -u someless -i smoke python - <<'EOF'

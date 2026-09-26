@@ -96,7 +96,7 @@ sudo ufw allow 587/tcp && sudo ufw allow 465/tcp && sudo ufw allow 17080/tcp
 
 ### Open it
 
-Go to `http://your-server-ip:17080` in your browser. You'll see a short welcome animation, then the login page. The very first start takes a little longer (up to a minute): Someless Mail sets its mail engine up before the web interface opens.
+Go to `http://your-server-ip:17080` in your browser. You'll see a short welcome animation, then the login page. On the very first start, it says **Preparing your Someless Mail server** for up to a minute while it sets its mail engine up, then moves on by itself.
 
 ## Step 2: Log in and lock it down
 

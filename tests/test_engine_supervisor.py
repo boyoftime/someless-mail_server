@@ -106,3 +106,55 @@ def test_the_relay_drops_connections_that_say_nothing(monkeypatch):
 
 def test_a_bad_host_header_is_refused_not_a_crash():
     assert supervisor._fetch_from_stalwart("/.well-known/acme-challenge/abc", "mail.example.com\r\nX: y") == (503, b"")
+
+
+def test_the_panel_starts_before_the_engine_is_set_up(monkeypatch):
+    """So the first start shows "Preparing your Someless Mail server" instead of no page at all."""
+    started = []
+
+    class Panel:
+        returncode = 0
+
+        def poll(self):
+            return 0   # it stops at once, and so does the supervisor
+
+        def terminate(self):
+            pass
+
+        def wait(self, timeout=None):
+            return 0
+
+    class Relay:
+        def __init__(self, *args):
+            pass
+
+        def serve_forever(self):
+            pass
+
+        def shutdown(self):
+            pass
+
+    monkeypatch.setattr(supervisor.subprocess, "Popen", lambda command: started.append("panel") or Panel())
+    monkeypatch.setattr(supervisor, "bring_up", lambda app, stalwart: started.append("engine") or True)
+    monkeypatch.setattr(supervisor, "ThreadingHTTPServer", Relay)
+    monkeypatch.setattr("someless.create_app", lambda: object())
+
+    supervisor.main()
+
+    assert started == ["panel", "engine"]
+
+
+def test_domains_are_checked_when_it_is_time(app, monkeypatch):
+    from someless import domain_checks
+    ran = []
+    monkeypatch.setattr(domain_checks, "run", lambda: ran.append("checked") or [])
+    with app.app_context():
+        domain_checks.save(enabled=True, every_hours=1)
+
+    supervisor.check_domains_if_due(app)
+    assert ran == ["checked"]
+
+    with app.app_context():
+        domain_checks.save(enabled=False, every_hours=1)
+    supervisor.check_domains_if_due(app)
+    assert ran == ["checked"]   # off: nothing

@@ -20,6 +20,14 @@ def enabled():
     return bool(current_app.config.get("ENGINE_ENABLED"))
 
 
+SETUP_STEPS = ("new", "bootstrapped", "provisioned", "ready")   # setup.py, in order
+
+
+def preparing():
+    """Whether Stalwart's first-time setup is still under way (the panel says so, pages.py)."""
+    return enabled() and state()["setup_step"] != "ready"
+
+
 def state():
     return get_db().execute("SELECT * FROM engine WHERE id = 1").fetchone()
 

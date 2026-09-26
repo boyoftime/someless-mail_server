@@ -278,6 +278,67 @@ body.is-playing .splash-title span:nth-child(5) { animation-delay: 0.78s; }
   .splash-main, .splash-title span { animation: none !important; opacity: 1 !important; }
 }
 
+/* The very first start: "Preparing your Someless Mail server" (preparing.html). The mail
+   animation, and the steps below it: a green tick when done, a turning blue ring for the one
+   under way, a quiet ring for those still to come. Once ready, it fades out. */
+body.preparing {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: 1fr auto;
+}
+body.preparing .loading-bar { display: none; }
+.preparing-main {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 0.6rem;
+  padding: 2rem var(--gutter);
+  text-align: center;
+  transition: opacity 0.6s ease 0.7s, transform 0.6s ease 0.7s;
+}
+body.is-ready .preparing-main { opacity: 0; transform: translateY(-6px); }
+.preparing-animation { width: min(260px, 70vw); aspect-ratio: 1; }
+.preparing-title { margin: 0; font-size: clamp(1.5rem, 4vw, 2.2rem); font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; }
+.preparing-text { max-width: 30rem; margin: 0; color: var(--muted); line-height: 1.5; }
+.preparing-steps { display: grid; gap: 0.75rem; margin: 1.1rem 0 0; padding: 0; list-style: none; text-align: left; }
+.preparing-step { display: flex; align-items: center; gap: 0.75rem; color: var(--muted); font-weight: 600; transition: color 0.3s ease; }
+.preparing-step.is-active, .preparing-step.is-done { color: var(--ink); }
+.preparing-mark {
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.preparing-step.is-active .preparing-mark {
+  border-color: #0195fb;
+  border-right-color: transparent;
+  box-shadow: 0 0 12px rgba(1, 149, 251, 0.6);
+  animation: spin 0.9s linear infinite;
+}
+.preparing-step.is-done .preparing-mark { border-color: #22c55e; background: #22c55e; box-shadow: 0 0 12px rgba(34, 197, 94, 0.7); }
+.preparing-step.is-done .preparing-mark::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 6px;
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.preparing-skip { margin-top: 1rem; color: var(--airmail-blue); font-weight: 600; }
+.preparing-skip[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .preparing-step.is-active .preparing-mark { animation-duration: 2.4s; }
+  .preparing-main { transition: none; }
+}
+
 /* Notice board (board.js): hangs from two ropes, drops in from the top with a swing,
    then is pulled back up. Green glow for success, red glow for errors. */
 .board-wrap {
@@ -3206,3 +3267,43 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
 /* The celebration when a domain is authenticated (celebrate.js): over the page, under the
    notice board, and clicks go straight through */
 .celebrate { position: fixed; inset: 0; z-index: 140; width: 100%; height: 100%; pointer-events: none; }
+
+/* Settings > Miscellaneous > Automatic domain checks: the switch, then how often as a row of
+   pills (greyed while it's off), and a custom time in hours or days (settings-misc.js) */
+.checks-about { margin: 0 0 1.1rem; color: var(--muted); line-height: 1.6; }
+.checks-about strong { color: var(--ink); }
+.checks-form { display: grid; gap: 1.1rem; max-width: 44rem; }
+.checks-every { display: grid; gap: 0.7rem; margin: 0; padding: 0; border: 0; min-width: 0; transition: opacity 0.25s ease; }
+.checks-every.is-off { opacity: 0.45; }
+.every-choices { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.every-choice input, .unit-switch input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+.every-choice span {
+  display: inline-block;
+  padding: 0.55rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--input-bg);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.25s ease, color 0.2s ease;
+}
+.every-choice span:hover { border-color: rgba(45, 212, 191, 0.55); }
+.every-choice input:checked + span {
+  border-color: rgba(45, 212, 191, 0.8);
+  color: var(--ink);
+  background: color-mix(in srgb, #14b8a6 16%, var(--input-bg));
+  box-shadow: 0 0 18px -6px rgba(45, 212, 191, 0.9);
+}
+.every-choice input:focus-visible + span, .unit-switch input:focus-visible + span { outline: 2px solid #2dd4bf; outline-offset: 2px; }
+.checks-every:disabled .every-choice span, .checks-every:disabled .unit-switch span { cursor: default; }
+.every-custom { display: grid; grid-template-columns: minmax(0, 12rem) auto; align-items: center; gap: 0.5rem 0.75rem; }
+.every-custom[hidden] { display: none; }
+.every-amount input { padding-left: 2.6rem; background: var(--input-bg); }   /* room for the clock */
+.unit-switch { justify-self: start; display: inline-flex; padding: 0.2rem; border: 1px solid var(--line); border-radius: 999px; background: var(--input-bg); }
+.unit-switch span { display: inline-block; padding: 0.45rem 0.95rem; border-radius: 999px; font-weight: 600; cursor: pointer; color: var(--muted); transition: background-color 0.2s ease, color 0.2s ease; }
+.unit-switch input:checked + span { background: linear-gradient(135deg, #0d9488, #2dd4bf); color: #fff; box-shadow: 0 0 14px -4px rgba(45, 212, 191, 0.9); }
+.every-in-days { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 0.9rem; }
+.checks-status { margin: 0; color: var(--muted); font-size: 0.9rem; }
+@media (max-width: 640px) {
+  .every-custom { grid-template-columns: minmax(0, 1fr); }
+}

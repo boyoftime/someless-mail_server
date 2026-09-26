@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block head %}
+  {# without JavaScript: look again every 10 seconds; once it's ready, the page is the usual one #}
+  <noscript><meta http-equiv="refresh" content="10"></noscript>
+{% endblock %}
+{% block title %}Preparing Someless Mail{% endblock %}
+{% block body_class %}preparing{% endblock %}
+{% block body %}
+{# The very first start: the mail engine is being set up (engine/setup.py). preparing.js
+   ticks the steps off as it goes, then moves on to the page the admin opened. #}
+<main class="preparing-main" data-progress="{{ url_for('pages.preparing_progress') }}" data-next="{{ next_page }}">
+  <div class="preparing-animation" data-src="{{ url_for('static', filename='lottie/contact-mail.json') }}" aria-hidden="true"></div>
+  <h1 class="preparing-title">Preparing your Someless Mail server</h1>
+  <p class="preparing-text">This happens once, on the first start, and takes about a minute. The page moves on by itself.</p>
+  <ol class="preparing-steps" aria-live="polite">
+    {% for step in steps %}
+    <li class="preparing-step is-{{ step.state }}"><span class="preparing-mark" aria-hidden="true"></span><span class="preparing-step-text">{{ step.text }}</span></li>
+    {% endfor %}
+  </ol>
+  <a class="preparing-skip" href="{{ url_for('pages.preparing_skip', next=next_page) }}" hidden>Taking longer than usual? Continue without waiting</a>
+</main>
+<footer class="splash-footer">Someless Mail {{ version }}</footer>
+<script src="{{ url_for('static', filename='js/lottie_light.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/preparing.js') }}"></script>
+{% endblock %}

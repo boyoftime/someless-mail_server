@@ -1,0 +1,97 @@
+{% extends "shell.html" %}
+{% block title %}Miscellaneous | Someless Mail{% endblock %}
+
+{% macro icon(name) %}
+  {%- if name == "radar" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12l5.5-5.5"/><circle cx="12" cy="12" r="0.8"/></svg>
+  {%- elif name == "clock" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
+  {%- endif -%}
+{% endmacro %}
+
+{% block content %}
+<header class="page-header">
+  <h1 class="page-title">Settings</h1>
+  <p class="page-subtitle">Manage your account and keep your information up to date.</p>
+</header>
+
+{% include "settings-tabs.html" %}
+
+<div class="settings-stack">
+  {# Closed until clicked (collapsible-cards.js), unless it has a problem to show #}
+  <section class="settings-card settings-card-teal{% if problem %} is-open{% endif %}" aria-labelledby="domain-checks-title" data-card>
+    <h2 class="card-heading">
+      <button type="button" class="card-head" data-card-toggle aria-controls="domain-checks-body" aria-expanded="{{ 'true' if problem else 'false' }}">
+        <span class="card-badge">{{ icon("radar") }}</span>
+        <span class="card-titles">
+          <span id="domain-checks-title" class="card-title">Automatic domain checks</span>
+          <span class="card-hint">{% if checks.enabled %}On: every {{ every_text }}.{% else %}Notice by itself when a domain's DNS records change.{% endif %}</span>
+        </span>
+        <span class="card-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg></span>
+      </button>
+    </h2>
+    <div class="card-body" id="domain-checks-body">
+      <div class="card-body-clip">
+        <div class="card-body-content">
+          {% if problem %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't save the checks">{{ problem }}</p>{% endif %}
+          <p class="checks-about">
+            Someless Mail looks at each domain's DNS records again by itself, as <strong>Authenticate this email domain</strong> does.
+            If a record was deleted at your registrar, the domain goes back to <strong>Not authenticated</strong>, and mail stops going out from its addresses until the record is back.
+            A domain whose records have all appeared is authenticated by itself.
+          </p>
+          {% set on = typed.enabled if typed else checks.enabled %}
+          <form method="post" action="{{ url_for('settings.save_domain_checks') }}" class="card-form checks-form" data-checks-form>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="rule-toggle">
+              <span class="rule-toggle-text">
+                <span class="rule-toggle-label">Check domains automatically</span>
+                <span class="rule-toggle-hint">Off: a domain is checked only when you open its page, or click Authenticate this email domain.</span>
+              </span>
+              <input type="checkbox" role="switch" name="enabled" data-checks-on{% if on %} checked{% endif %}>
+              <span class="switch" aria-hidden="true"><span class="switch-knob"></span></span>
+            </label>
+
+            {# how often: greyed while the switch is off (settings-misc.js) #}
+            <fieldset class="checks-every" data-checks-every>
+              <legend class="field-label">How often</legend>
+              <div class="every-choices">
+                {% for hours, label in presets %}
+                <label class="every-choice"><input type="radio" name="every" value="{{ hours }}"{% if not custom and hours == every and not typed.amount %} checked{% endif %}><span>{{ label }}</span></label>
+                {% endfor %}
+                <label class="every-choice"><input type="radio" name="every" value="custom" data-every-custom{% if custom or typed.amount %} checked{% endif %}><span>Custom</span></label>
+              </div>
+              {% set custom_amount = typed.amount if typed.amount else ((every // 24) if custom_days else every) %}
+              {% set custom_unit = typed.unit if typed.unit else ("days" if custom_days else "hours") %}
+              <div class="every-custom" data-custom-row>
+                <label class="visually-hidden" for="every-amount">Every</label>
+                <div class="field input-wrap every-amount">
+                  <span class="input-icon">{{ icon("clock") }}</span>
+                  <input id="every-amount" name="amount" inputmode="numeric" autocomplete="off" value="{{ custom_amount if (custom or typed.amount) else '' }}" placeholder="{{ 'e.g. 3' if custom_unit == 'days' else 'e.g. 36' }}" aria-describedby="every-in-days">
+                </div>
+                <div class="unit-switch" role="radiogroup" aria-label="Hours or days">
+                  <label><input type="radio" name="unit" value="hours"{% if custom_unit != "days" %} checked{% endif %}><span>Hours</span></label>
+                  <label><input type="radio" name="unit" value="days"{% if custom_unit == "days" %} checked{% endif %}><span>Days</span></label>
+                </div>
+                <p class="every-in-days" id="every-in-days" aria-live="polite" data-custom-hint>From 1 hour to {{ longest_days }} days.</p>
+              </div>
+            </fieldset>
+
+            <p class="checks-status">
+              {%- if checks.last_run %}Last automatic check: <time datetime="{{ last_run }}" data-local-moment>{{ last_run }}</time>.
+              {%- else %}No automatic check has run yet.{% endif -%}
+            </p>
+            <div class="card-actions">
+              <button class="button card-button" type="submit" data-busy-label="Saving…">
+                <span class="button-spinner" aria-hidden="true"></span>
+                <span class="button-label">Save</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+<script src="{{ url_for('static', filename='js/collapsible-cards.js') }}"></script>
+<script src="{{ url_for('static', filename='js/settings-misc.js') }}"></script>
+{% endblock %}

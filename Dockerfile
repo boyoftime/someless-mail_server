@@ -41,7 +41,7 @@ VOLUME ["/data"]
 # 17081: Let's Encrypt's check of the server name (nothing else answers there).
 EXPOSE 17080 17587 17465 17081
 
-# The first start sets the mail engine up before the panel starts: give it a minute.
+# The panel answers at once; the mail engine sets itself up alongside (a minute, the first time).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
   CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:17080/healthz', timeout=4)"]
 

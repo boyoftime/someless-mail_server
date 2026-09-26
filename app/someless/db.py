@@ -96,6 +96,15 @@ CREATE TABLE IF NOT EXISTS engine (
     certificate_asked_at REAL   -- the last time "Check again" asked Let's Encrypt for the server name's certificate
 );
 INSERT OR IGNORE INTO engine (id) VALUES (1);
+-- Automatic domain checks (Settings > Miscellaneous, domain_checks.py): off until switched on
+CREATE TABLE IF NOT EXISTS domain_checks (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    enabled INTEGER NOT NULL DEFAULT 0,
+    every_hours INTEGER NOT NULL DEFAULT 6,
+    last_run REAL,
+    server_address TEXT        -- this server's public IP, as the panel last saw it
+);
+INSERT OR IGNORE INTO domain_checks (id) VALUES (1);
 -- Test emails the panel sent, and what became of them (Stalwart's delivery reports, engine/deliveries.py)
 CREATE TABLE IF NOT EXISTS deliveries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
