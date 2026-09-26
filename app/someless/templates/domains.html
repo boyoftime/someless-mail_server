@@ -54,7 +54,8 @@
           <span class="domain-status is-ok"><span class="status-dot" aria-hidden="true"></span>Authenticated</span>
           {% else %}
           <span class="domain-status"><span class="status-dot" aria-hidden="true"></span>Not authenticated
-            <span class="help-dot" tabindex="0" role="img" aria-label="Add its DNS records at your domain provider, then check them on its Authenticate page." title="Add its DNS records at your domain provider, then check them on its Authenticate page.">?</span>
+            {% set help = "Add its DNS records at your domain provider, then check them on its Authenticate page." %}
+            <span class="help-dot" tabindex="0" role="img" aria-label="{{ help }}" data-tip="{{ help }}">?</span>
           </span>
           {% endif %}
         </td>

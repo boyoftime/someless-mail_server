@@ -143,3 +143,16 @@ def test_domains_are_kept_across_restarts(tmp_path):
     second.post("/login", data={"username": "admin", "password": "admin"})
 
     assert rows(domains_page(second)) == ["example.com"]
+
+
+def test_the_status_help_shows_in_a_styled_tip(client, login):
+    login()
+    add(client, "example.com")
+
+    page = domains_page(client)
+
+    dot = re.search(r'<span class="help-dot"[^>]*>', page).group(0)
+    assert 'data-tip="Add its DNS records at your domain provider' in dot
+    assert "title=" not in dot  # not the browser's own plain tooltip
+    main = page[page.index('<main class="app-main"'):page.index("</main>")]
+    assert 'src="/static/js/tooltip.js?v=' in page and "tooltip.js" not in main  # once, with the layout

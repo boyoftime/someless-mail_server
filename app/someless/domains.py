@@ -100,18 +100,17 @@ def authenticate(domain_id):
     keys = domain_records.keys_for(domain_id)
     # domains added before providers were noted (or when DNS didn't answer) find out now
     provider = domain["provider"] or _note_provider(domain_id, domain["name"])
-    if keys["found"] is None:  # the first visit: see what the domain has for mail already
+    if domain_records.out_of_date(keys):  # see what the domain has for mail now
         host, found, results = domain_records.look(domain["name"], keys, address)
-        # a domain checked before this page knew what it has is checked again, so what the
-        # check says fits the records the page shows now
+        # a domain checked before is checked again, so what the check says fits the records
+        # the page shows now
         domain_records.save(domain_id, host, found, results if keys["checks"] else None)
         keys = domain_records.keys_for(domain_id)
     authenticating, receiving = domain_records.records(domain["name"], keys, address)
     return render_template(
         "domain.html", domain=domain, provider=provider, records=authenticating, receiving=receiving,
         receive_note=domain_records.receive_note(domain["name"], keys),
-        services=domain_records.services(domain["name"], keys),
-        clean=domain_records.cleanup(domain["name"], keys, address),
+        summary=domain_records.summary(domain["name"], keys, address),
         checks=json.loads(keys["checks"]) if keys["checks"] else {}, checked_ago=_ago(keys["checked_at"]),
     )
 

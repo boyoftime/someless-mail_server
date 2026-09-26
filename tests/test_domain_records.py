@@ -170,9 +170,9 @@ def test_an_spf_record_without_this_server_is_flagged(client, login, app, dns):
 
     client.post(f"/domains/{domain_id}/check")
 
-    card = record(text(client.get(f"/domains/{domain_id}")), "spf")
-    assert 'class="dns-status is-different"' in card
-    assert "add a:mail.example.com to it" in card
+    page = text(client.get(f"/domains/{domain_id}"))
+    assert 'class="dns-status is-different"' in record(page, "spf")
+    assert "a:mail.example.com added" in summary(page)
 
 
 def test_two_spf_records_are_flagged(client, login, app, dns):
@@ -183,9 +183,9 @@ def test_two_spf_records_are_flagged(client, login, app, dns):
 
     client.post(f"/domains/{domain_id}/check")
 
-    card = record(text(client.get(f"/domains/{domain_id}")), "spf")
-    assert 'class="dns-status is-different"' in card
-    assert "only one SPF record" in card
+    page = text(client.get(f"/domains/{domain_id}"))
+    assert 'class="dns-status is-different"' in record(page, "spf")
+    assert "only one SPF record" in summary(page)
 
 
 def test_a_dkim_record_with_another_key_is_flagged(client, login, app, dns):
@@ -209,9 +209,8 @@ def test_mx_is_checked_but_not_needed_to_authenticate(client, login, app, dns):
 
     page = text(client.get(f"/domains/{domain_id}"))
     assert "example.com is authenticated." in page
-    card = record(page, "mx")
-    assert 'class="dns-status is-elsewhere"' in card  # "Not moved yet": right until the mail moves
-    assert "mx1.privateemail.com" in card
+    assert 'class="dns-status is-elsewhere"' in record(page, "mx")  # "Not moved yet": right until the mail moves
+    assert "mx1.privateemail.com" in summary(page)
 
 
 def test_dns_that_does_not_answer_counts_as_not_found(client, login, app, monkeypatch):
@@ -339,25 +338,54 @@ def authenticate_page(client, login, name="example.com"):
     return text(client.get(f"/domains/{add_domain(client, name)}"))
 
 
+def summary(page):
+    """The summary at the end of the page: what other mail services left on the domain, and
+    what to do about it (as words)."""
+    start = page.index('id="other-services"')
+    return plain(page[start:page.index("</section>", start)])
+
+
+def test_a_domain_nothing_else_uses_is_ready_to_set_up(client, login):
+    page = authenticate_page(client, login)
+
+    assert 'class="dns-ready"' in page
+    assert "Your domain is ready to set up" in plain(page)
+    assert 'id="other-services"' not in page
+
+
+def test_a_domain_other_services_use_gets_its_summary_at_the_end(client, login, dns):
+    dns[("example.com", "MX")] = ZOHO_MX
+
+    page = authenticate_page(client, login)
+
+    assert 'class="dns-ready"' not in page  # nothing at the top
+    assert page.index('class="dns-group dns-group-receive"') < page.index('id="other-services"') < page.index('class="dns-actions"')
+
+
 def test_an_existing_spf_record_is_extended_not_doubled(client, login, dns):
     dns[("example.com", "TXT")] = [ZOHO_SPF]
     dns[("example.com", "MX")] = ZOHO_MX
 
-    card = plain(record(authenticate_page(client, login), "spf"))
+    page = authenticate_page(client, login)
 
+    card = plain(record(page, "spf"))
     assert "v=spf1 include:zohomail.com a:mail.example.com ~all" in card
-    assert "Edit your existing record" in card
-    assert "Don't add a second one" in card
-    assert f"Now: {ZOHO_SPF}" in card
+    assert "Replace your current SPF record with this one." in card
+    assert "Now:" not in card  # the card just says what to add
+    told = summary(page)
+    assert "Replace your SPF record with the one above" in told and "a:mail.example.com added" in told
+    assert "Don't add it as a second record" in told
+    assert f"Now: {ZOHO_SPF}" in told
 
 
 def test_several_spf_records_become_one(client, login, dns):
     dns[("example.com", "TXT")] = [ZOHO_SPF, "v=spf1 include:spf.brevo.com -all"]
 
-    card = plain(record(authenticate_page(client, login), "spf"))
+    page = authenticate_page(client, login)
 
-    assert "v=spf1 include:zohomail.com include:spf.brevo.com a:mail.example.com ~all" in card
-    assert "Delete them and add this one instead" in card
+    assert "v=spf1 include:zohomail.com include:spf.brevo.com a:mail.example.com ~all" in plain(record(page, "spf"))
+    assert "Replace your 2 SPF records with this one." in plain(record(page, "spf"))
+    assert "Delete them all and add the one above" in summary(page)
 
 
 def test_a_strict_spf_record_stays_strict(client, login, dns):
@@ -373,17 +401,18 @@ def test_an_spf_record_that_already_includes_this_server_is_kept(client, login, 
 
     card = plain(record(authenticate_page(client, login), "spf"))
 
-    assert "Keep yours" in card
+    assert "Already there: keep it." in card
 
 
 def test_an_existing_dmarc_record_is_kept(client, login, dns):
     dns[("_dmarc.example.com", "TXT")] = ["v=DMARC1; p=quarantine; rua=mailto:dmarc@example.com"]
 
-    card = plain(record(authenticate_page(client, login), "dmarc"))
+    page = authenticate_page(client, login)
 
-    assert "Keep yours" in card
+    card = plain(record(page, "dmarc"))
+    assert "Already there: keep it." in card
     assert "v=DMARC1; p=quarantine; rua=mailto:dmarc@example.com" in card
-    assert "already has a DMARC record" in card
+    assert 'class="dns-ready"' in page  # a DMARC record alone is no other service
 
 
 def test_the_mx_advice_says_where_mail_goes_now(client, login, dns):
@@ -391,9 +420,11 @@ def test_the_mx_advice_says_where_mail_goes_now(client, login, dns):
 
     page = authenticate_page(client, login)
 
-    receive = plain(page[page.index('class="dns-group dns-group-receive"'):])
-    assert "Zoho Mail" in receive and "mx.zoho.com" in receive
-    assert "don't keep both" in receive
+    told = summary(page)
+    assert "Mail for example.com goes to Zoho Mail now" in told and "mx.zoho.com" in told
+    assert "don't keep both" in told
+    start = page.index('class="dns-group dns-group-receive"')
+    assert "Zoho" not in page[start:page.index("</section>", start)]  # the receive part just says when to add it
 
 
 def test_a_mail_name_in_use_moves_this_server_to_a_free_one(client, login, dns):
@@ -404,7 +435,7 @@ def test_a_mail_name_in_use_moves_this_server_to_a_free_one(client, login, dns):
     assert 'data-copy="mx"' in record(page, "a")
     assert 'data-copy="v=spf1 a:mx.example.com mx ~all"' in record(page, "spf")
     assert 'data-copy="mx.example.com"' in record(page, "mx")
-    assert "mail.example.com is already in use" in plain(page)
+    assert "mail.example.com is already in use" in summary(page)
 
 
 def test_nested_includes_count_toward_the_spf_lookup_limit(client, login, dns):
@@ -413,20 +444,18 @@ def test_nested_includes_count_toward_the_spf_lookup_limit(client, login, dns):
     dns[("_spf.google.com", "TXT")] = ["v=spf1 include:_netblocks.google.com include:_netblocks2.google.com"
                                        " include:_netblocks3.google.com ~all"]  # 10 lookups in all
 
-    card = plain(record(authenticate_page(client, login), "spf"))
+    page = authenticate_page(client, login)
 
     # a:mail.example.com would be an 11th, so this server goes in by its address
-    assert f"v=spf1 include:_spf.google.com {others} ip4:194.163.167.106 ~all" in card
-    assert "already takes 10" in card
+    assert f"v=spf1 include:_spf.google.com {others} ip4:194.163.167.106 ~all" in plain(record(page, "spf"))
+    assert "already takes 10" in summary(page)
 
 
 def test_an_spf_record_past_the_lookup_limit_is_flagged(client, login, dns):
     includes = " ".join(f"include:spf{n}.example.net" for n in range(11))
     dns[("example.com", "TXT")] = [f"v=spf1 {includes} ~all"]
 
-    card = plain(record(authenticate_page(client, login), "spf"))
-
-    assert "more than the 10 DNS lookups SPF allows" in card
+    assert "more than the 10 DNS lookups SPF allows" in summary(authenticate_page(client, login))
 
 
 def test_a_wildcard_record_leaves_names_free(client, login, monkeypatch):
@@ -479,28 +508,32 @@ def test_the_page_sums_up_the_mail_services_it_found(client, login, dns):
     dns[("example.com", "TXT")] = ["v=spf1 include:zohomail.com include:spf.brevo.com ~all"]
     dns[("example.com", "MX")] = ZOHO_MX
 
-    page = authenticate_page(client, login)
+    told = summary(authenticate_page(client, login))
 
-    summary = plain(page[page.index('class="dns-found"'):page.index("</section>", page.index('class="dns-found"'))])
-    assert "example.com already uses Zoho Mail and Brevo" in summary
-    assert "Edit your SPF record instead of adding a second one." in summary
-    assert "Mail keeps going to Zoho Mail until you move it here." in summary
+    assert "example.com already uses Zoho Mail and Brevo" in told
+    assert "Replace your SPF record with the one above" in told
+    assert "Mail for example.com goes to Zoho Mail now" in told
 
 
 def test_services_that_only_send_are_found_by_their_code(client, login, dns):
     dns[("example.com", "TXT")] = ["brevo-code:0123456789abcdef"]
 
-    page = authenticate_page(client, login)
-
-    assert "example.com already uses Brevo" in plain(page)
+    assert "example.com already uses Brevo" in summary(authenticate_page(client, login))
 
 
-def test_a_domain_with_no_mail_set_up_gets_no_summary(client, login):
-    assert 'class="dns-found"' not in authenticate_page(client, login)
+def test_an_authenticated_domain_says_so_at_the_top(client, login, app, dns):
+    login()
+    domain_id = add_domain(client)
+    all_right(dns, app, domain_id)  # its own records are no other service's
+    client.post(f"/domains/{domain_id}/check")
+
+    page = text(client.get(f"/domains/{domain_id}"))
+
+    assert "Your domain is authenticated" in plain(page[page.index('class="dns-ready"'):])
 
 
 def to_delete(page):
-    """The page's list of records to delete, as words."""
+    """The summary's list of records to delete, as words."""
     start = page.index('id="clean-up"')
     return plain(page[start:page.index("</section>", start)])
 
@@ -584,6 +617,71 @@ def test_a_check_from_before_the_update_is_done_again(client, login, app, dns):
 
     assert 'class="dns-status is-elsewhere"' in card
     assert "still goes to" not in card
+
+
+def at_namecheap(dns):
+    """example.com's DNS is at Namecheap, whose name server is at 156.154.132.200."""
+    dns[("example.com", "NS")] = ["dns1.registrar-servers.com"]
+    dns[("dns1.registrar-servers.com", "A")] = ["156.154.132.200"]
+
+
+def test_the_domains_own_name_servers_are_asked_not_a_cache(client, login, dns, monkeypatch):
+    at_namecheap(dns)
+    dns[("example.com", "MX")] = ZOHO_MX  # a cache still has the Zoho records just deleted at Namecheap
+    asked = []
+
+    def namecheap(servers, name, rdtype):
+        asked.append(servers)
+        return []  # nothing there any more
+    monkeypatch.setattr(domain_records, "lookup_at", namecheap)
+
+    page = authenticate_page(client, login)
+
+    assert "Zoho" not in page
+    assert asked and all(servers == ["156.154.132.200"] for servers in asked)
+
+
+def test_the_usual_dns_is_asked_when_the_name_servers_do_not_answer(client, login, dns):
+    at_namecheap(dns)  # its name server doesn't answer (conftest)
+    dns[("example.com", "MX")] = ZOHO_MX
+
+    assert "example.com already uses Zoho Mail" in plain(authenticate_page(client, login))
+
+
+def looked_long_ago(app, domain_id):
+    import json
+    with app.app_context():
+        db = get_db()
+        found = json.loads(db.execute("SELECT found FROM domain_keys WHERE domain_id = ?", (domain_id,)).fetchone()[0])
+        db.execute("UPDATE domain_keys SET found = ? WHERE domain_id = ?", (json.dumps({**found, "at": 0}), domain_id))
+        db.commit()
+
+
+def test_the_page_looks_again_once_its_last_look_is_old(client, login, app, dns):
+    login()
+    domain_id = add_domain(client)
+    client.get(f"/domains/{domain_id}")  # nothing set up yet
+    dns[("example.com", "MX")] = ZOHO_MX  # then the admin connects Zoho Mail
+    looked_long_ago(app, domain_id)
+
+    page = text(client.get(f"/domains/{domain_id}"))
+
+    assert "example.com already uses Zoho Mail" in plain(page)
+
+
+def test_a_recent_look_is_not_done_again(client, login, dns):
+    login()
+    domain_id = add_domain(client)
+    client.get(f"/domains/{domain_id}")
+    asked = []
+    dns_lookup = domain_records.lookup
+    domain_records.lookup = lambda name, rdtype: asked.append(name) or dns_lookup(name, rdtype)
+    try:
+        client.get(f"/domains/{domain_id}")  # as right after the check's own look
+    finally:
+        domain_records.lookup = dns_lookup
+
+    assert not [name for name in asked if name.endswith("example.com") and name != "example.com"]
 
 
 def test_the_check_accepts_the_extended_spf_record(client, login, app, dns):

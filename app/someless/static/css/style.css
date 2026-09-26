@@ -2073,8 +2073,62 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
   font-size: 0.7rem;
   font-weight: 700;
   cursor: help;
+  transition: color 0.2s ease, box-shadow 0.25s ease;
 }
 .help-dot:focus-visible { outline: 3px solid var(--airmail-blue); outline-offset: 2px; }
+.help-dot:hover, .help-dot:focus { color: #0195fb; box-shadow: 0 0 10px -2px rgba(1, 149, 251, 0.8); }
+
+/* Tips (tooltip.js): a word of help in a small card of the panel's own, with a point
+   towards what it's about. It rises into place above it (or drops in below it). */
+:root {
+  --tip-edge: rgba(20, 99, 243, 0.22);
+  --tip-shadow: 0 14px 34px rgba(15, 26, 61, 0.16), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+}
+:root[data-theme="dark"] {
+  --tip-edge: rgba(123, 150, 255, 0.34);
+  --tip-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 28px -8px rgba(1, 149, 251, 0.65);
+}
+.tip {
+  position: fixed;
+  z-index: 60;
+  max-width: min(17.5rem, calc(100vw - 24px));
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--tip-edge);
+  border-radius: 12px;
+  background: var(--dialog-bg);
+  box-shadow: var(--tip-shadow);
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 500;
+  line-height: 1.45;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(5px);
+  transition: opacity 0.15s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+}
+.tip[data-side="below"] { transform: translateY(-5px); }
+.tip.is-shown {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition: opacity 0.18s ease, transform 0.28s var(--menu-ease), visibility 0s;
+}
+/* the point: a corner of the same card, turned towards the element */
+.tip::after {
+  content: "";
+  position: absolute;
+  left: calc(var(--arrow-x, 50%) - 6px);
+  width: 11px;
+  height: 11px;
+  background: var(--dialog-bg);
+  transform: rotate(45deg);
+}
+.tip[data-side="above"]::after { bottom: -6.5px; border-right: 1px solid var(--tip-edge); border-bottom: 1px solid var(--tip-edge); }
+.tip[data-side="below"]::after { top: -6.5px; border-left: 1px solid var(--tip-edge); border-top: 1px solid var(--tip-edge); }
+@media (prefers-reduced-motion: reduce) {
+  .tip, .tip[data-side="below"], .tip.is-shown { transform: none; transition: opacity 0.15s ease, visibility 0s linear 0.15s; }
+  .tip.is-shown { transition: opacity 0.15s ease, visibility 0s; }
+}
 .domain-action { color: var(--airmail-blue); font-weight: 600; text-decoration: none; }
 .domain-action:hover { text-decoration: underline; text-underline-offset: 3px; }
 .domain-action.is-disabled { color: var(--muted); opacity: 0.6; cursor: not-allowed; }
@@ -2210,16 +2264,78 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
 }
 
 /* Fitting in with the mail the domain has already (Zoho Mail, Brevo...). Blue: do this;
-   green: keep yours; grey: wait until the mail moves; red: delete now. */
+   green: keep yours, or all's well; grey: wait until the mail moves; red: delete now. */
 :root { --ok-text: #15803d; }
 :root[data-theme="dark"] { --ok-text: #4ade80; }
-/* where the summary's links lead: a card's title (the card's padding above it, and some air) */
-.dns-record-title { scroll-margin-top: 2.1rem; }
-.dns-delete { scroll-margin-top: 1rem; }
 .dns-status.is-elsewhere { background: color-mix(in srgb, var(--airmail-blue) 14%, transparent); color: var(--airmail-blue); }
 
-/* The summary: what the domain uses already, framed like an airmail envelope (red and blue
-   stripes along the top), with a line per record that works around it */
+/* At the top, for a domain no other mail service uses: a green bar with a light sweeping
+   across it now and then */
+.dns-ready {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.95rem;
+  margin: 0 0 1.75rem;
+  padding: 1rem 1.3rem;
+  overflow: hidden;
+  border: 1px solid rgba(34, 197, 94, 0.55);
+  border-radius: 16px;
+  background: linear-gradient(100deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.08) 55%, rgba(34, 197, 94, 0.16));
+  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.1), 0 0 34px -10px rgba(34, 197, 94, 0.85);
+}
+.dns-ready::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 35%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+  transform: translateX(-130%) skewX(-18deg);
+  animation: ready-shine 4s ease-in-out 0.5s infinite;
+  pointer-events: none;
+}
+@keyframes ready-shine {
+  0% { transform: translateX(-130%) skewX(-18deg); }
+  40%, 100% { transform: translateX(330%) skewX(-18deg); }
+}
+.dns-ready-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  color: #fff;
+  box-shadow: 0 0 18px -2px rgba(34, 197, 94, 0.9);
+}
+.dns-ready-icon svg { width: 34px; height: 34px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.dns-ready-icon svg circle { display: none; } /* the badge is the circle */
+.dns-ready-title { margin: 0; color: var(--ok-text); font-size: 1.05rem; font-weight: 700; }
+.dns-ready-text { margin: 0.1rem 0 0; font-size: 0.92rem; }
+@media (prefers-reduced-motion: reduce) {
+  .dns-ready::after { animation: none; display: none; }
+}
+
+/* On a record's card, when the domain has that record already: one line on what to do */
+.dns-action {
+  --tone: var(--airmail-blue);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin: 0.45rem 0 0;
+  color: var(--tone);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.dns-action.is-keep { --tone: var(--ok-text); }
+.dns-action svg { flex: none; width: 17px; height: 17px; margin-top: 0.1rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* The summary at the end of the page: what other mail services have on the domain, framed
+   like an airmail envelope (red and blue stripes along the top): what to do with their
+   records, and what to remove, when */
 .dns-found {
   position: relative;
   display: grid;
@@ -2277,45 +2393,19 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
   font-size: 0.78rem;
   font-weight: 600;
 }
-.dns-fits { display: grid; gap: 0.15rem; margin: 0; padding: 0; list-style: none; }
-.dns-fit {
-  --tone: var(--airmail-blue);
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-  padding: 0.4rem 0.55rem;
-  margin: 0 -0.55rem;
-  border-radius: 10px;
-  color: var(--ink);
-  font-size: 0.93rem;
-  text-decoration: none;
-  transition: background-color 0.2s ease;
-}
-.dns-fit:hover { background: color-mix(in srgb, var(--tone) 9%, transparent); }
-.dns-fit:hover span { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--tone) 55%, transparent); text-underline-offset: 3px; }
-.dns-fit:focus-visible { outline: 2px solid var(--tone); outline-offset: 1px; }
-.dns-fit svg { flex: none; width: 18px; height: 18px; margin-top: 0.12rem; fill: none; stroke: var(--tone); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.dns-fit.is-keep { --tone: var(--ok-text); }
-.dns-fit.is-move { --tone: var(--muted); }
-.dns-fit.is-delete { --tone: var(--airmail-red); }
-
-/* On a record's card: how it fits with the domain's own record, and that record now */
-.dns-advice {
+.dns-todo { display: grid; gap: 0.7rem; margin: 0; padding: 0; list-style: none; }
+.dns-todo-item {
   --tone: var(--airmail-blue);
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.7rem;
-  padding: 0.75rem 0.9rem;
-  border: 1px solid color-mix(in srgb, var(--tone) 35%, transparent);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--tone) 8%, transparent);
-  font-size: 0.92rem;
+  gap: 0.65rem;
+  font-size: 0.93rem;
 }
-.dns-advice.is-keep { --tone: var(--ok-text); }
-.dns-advice.is-move { --tone: var(--muted); }
-.dns-advice-icon svg { display: block; width: 20px; height: 20px; fill: none; stroke: var(--tone); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.dns-advice-body { display: grid; gap: 0.5rem; min-width: 0; }
-.dns-advice-body p { margin: 0; }
+.dns-todo-item.is-keep { --tone: var(--ok-text); }
+.dns-todo-item.is-move { --tone: var(--muted); }
+.dns-todo-item > svg { width: 18px; height: 18px; margin-top: 0.15rem; fill: none; stroke: var(--tone); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.dns-todo-body { display: grid; gap: 0.4rem; min-width: 0; }
+.dns-todo-body p { margin: 0; }
 .dns-now { display: grid; gap: 0.3rem; }
 .dns-now-label { color: var(--muted); font-size: 0.82rem; font-weight: 600; }
 .dns-now code {
@@ -2326,17 +2416,18 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
   font-size: 0.85rem;
   word-break: break-all;
 }
+.dns-remove { display: grid; gap: 0.75rem; margin-top: 0.35rem; padding-top: 1.1rem; border-top: 1px solid var(--line); }
+.dns-remove-title { margin: 0; font-size: 1.05rem; font-weight: 700; }
 
-/* What to remove: a group per moment (now, when the mail moves, if a service is no longer
-   used), each record as the domain provider lists it */
+/* What to remove, in the summary: a group per moment (now, when the mail moves, if a
+   service is no longer used), each record as the domain provider lists it */
 .dns-delete-group {
   display: grid;
   gap: 0.35rem;
-  padding: 1rem 1.25rem 0.6rem;
+  padding: 0.9rem 1.1rem 0.5rem;
   border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--card-bg);
-  box-shadow: var(--card-shadow);
+  border-radius: 14px;
+  background: var(--input-bg);
 }
 .dns-delete-group.is-now { border-color: color-mix(in srgb, var(--airmail-red) 50%, transparent); }
 .dns-delete-title { display: flex; align-items: center; gap: 0.5rem; margin: 0; font-size: 1rem; font-weight: 700; }

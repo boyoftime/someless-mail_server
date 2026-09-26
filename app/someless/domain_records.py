@@ -36,12 +36,16 @@ DKIM_SELECTOR = "someless"
 AUTHENTICATING = ("code", "a", "spf", "dkim", "dmarc")  # all found: authenticated
 HOST_CHOICES = ("mail", "mx", "smtp", "mail2")  # this server's name in the domain: the first free one
 SPF_LOOKUP_LIMIT = 10  # DNS lookups one SPF check may take; past it the record fails everywhere
+LOOK_AGAIN_AFTER = 60  # seconds: an older look at a domain's DNS is done again when its page opens
 
 # One record to add: `host` as DNS providers take it ("@" for the domain itself). `advice`:
-# how it fits with what the domain has now (`now`: those records' values).
+# how it fits with a record the domain has already (`now`: that record's value).
 Record = namedtuple("Record", "key title hint type host full_host value priority advice now",
                     defaults=(None, None, ()))
-Advice = namedtuple("Advice", "kind text short")  # kind: edit, keep, moved or move; short: for the page's summary
+# kind: edit (a record of the domain's to change), keep (it's there already) or moved (this
+# server's name). text: what to do, for the summary at the end of the page. short: the same
+# in a line, on the record's own card (None: nothing to say there).
+Advice = namedtuple("Advice", "kind text short")
 # What the last look at the domain's DNS found for its mail
 NOTHING_FOUND = {"mx": [], "txt": [], "spf": [], "dmarc": [], "spf_lookups": 0,
                  "here": {"A": [], "AAAA": []},  # at this server's name
@@ -95,6 +99,11 @@ def found_in(keys):
     return {**NOTHING_FOUND, **json.loads(keys["found"])} if keys["found"] else dict(NOTHING_FOUND)
 
 
+def out_of_date(keys):
+    """Whether the domain's DNS is due another look: never looked at, or not for a while."""
+    return keys["found"] is None or time.time() - found_in(keys).get("at", 0) > LOOK_AGAIN_AFTER
+
+
 def records(domain, keys, address):
     """What to add at the domain provider: the records that authenticate the domain, then
     the one that brings its mail here. Each fits with what the domain has now."""
@@ -106,13 +115,10 @@ def records(domain, keys, address):
     host = keys["mail_host"] or HOST_CHOICES[0]
     mail_host = f"{host}.{domain}"
     moved = None if host == HOST_CHOICES[0] else Advice(
-        "moved", f"mail.{domain} is already in use, so this server takes {mail_host} instead. "
-                 f"Leave mail.{domain} as it is.",
-        f"This server is {mail_host}, since mail.{domain} is already in use.")
+        "moved", f"mail.{domain} is already in use, so this server is {mail_host}, and the records "
+                 f"above use that name. Leave mail.{domain} as it is.", None)
     spf_value, spf_advice, spf_now = _spf(domain, mail_host, address, found)
     dmarc_value, dmarc_advice, dmarc_now = _dmarc(domain, found)
-    # mail that goes to another service now: it stays there until the domain's mail moves
-    elsewhere = [] if mail_host in found["mx"] else found["mx"]
     authenticating = [
         make("code", "Someless code", "Shows that the domain is yours.",
              "TXT", "@", f"someless-code:{keys['code']}"),
@@ -126,10 +132,7 @@ def records(domain, keys, address):
              "TXT", "_dmarc", dmarc_value, advice=dmarc_advice, now=dmarc_now),
     ]
     receiving = make("mx", "MX record", "Sends the domain's incoming mail to this server.",
-                     "MX", "@", mail_host, priority=10,
-                     advice=Advice("move", "When you move, delete your current MX records and add this one.",
-                                   f"Mail keeps going to {_join(_receivers(elsewhere))} until you move it here.")
-                     if elsewhere else None, now=elsewhere)
+                     "MX", "@", mail_host, priority=10)
     return authenticating, receiving
 
 
@@ -140,29 +143,29 @@ def _spf(domain, mail_host, address, found):
     if not existing:
         return f"v=spf1 a:{mail_host} mx ~all", None, ()
     if len(existing) == 1 and _lets_in(existing[0], mail_host, address, found["mx"]):
-        advice = "Keep yours: it already lets this server send."
+        text = "Your SPF record already lets this server send: keep it as it is."
         if lookups > SPF_LOOKUP_LIMIT:
-            advice += " " + _too_many_lookups()
-        return existing[0], Advice("keep", advice, "Keep your SPF record: it already lets this server send."), ()
+            text += " " + _too_many_lookups()
+        return existing[0], Advice("keep", text, "Already there: keep it."), ()
     # Name this server by its address when its name would take the record past the lookup limit
     ours = f"ip4:{address}" if address and lookups + 1 > SPF_LOOKUP_LIMIT else f"a:{mail_host}"
     mechanisms, end, modifiers = _spf_parts(existing)
     value = " ".join(["v=spf1", *mechanisms, ours, *([end] if end else []), *modifiers])
     if len(existing) == 1:
-        short = "Edit your SPF record instead of adding a second one."
-        advice = (f"Edit your existing record: add {ours} to it, so it reads like the value below. "
-                  "Don't add a second one: a domain can have only one SPF record. "
-                  "Everything it allows now keeps working.")
+        short = "Replace your current SPF record with this one."
+        text = (f"Replace your SPF record with the one above: it's yours with {ours} added, so "
+                "everything yours allows keeps working. Don't add it as a second record, since a "
+                "domain can have only one SPF record.")
     else:
-        short = f"Put your {len(existing)} SPF records together into one."
-        advice = (f"A domain can have only one SPF record, and {domain} has {len(existing)}, so none of "
-                  "them works now. Delete them and add this one instead: it allows everything they allow.")
+        short = f"Replace your {len(existing)} SPF records with this one."
+        text = (f"{domain} has {len(existing)} SPF records, but a domain can have only one SPF record, so "
+                "none of them works now. Delete them all and add the one above: it allows everything they allow.")
     if ours.startswith("ip4:"):
-        advice += (f" It names this server by its IP address, since SPF allows only {SPF_LOOKUP_LIMIT} "
-                   f"DNS lookups and your record already takes {lookups}.")
+        text += (f" It names this server by its IP address, since SPF allows only {SPF_LOOKUP_LIMIT} "
+                 f"DNS lookups and your record already takes {lookups}.")
     if lookups + (0 if ours.startswith("ip4:") else 1) > SPF_LOOKUP_LIMIT:
-        advice += " " + _too_many_lookups()
-    return value, Advice("edit", advice, short), tuple(existing)
+        text += " " + _too_many_lookups()
+    return value, Advice("edit", text, short), tuple(existing)
 
 
 def _too_many_lookups():
@@ -176,15 +179,15 @@ def _dmarc(domain, found):
     if not existing:
         return "v=DMARC1; p=none", None, ()
     if len(existing) == 1:
-        return existing[0], Advice("keep", f"Keep yours: {domain} already has a DMARC record, and a "
-                                           "domain can have only one.", "Keep your DMARC record."), ()
+        return existing[0], Advice("keep", f"Keep your DMARC record: {domain} has one already (the one "
+                                           "above), and a domain can have only one.", "Already there: keep it."), ()
     return existing[0], Advice("edit", f"{domain} has {len(existing)} DMARC records, but a domain can have "
-                                       "only one, so none of them counts. Keep one and delete the rest.",
-                               f"Keep one of your {len(existing)} DMARC records."), tuple(existing)
+                                       "only one, so none of them counts. Keep the one above and delete the rest.",
+                               f"Keep this one of your {len(existing)} DMARC records, and delete the rest."), tuple(existing)
 
 
 def receive_note(domain, keys):
-    """What moving the domain's mail here means, as things are now."""
+    """When to add the MX record, as things are now (what other services have is in summary())."""
     found = found_in(keys)
     mail_host = _mail_host(domain, keys)
     elsewhere = _join(_receivers([server for server in found["mx"] if server != mail_host]))
@@ -194,12 +197,35 @@ def receive_note(domain, keys):
     if mail_host in found["mx"]:
         return (f"Mail for {domain} comes to this server now, but the mail engine isn't ready to receive "
                 "it yet. Until it is, point the MX record back to where the mail went before.")
-    if elsewhere:
-        return (f"Mail for {domain} goes to {elsewhere} now. Keep those MX records until Someless Mail "
-                "can receive mail: the mail engine isn't ready yet. When you move, swap them for this "
-                f"one, and don't keep both, or some mail would land at {elsewhere} and some here.")
+    if found["mx"]:
+        return (f"Add this one only when you move {domain}'s mail to Someless Mail: from then on, all new "
+                "mail for the domain comes here. The mail engine isn't ready yet, so keep the MX records "
+                "you have until then.")
     return (f"{domain} has no MX record, so it doesn't receive mail anywhere yet. Add this one when "
             "Someless Mail can receive mail: the mail engine isn't ready yet.")
+
+
+def summary(domain, keys, address):
+    """What other mail services have on the domain, and what to do about it, for the end of the
+    page: {"services", "todo": [{"kind", "text", "now"}], "clean": cleanup()}. None when there's
+    nothing of theirs: the domain is ready to set up."""
+    found = found_in(keys)
+    mail_host = _mail_host(domain, keys)
+    authenticating, _ = records(domain, keys, address)
+    todo = [{"kind": record.advice.kind, "text": record.advice.text, "now": record.now}
+            for record in authenticating if record.advice]
+    if found["mx"] and mail_host not in found["mx"]:
+        receivers = _join(_receivers(found["mx"]))
+        todo.append({"kind": "move", "now": (), "text": (
+            f"Mail for {domain} goes to {receivers} now. Keep those MX records until your mail moves "
+            "here: the mail engine isn't ready yet. Then delete them and add the MX record above, and "
+            f"don't keep both, or some mail would land at {receivers} and some here.")})
+    uses = services(domain, keys)
+    clean = cleanup(domain, keys, address)
+    in_the_way = [item for item in todo if item["kind"] != "keep"]
+    if not (uses or in_the_way or clean["now"] or clean["moving"] or clean["unused"]):
+        return None
+    return {"services": uses, "todo": todo, "clean": clean}
 
 
 # Mail services a domain may use already, told by the names of their mail servers (the
@@ -470,22 +496,44 @@ PROVIDERS = [
 ]
 
 
-def dns_provider(domain):
-    """Who runs the domain's DNS: a name we know, else its first name server, else None.
-    A subdomain without name servers of its own uses its parent domain's."""
+def _name_servers(domain):
+    """The names of the servers holding the domain's DNS: a subdomain without name servers
+    of its own uses its parent domain's. None known: []."""
     labels = domain.split(".")
     for start in range(len(labels) - 1):  # example.co.uk, then co.uk, never the top level alone
         servers = sorted(server.rstrip(".").lower() for server in _answers(".".join(labels[start:]), "NS"))
         if servers:
-            for pattern, name in PROVIDERS:
-                if any(re.search(pattern, server) for server in servers):
-                    return name
-            return servers[0]
-    return None
+            return servers
+    return []
 
 
-def _answers(name, rdtype):
+def dns_provider(domain):
+    """Who runs the domain's DNS: a name we know, else its first name server, else None."""
+    servers = _name_servers(domain)
+    for pattern, name in PROVIDERS:
+        if any(re.search(pattern, server) for server in servers):
+            return name
+    return servers[0] if servers else None
+
+
+def _zone_addresses(domain):
+    """Where to ask about names in the domain: its own name servers' addresses. They hold its
+    records as saved at the DNS provider now, while the usual DNS may hand out copies it
+    keeps for a while (up to each record's TTL, often 30 minutes)."""
+    servers = _name_servers(domain)
+    if not servers:
+        return []
+    answers = _ask([(server, "A") for server in servers])
+    return list(dict.fromkeys(address for server in servers for address in answers[(server, "A")]))
+
+
+def _answers(name, rdtype, servers=None):
+    """lookup(), asking the given name servers first. Never fails: no answer is []."""
     try:
+        if servers:
+            answers = lookup_at(servers, name, rdtype)
+            if answers is not None:
+                return answers
         return lookup(name, rdtype)
     except Exception:
         return []
@@ -497,9 +545,25 @@ def lookup(name, rdtype):
     resolver = dns.resolver.Resolver()
     resolver.lifetime = 4.0
     try:
-        answer = resolver.resolve(name, rdtype)
+        return _as_text(resolver.resolve(name, rdtype), rdtype)
     except dns.exception.DNSException:
         return []
+
+
+def lookup_at(servers, name, rdtype):
+    """lookup(), asking only these name servers (their addresses). None if they don't answer."""
+    resolver = dns.resolver.Resolver(configure=False)
+    resolver.nameservers = servers
+    resolver.lifetime = 4.0
+    try:
+        return _as_text(resolver.resolve(name, rdtype), rdtype)
+    except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
+        return []
+    except dns.exception.DNSException:
+        return None
+
+
+def _as_text(answer, rdtype):
     if rdtype == "TXT":
         return [b"".join(item.strings).decode("utf-8", "replace") for item in answer]
     if rdtype == "MX":
@@ -507,10 +571,11 @@ def lookup(name, rdtype):
     return [item.to_text() for item in answer]
 
 
-def _ask(questions):
-    """All the DNS questions at once (so a slow DNS costs seconds, not minutes)."""
+def _ask(questions, servers=None):
+    """All the DNS questions at once (so a slow DNS costs seconds, not minutes), of the
+    given name servers first when there are some."""
     with ThreadPoolExecutor(max_workers=len(questions)) as pool:
-        return dict(zip(questions, pool.map(lambda question: _answers(*question), questions)))
+        return dict(zip(questions, pool.map(lambda question: _answers(*question, servers), questions)))
 
 
 def look(domain, keys, address):
@@ -528,7 +593,8 @@ def look(domain, keys, address):
     questions = [(domain, "TXT"), (domain, "MX"), (f"_dmarc.{domain}", "TXT"), (selector, "TXT")]
     questions += [(f"{label}.{domain}", rdtype) for label in labels for rdtype in ("A", "AAAA", "CNAME")]
     questions += [(f"{label}.{domain}", "CNAME") for label in APP_NAMES]
-    answers = _ask(list(dict.fromkeys(questions)))
+    servers = _zone_addresses(domain)  # what's saved at the DNS provider now, not an old copy
+    answers = _ask(list(dict.fromkeys(questions)), servers)
 
     def at(label):
         return tuple(tuple(sorted(answers[(f"{label}.{domain}", rdtype)])) for rdtype in ("A", "AAAA", "CNAME"))
@@ -544,7 +610,7 @@ def look(domain, keys, address):
     mx = answers[(domain, "MX")]
     spf = [record for record in txt if _is_spf(record)]
     dmarc = [record for record in answers[(f"_dmarc.{domain}", "TXT")] if _is_dmarc(record)]
-    found = {"mx": mx, "txt": txt, "spf": spf, "dmarc": dmarc,
+    found = {"at": time.time(), "mx": mx, "txt": txt, "spf": spf, "dmarc": dmarc,
              "here": {"A": answers[(mail_host, "A")], "AAAA": answers[(mail_host, "AAAA")]},
              "extra": [["CNAME", label, target.rstrip(".")] for label in APP_NAMES if label != host
                        for target in answers[(f"{label}.{domain}", "CNAME")]]}
@@ -553,7 +619,7 @@ def look(domain, keys, address):
     selectors = [f"{name}._domainkey" for use in _uses(found, mail_host).values() if use["service"]
                  for name in use["service"].selectors]
     if selectors:
-        keyed = _ask([(f"{label}.{domain}", rdtype) for label in selectors for rdtype in ("CNAME", "TXT")])
+        keyed = _ask([(f"{label}.{domain}", rdtype) for label in selectors for rdtype in ("CNAME", "TXT")], servers)
         for label in selectors:
             aliases = [["CNAME", label, target.rstrip(".")] for target in keyed[(f"{label}.{domain}", "CNAME")]]
             found["extra"] += aliases or [["TXT", label, value] for value in keyed[(f"{label}.{domain}", "TXT")]]

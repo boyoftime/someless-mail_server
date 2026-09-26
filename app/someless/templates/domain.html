@@ -32,28 +32,20 @@
 </ul>
 {% endmacro %}
 
-{# One record to add: its type, host and value (each ready to copy), how it fits with what
-   the domain has now and, after a check, what DNS holds for it #}
+{# One record to add: its type, host and value (each ready to copy), a line on what to do
+   when the domain has that record already and, after a check, what DNS holds for it #}
 {% macro dns_record(record, result) %}
 <article class="dns-record{% if result %} is-{{ result.state }}{% endif %}" aria-labelledby="record-{{ record.key }}">
   <div class="dns-record-head">
     <div>
       <h3 class="dns-record-title" id="record-{{ record.key }}">{{ record.title }}</h3>
       <p class="dns-record-hint">{{ record.hint }}</p>
+      {% if record.advice and record.advice.short %}<p class="dns-action is-{{ record.advice.kind }}">{{ icon(record.advice.kind) }}<span>{{ record.advice.short }}</span></p>{% endif %}
     </div>
     {% if result %}
     <span class="dns-status is-{{ result.state }}">{{ {"found": "Found", "missing": "Not found yet", "different": "Doesn't match", "elsewhere": "Not moved yet"}[result.state] }}</span>
     {% endif %}
   </div>
-  {% if record.advice %}
-  <div class="dns-advice is-{{ record.advice.kind }}">
-    <span class="dns-advice-icon">{{ icon(record.advice.kind) }}</span>
-    <div class="dns-advice-body">
-      <p>{{ record.advice.text }}</p>
-      {% if record.now %}<p class="dns-now"><span class="dns-now-label">Now:</span> {% for value in record.now %}<code>{{ value }}</code>{% endfor %}</p>{% endif %}
-    </div>
-  </div>
-  {% endif %}
   <dl class="dns-fields">
     <dt>Type</dt>
     <dd><span class="dns-box">{{ record.type }}</span></dd>
@@ -79,45 +71,23 @@
   <p class="page-subtitle">
     {%- if provider %}Your domain's DNS is at <strong>{{ provider }}</strong>. Add these records there, in the DNS settings for {{ domain.name }}, then check them here.
     {%- else %}Add these records in the DNS settings at your domain provider (where you bought {{ domain.name }}, like Namecheap or Cloudflare), then check them here.
-    {%- endif %} New records can take a few minutes, sometimes a few hours, to show up.</p>
+    {%- endif %} Changes usually show up here within a few minutes.</p>
 </header>
 
-{# What the domain has for mail already (Zoho Mail, Brevo...), and how the records below fit
-   around it: each point leads to its record #}
-{% set fitted = (records + [receiving]) | selectattr("advice") | list %}
-{% set to_delete = clean.now or clean.moving or clean.unused %}
-{% if services or fitted or to_delete %}
-<section class="dns-found" aria-labelledby="found-title">
-  <span class="dns-found-badge" aria-hidden="true">{{ icon("link") }}</span>
-  <div class="dns-found-body">
-    <h2 class="dns-found-title" id="found-title">
-      {%- if services %}{{ domain.name }} already uses {% for service in services %}{{ service.name }}{% if not loop.last %}{{ " and " if loop.revindex == 2 else ", " }}{% endif %}{% endfor %}
-      {%- else %}{{ domain.name }} has records already{% endif -%}
-    </h2>
-    {% if services %}
-    <ul class="dns-services">
-      {% for service in services %}
-      <li class="dns-service">
-        <span class="dns-service-name">{{ service.name }}</span>
-        {% if service.receives %}<span class="dns-role">Receives mail</span>{% endif %}
-        {% if service.sends %}<span class="dns-role">Sends mail</span>{% endif %}
-      </li>
-      {% endfor %}
-    </ul>
-    {% endif %}
-    {% if fitted or to_delete %}
-    <p class="dns-found-text">The records below are set to work alongside {{ "what's there" if not services else "it" if services | length == 1 else "them" }}, so your mail keeps working as it does now:</p>
-    <ul class="dns-fits">
-      {% for record in fitted %}
-      <li><a class="dns-fit is-{{ record.advice.kind }}" href="#record-{{ record.key }}">{{ icon(record.advice.kind) }}<span>{{ record.advice.short }}</span></a></li>
-      {% endfor %}
-      {% if to_delete %}
-      <li><a class="dns-fit is-delete" href="#clean-up">{{ icon("delete") }}<span>{{ "Delete what gets in the way now, and the rest when your mail moves." if clean.now and clean.moving else "Delete what gets in the way now." if clean.now else "See what to delete when your mail moves here." if clean.moving else "See what to delete if you no longer use it." }}</span></a></li>
-      {% endif %}
-    </ul>
+{# A domain no other mail service uses: nothing to watch out for #}
+{% if not summary %}
+<div class="dns-ready">
+  <span class="dns-ready-icon" aria-hidden="true">{{ icon("keep") }}</span>
+  <div>
+    {% if domain.authenticated %}
+    <p class="dns-ready-title">Your domain is authenticated</p>
+    <p class="dns-ready-text">All its records are in place.</p>
+    {% else %}
+    <p class="dns-ready-title">Your domain is ready to set up</p>
+    <p class="dns-ready-text">No other mail service uses {{ domain.name }}. Add the records below{% if provider %} at {{ provider }}{% endif %}, then check them.</p>
     {% endif %}
   </div>
-</section>
+</div>
 {% endif %}
 
 <section class="dns-group" aria-labelledby="authenticate-title">
@@ -135,36 +105,77 @@
   {{ dns_record(receiving, checks.get(receiving.key)) }}
 </section>
 
-{# What Someless Mail won't need, and when to delete it: now, when the mail moves, or once a
-   service is no longer used #}
-{% if to_delete %}
-<section class="dns-group dns-delete" id="clean-up" aria-labelledby="clean-up-title">
-  <h2 class="dns-group-title" id="clean-up-title">What to remove</h2>
-  <p class="dns-group-hint">Records {{ domain.name }} won't need with Someless Mail, and when to delete each, so its DNS ends up clean, with its mail going one way only.</p>
-  {% if clean.now %}
-  <div class="dns-delete-group is-now">
-    <h3 class="dns-delete-title">{{ icon("delete") }}Delete now</h3>
-    <p class="dns-delete-hint">These get in the way today.</p>
-    {{ delete_rows(clean.now) }}
+{# The end of the page: what other mail services have on the domain (Zoho Mail, Brevo...),
+   what to do with their records, and what to remove, when #}
+{% if summary %}
+{% set clean = summary.clean %}
+<section class="dns-found" id="other-services" aria-labelledby="found-title">
+  <span class="dns-found-badge" aria-hidden="true">{{ icon("link") }}</span>
+  <div class="dns-found-body">
+    <h2 class="dns-found-title" id="found-title">
+      {%- if summary.services %}{{ domain.name }} already uses {% for service in summary.services %}{{ service.name }}{% if not loop.last %}{{ " and " if loop.revindex == 2 else ", " }}{% endif %}{% endfor %}
+      {%- else %}{{ domain.name }} has other records{% endif -%}
+    </h2>
+    {% if summary.services %}
+    <ul class="dns-services">
+      {% for service in summary.services %}
+      <li class="dns-service">
+        <span class="dns-service-name">{{ service.name }}</span>
+        {% if service.receives %}<span class="dns-role">Receives mail</span>{% endif %}
+        {% if service.sends %}<span class="dns-role">Sends mail</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if summary.todo %}
+    <p class="dns-found-text">The records above already work alongside {{ "what's there" if not summary.services else "it" if summary.services | length == 1 else "them" }}. Here's what to do with the records {{ domain.name }} has now:</p>
+    <ul class="dns-todo">
+      {% for item in summary.todo %}
+      <li class="dns-todo-item is-{{ item.kind }}">
+        {{ icon(item.kind) }}
+        <div class="dns-todo-body">
+          <p>{{ item.text }}</p>
+          {% if item.now %}<p class="dns-now"><span class="dns-now-label">Now:</span> {% for value in item.now %}<code>{{ value }}</code>{% endfor %}</p>{% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if clean.now or clean.moving or clean.unused or clean.keep %}
+    <div class="dns-remove" id="clean-up">
+      <h3 class="dns-remove-title">What to remove</h3>
+      {% if clean.now or clean.moving or clean.unused %}
+      <p class="dns-found-text">Records {{ domain.name }} won't need with Someless Mail, and when to delete each, so its DNS ends up clean, with its mail going one way only.</p>
+      {% else %}
+      <p class="dns-found-text">Nothing needs removing.</p>
+      {% endif %}
+      {% if clean.now %}
+      <div class="dns-delete-group is-now">
+        <h4 class="dns-delete-title">{{ icon("delete") }}Delete now</h4>
+        <p class="dns-delete-hint">These get in the way today.</p>
+        {{ delete_rows(clean.now) }}
+      </div>
+      {% endif %}
+      {% for name, rows in clean.moving %}
+      <div class="dns-delete-group is-moving">
+        <h4 class="dns-delete-title">{{ icon("move") }}Delete when your mail moves here: {{ name }}</h4>
+        <p class="dns-delete-hint">Keep these until then: they're how {{ name }} gets {{ domain.name }}'s mail now.</p>
+        {{ delete_rows(rows) }}
+      </div>
+      {% endfor %}
+      {% for name, sends, rows in clean.unused %}
+      <div class="dns-delete-group">
+        <h4 class="dns-delete-title">{{ icon("delete") }}If you no longer use {{ name }}</h4>
+        <p class="dns-delete-hint">{{ name }} doesn't receive {{ domain.name }}'s mail{% if sends %}, but it can still send for it{% endif %}. If you've stopped using it, delete these.</p>
+        {{ delete_rows(rows) }}
+      </div>
+      {% endfor %}
+      {% if clean.keep %}
+      <p class="dns-keep">{{ icon("keep") }}<span>Keep {% for name in clean.keep %}{{ name }}'s{% if not loop.last %}{{ " and " if loop.revindex == 2 else ", " }}{% endif %}{% endfor %} records: several services can send for one domain at once.</span></p>
+      {% endif %}
+    </div>
+    {% endif %}
   </div>
-  {% endif %}
-  {% for name, rows in clean.moving %}
-  <div class="dns-delete-group is-moving">
-    <h3 class="dns-delete-title">{{ icon("move") }}Delete when your mail moves here: {{ name }}</h3>
-    <p class="dns-delete-hint">Keep these until then: they're how {{ name }} gets {{ domain.name }}'s mail now.</p>
-    {{ delete_rows(rows) }}
-  </div>
-  {% endfor %}
-  {% for name, sends, rows in clean.unused %}
-  <div class="dns-delete-group">
-    <h3 class="dns-delete-title">{{ icon("delete") }}If you no longer use {{ name }}</h3>
-    <p class="dns-delete-hint">{{ name }} doesn't receive {{ domain.name }}'s mail{% if sends %}, but it can still send for it{% endif %}. If you've stopped using it, delete these.</p>
-    {{ delete_rows(rows) }}
-  </div>
-  {% endfor %}
-  {% if clean.keep %}
-  <p class="dns-keep">{{ icon("keep") }}<span>Keep {% for name in clean.keep %}{{ name }}'s{% if not loop.last %}{{ " and " if loop.revindex == 2 else ", " }}{% endif %}{% endfor %} records: several services can send for one domain at once.</span></p>
-  {% endif %}
 </section>
 {% endif %}
 

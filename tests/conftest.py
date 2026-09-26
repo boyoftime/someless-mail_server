@@ -7,6 +7,8 @@ from someless import create_app, domain_records
 def no_real_dns(monkeypatch):
     """Tests never ask the real DNS: nothing is found, unless a test's `dns` fixture says so."""
     monkeypatch.setattr(domain_records, "lookup", lambda name, rdtype: [])
+    # a domain's own name servers don't answer either, so the (made-up) usual DNS is asked
+    monkeypatch.setattr(domain_records, "lookup_at", lambda servers, name, rdtype: None)
 
 
 @pytest.fixture
