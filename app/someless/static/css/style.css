@@ -3042,31 +3042,90 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
 .test-result.is-delivered, .test-status.is-delivered { color: var(--ok-text); }
 .test-result.is-bounced, .test-status.is-bounced { color: #ff5d6e; }
 .test-result.is-retrying, .test-status.is-retrying { color: #f59e0b; }
+/* The test email's line in its dialog: the text centred between two glowing lines. Waiting,
+   a light runs along them; delivered, they flare, a glow flashes between them and a tick
+   draws itself after the text. Red when it bounced, amber while it's being tried again. */
 .test-status {
-  margin: 0;
-  padding: 0.7rem 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  --line: #0195fb;
+  --line-light: #9fdcff;
+  position: relative;
+  isolation: isolate;   /* the flash stays behind the text, not behind the dialog */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  margin: 0.2rem 0;
+  padding: 1rem 0.5rem;
   font-weight: 600;
+  text-align: center;
   overflow-wrap: anywhere;
 }
-.test-status.is-queued::before {
+.test-status[hidden] { display: none; }
+.test-status::before, .test-status::after {
   content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--line) 18%, var(--line-light) 50%, var(--line) 82%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--line) 80%, transparent);
+}
+.test-status::before { top: 0; }
+.test-status::after { bottom: 0; }
+/* waiting: the line twice as long, sliding by, so its light runs along */
+.test-status.is-queued::before, .test-status.is-queued::after { background-size: 200% 100%; animation: line-run 1.6s linear infinite; }
+@keyframes line-run { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+.test-status.is-bounced { --line: #ff5d6e; --line-light: #ffb3bc; }
+.test-status.is-retrying { --line: #f59e0b; --line-light: #fde68a; }
+.test-status-flash {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(60% 120% at 50% 50%, rgba(1, 149, 251, 0.5), transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+}
+.test-status-spinner, .test-status-tick { display: none; flex: none; }
+.test-status.is-queued .test-status-spinner {
   display: inline-block;
-  width: 0.7rem;
-  height: 0.7rem;
-  margin-right: 0.55rem;
+  width: 0.75rem;
+  height: 0.75rem;
   border: 2px solid currentColor;
   border-right-color: transparent;
   border-radius: 50%;
-  vertical-align: -0.05rem;
   animation: spin 0.8s linear infinite;
 }
-.test-status.is-delivered { border-color: rgba(34, 197, 94, 0.55); box-shadow: 0 0 22px -10px rgba(34, 197, 94, 0.9); }
-.test-status.is-bounced { border-color: rgba(255, 93, 110, 0.55); }
-.test-status.is-retrying { border-color: rgba(245, 158, 11, 0.55); }
+.test-status.is-delivered { color: var(--ok-text); }
+.test-status.is-delivered::before, .test-status.is-delivered::after { animation: line-flare 1.2s ease-out both; }
+@keyframes line-flare {
+  0% { box-shadow: 0 0 0 transparent; filter: brightness(1); }
+  30% { box-shadow: 0 0 26px 3px rgba(1, 149, 251, 0.95); filter: brightness(1.8); }
+  100% { box-shadow: 0 0 14px rgba(1, 149, 251, 0.85); filter: brightness(1.15); }
+}
+.test-status.is-delivered .test-status-flash { animation: status-flash 1.4s ease-out both; }
+@keyframes status-flash { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0.35; } }
+.test-status.is-delivered .test-status-tick {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  filter: drop-shadow(0 0 6px rgba(34, 197, 94, 0.9));
+  animation: tick-pop 0.45s 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.test-status-tick circle { fill: #22c55e; }
+.test-status-tick path { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 16; stroke-dashoffset: 16; }
+.test-status.is-delivered .test-status-tick path { animation: tick-draw 0.4s 0.55s ease-out forwards; }
+@keyframes tick-pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes tick-draw { to { stroke-dashoffset: 0; } }
+.test-status.is-bounced { color: #ff5d6e; }
+.test-status.is-retrying { color: #f59e0b; }
 @media (prefers-reduced-motion: reduce) {
-  .test-status.is-queued::before { animation-duration: 2.4s; }
+  .test-status::before, .test-status::after, .test-status-flash,
+  .test-status.is-delivered .test-status-tick, .test-status.is-delivered .test-status-tick path { animation: none !important; }
+  .test-status.is-delivered .test-status-flash { opacity: 0.35; }
+  .test-status-tick path { stroke-dashoffset: 0; }
+  .test-status.is-queued .test-status-spinner { animation-duration: 2.4s; }
 }
 .smtp-note a { color: var(--airmail-blue); font-weight: 600; }
 .empty-state-action { margin-top: 0.4rem; }

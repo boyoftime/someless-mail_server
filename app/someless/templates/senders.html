@@ -144,7 +144,8 @@
       <label class="field-label" for="test-text">Message</label>
       <textarea id="test-text" name="text" rows="4" maxlength="5000">It works! This is a test from Someless Mail.</textarea>
     </div>
-    <p class="test-status" role="status" aria-live="polite" hidden></p>
+    {# what became of it, between two glowing lines (senders-page.js) #}
+    <p class="test-status" role="status" aria-live="polite" hidden><span class="test-status-flash" aria-hidden="true"></span><span class="test-status-spinner" aria-hidden="true"></span><span class="test-status-text"></span><svg class="test-status-tick" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.4l3 3 6-6.3"/></svg></p>
     <div class="rules-actions">
       <button type="button" class="button button-quiet" data-dialog-close>Close</button>
       <button type="submit" class="button rules-save" data-busy-label="Sending…"><span class="button-spinner" aria-hidden="true"></span><span class="button-label">Send</span></button>

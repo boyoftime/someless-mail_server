@@ -58,12 +58,14 @@
   if (testDialog && typeof testDialog.showModal === "function" && window.fetch) {
     var testForm = testDialog.querySelector("[data-test-form]");
     var line = testDialog.querySelector(".test-status");
+    var lineText = line.querySelector(".test-status-text");
     var testing = null; // the button of the sender being tested
     var polling = null;
     var sent = false;
 
     var show = function (text, state) {
-      line.textContent = text;
+      if (lineText.textContent === text && line.classList.contains("is-" + state)) return; // no flash again
+      lineText.textContent = text;
       line.className = "test-status" + (state ? " is-" + state : "");
       line.hidden = !text;
     };

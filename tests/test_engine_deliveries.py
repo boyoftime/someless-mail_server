@@ -188,3 +188,17 @@ def test_a_name_in_any_language_or_with_punctuation_is_kept_whole():
     assert message["From"].addresses[0].display_name == 'Café "Lumière", Paris'
     assert message["From"].addresses[0].addr_spec == "hello@cafe.example"
     assert b"=?utf-8?" in bytes(message)   # encoded for the way to Gmail
+
+
+def test_the_test_dialog_has_its_status_line(app, client, login, engine):
+    """Between two lines: the text, a spinner while it waits and a tick once delivered (senders-page.js)."""
+    import re
+    from test_engine_sync import a_sender, authenticated_domain
+    a_sender(app, authenticated_domain(app), "no-reply@pineloop.online")
+    login()
+
+    page = client.get("/senders").get_data(as_text=True)
+
+    line = re.search(r'<p class="test-status"[^>]*>(.*?)</p>', page, re.S).group(1)
+    for part in ("test-status-spinner", "test-status-text", "test-status-tick", "test-status-flash"):
+        assert f'class="{part}"' in line, part
