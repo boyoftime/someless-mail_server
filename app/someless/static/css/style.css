@@ -451,6 +451,10 @@ body.is-playing .splash-title span:nth-child(5) { animation-delay: 0.78s; }
   transition: color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
 }
 .page-tab svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 640px) {
+  /* side by side on a phone, each as wide as its words; a second row only when they don't fit */
+  .page-tab { flex: 1 1 auto; padding: 0.65rem 0.8rem; gap: 0.45rem; font-size: 0.92rem; }
+}
 .page-tab:hover { color: var(--ink); background: rgba(1, 149, 251, 0.06); }
 .page-tab[aria-current="page"], .page-tab[aria-selected="true"] {
   color: var(--ink);
@@ -2639,7 +2643,18 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
 }
 .ready-title { font-weight: 600; }
 .ready-detail { grid-column: 2; color: var(--muted); font-size: 0.9rem; }
-.server-name-form { display: grid; gap: 0.4rem; max-width: 360px; }
+.ready-link { grid-column: 2; justify-self: start; color: var(--airmail-blue); font-size: 0.9rem; font-weight: 600; text-decoration: none; }
+.ready-link:hover, .ready-link:focus-visible { text-decoration: underline; }
+
+/* Settings > Mail server name: the name in use, the choice of it (one card per authenticated
+   domain, like the key variants), then what the name needs, marked like Ready to send */
+.server-name-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.75rem; }
+.mail-server-form { display: grid; gap: 1.1rem; margin-top: 1.25rem; }
+.mail-server-needs { display: grid; gap: 0.6rem; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
+.mail-server-empty { display: grid; justify-items: center; gap: 0.5rem; padding: 0.5rem 0 0.75rem; text-align: center; }
+.mail-server-empty .empty-state-title, .mail-server-empty .empty-state-text { margin: 0; }
+.switch-list { display: grid; gap: 0.6rem; margin: 0; padding-left: 1.2rem; color: var(--muted); }
+.switch-list strong { color: var(--ink); overflow-wrap: anywhere; }
 
 .smtp-card {
   display: grid;

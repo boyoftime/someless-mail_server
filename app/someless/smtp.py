@@ -100,7 +100,7 @@ def _page(status=200, typed=None, **context):
     found = checks.run_checks(domain_records.server_address(request.host))
     return render_template(
         "smtp.html", keys=keys, query=query, server=_server_name(), port=PORT, expiries=expiries,
-        checks=found, can_send=checks.can_send(found), server_names=names.server_names(), server_name=names.server_name(),
+        checks=found, can_send=checks.can_send(found),
         engine_error=engine.state()["sync_error"] if engine.enabled() else None,
         typed=typed or {"name": "", "variant": "standard", "expiry": DEFAULT_EXPIRY}, **context,
     ), status
@@ -142,17 +142,6 @@ def generate():
     response = make_response(_page(new_key=key, new_name=typed["name"], new_login=login))
     response.headers["Cache-Control"] = "no-store"  # the key is in it: nothing keeps a copy
     return response
-
-
-@bp.post("/server-name")
-@login_required
-def choose_server_name():
-    chosen = request.form.get("server_name", "")
-    if chosen in names.server_names():
-        engine.remember(server_name=chosen)
-        engine_sync.after_change()
-        flash(f"The server is {chosen} now.", "success")
-    return redirect(url_for("smtp.index"))
 
 
 @bp.post("/checks")

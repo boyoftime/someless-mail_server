@@ -15,6 +15,7 @@ def no_real_dns(monkeypatch):
     monkeypatch.setattr(checks, "port25_open", lambda: True)
     monkeypatch.setattr(checks, "reverse_name", lambda ip: None)
     monkeypatch.setattr(checks, "addresses_of", lambda name: [])
+    monkeypatch.setattr(checks, "relay_reached", lambda name: False)
 
 
 @pytest.fixture

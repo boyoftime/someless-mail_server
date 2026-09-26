@@ -50,20 +50,10 @@
       <span class="ready-mark" aria-hidden="true"></span>
       <span class="ready-title">{{ check.title }}<span class="visually-hidden">: {{ {"ok": "done", "missing": "to do", "warning": "warning"}[check.state] }}</span></span>
       {% if check.detail %}<span class="ready-detail">{{ check.detail }}</span>{% endif %}
+      {% if check.key == "server-name" %}<a class="ready-link" href="{{ url_for('settings.mail_server') }}">Mail server name in Settings</a>{% endif %}
     </li>
     {% endfor %}
   </ul>
-  {% if server_names | length > 1 %}
-  {# choosing one saves it (smtp-page.js); without JavaScript, the button does #}
-  <form method="post" action="{{ url_for('smtp.choose_server_name') }}" class="server-name-form">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label class="field-label" for="server-name">Server name</label>
-    <select id="server-name" name="server_name" data-dropdown data-submit-on-change>
-      {% for name in server_names %}<option value="{{ name }}"{% if name == server_name %} selected{% endif %}>{{ name }}</option>{% endfor %}
-    </select>
-    <noscript><button class="button button-quiet" type="submit">Use this name</button></noscript>
-  </form>
-  {% endif %}
 </section>
 
 <section class="smtp-card" aria-labelledby="smtp-settings-title">

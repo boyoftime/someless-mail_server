@@ -4,9 +4,12 @@ from collections import namedtuple
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from . import two_factor
+from . import engine, two_factor
 from .auth import login_required
 from .db import get_db
+from .domain_records import server_address
+from .engine import checks, names
+from .engine import sync as engine_sync
 
 bp = Blueprint("settings", __name__, url_prefix="/settings")
 
@@ -174,3 +177,35 @@ def change_password_rules():
     db.commit()
     flash("Password rules saved.", "success")
     return redirect(url_for("settings.index"))
+
+
+# Mail server name: the one name the mail server goes by (engine/names.py). Apps connect to it,
+# and its certificate and reverse DNS carry it; it's one of the authenticated domains' mail names.
+
+@bp.get("/mail-server")
+@login_required
+def mail_server():
+    return render_template("settings-mail-server.html", server_names=names.server_names(), server_name=names.server_name(),
+                           needs=checks.name_checks(server_address(request.host)))
+
+
+@bp.post("/mail-server")
+@login_required
+def save_mail_server():
+    chosen = request.form.get("server_name", "")
+    if chosen in names.server_names():
+        changed = chosen != names.server_name()
+        engine.remember(server_name=chosen)   # kept even when it's the first one: it stays, whatever domains come later
+        if changed:
+            engine_sync.after_change()   # the engine greets with it, and asks Let's Encrypt for its certificate
+            flash(f"Your mail server is {chosen} now.", "success")
+    return redirect(url_for("settings.mail_server"))
+
+
+@bp.post("/mail-server/check")
+@login_required
+def check_mail_server():
+    """Check again: nothing cached, and Let's Encrypt asked again (at most every 10 minutes)."""
+    checks.forget()
+    engine_sync.ask_for_certificate()
+    return redirect(url_for("settings.mail_server"))

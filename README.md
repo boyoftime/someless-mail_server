@@ -214,7 +214,7 @@ SSL stays off here on purpose: Someless Mail gets this certificate itself, and w
 
 Then, on **SMTP & API**, click **Check again**: Someless Mail asks Let's Encrypt again straight away, so you don't wait for its next try, which can be hours after a failed check. Let's Encrypt allows only a few failed checks of a name an hour, so **Check again** asks at most every 10 minutes. The certificate usually arrives within a few minutes after that, and Someless Mail renews it by itself. **SMTP & API** shows when it's there (see [Step 8](#step-8-check-ready-to-send)).
 
-**More than one domain?** The mail server has one name. It takes the first authenticated domain's mail name; on **SMTP & API** you can pick another one.
+**More than one domain?** The mail server has one name, whichever domain your mail comes from. It takes the first authenticated domain's mail name; choose another one in **Settings → Mail server name**. That page also shows what the name needs (its A record, the proxy host, reverse DNS and the certificate) and how each stands.
 
 ## Step 6: Reverse DNS and port 25
 

@@ -2,11 +2,6 @@
 {% from "copy-box.html" import copy_box %}
 {% block title %}Settings | Someless Mail{% endblock %}
 
-{# The sections of Settings, shown as tabs. To add one, add a line here (and its page). #}
-{% set settings_tabs = [
-  {"label": "Account", "href": url_for("settings.index"), "icon": "account", "current": request.blueprint == "settings"},
-] %}
-
 {% macro icon(name) %}
   {%- if name == "account" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20.5c1.4-3.8 4.4-5.5 8-5.5s6.6 1.7 8 5.5"/></svg>
@@ -66,13 +61,7 @@
   <p class="page-subtitle">Manage your account and keep your information up to date.</p>
 </header>
 
-<nav class="page-tabs" aria-label="Settings sections">
-  {% for tab in settings_tabs %}
-  <a class="page-tab" href="{{ tab.href }}"{% if tab.current %} aria-current="page"{% endif %}>
-    {{ icon(tab.icon) }}<span>{{ tab.label }}</span>
-  </a>
-  {% endfor %}
-</nav>
+{% include "settings-tabs.html" %}
 
 {# Full-width cards, one under another, with a glowing divider between them #}
 <div class="settings-stack">

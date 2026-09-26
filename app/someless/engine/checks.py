@@ -1,8 +1,11 @@
 """Ready to send? The checklist at the top of SMTP & API: what's done, and what to do next.
 Engine, server name, certificate and a Sender are needed to send; port 25 and reverse DNS are
-warnings (mail may go out, but land in spam or bounce)."""
+warnings (mail may go out, but land in spam or bounce). Also what the server name itself
+needs, for Settings > Mail server name (name_checks)."""
 import socket
 import time
+import urllib.error
+import urllib.request
 from collections import namedtuple
 from datetime import datetime, timezone
 
@@ -13,6 +16,7 @@ from ..db import get_db
 from . import client, enabled
 from .client import EngineError, EngineUnavailable
 from .names import server_name
+from .supervisor import NOT_HERE
 
 Check = namedtuple("Check", "key title state detail")
 NEEDED = ("engine", "server-name", "certificate", "sender")
@@ -42,6 +46,72 @@ def addresses_of(name):
         return []
 
 
+def relay_answers(url):
+    """Whether the challenge relay (supervisor.py) is what answers at this address: it says
+    so in every answer that isn't a real challenge's."""
+    try:
+        with urllib.request.urlopen(url, timeout=4) as response:
+            body = response.read(300)
+    except urllib.error.HTTPError as error:
+        body = error.read(300)
+    except (OSError, ValueError):
+        return False
+    return NOT_HERE.strip() in body
+
+
+def relay_reached(name):
+    """Whether Let's Encrypt's check of the name gets through to Someless Mail (the proxy
+    host, or port 80 mapped to 17081)."""
+    return relay_answers(f"http://{name}/.well-known/acme-challenge/someless-check")
+
+
+def _certificates():
+    """The engine's certificates; None when it isn't there to ask."""
+    if not enabled():
+        return None
+    try:
+        return client().get("Certificate")
+    except (EngineUnavailable, EngineError):
+        return None
+
+
+def _has_certificate(name, certificates):
+    now = datetime.now(timezone.utc).isoformat()
+    return bool(name) and any(name in (cert.get("subjectAlternativeNames") or {}) and cert.get("notValidAfter", "") > now
+                              for cert in (certificates or []))
+
+
+def name_checks(address):
+    """What the server name needs, each with how it stands: its A record, the proxy host
+    Let's Encrypt comes through, reverse DNS (when the panel knows its public address) and
+    the certificate. Empty without a server name."""
+    name = server_name()
+    if not name:
+        return []
+    found = []
+    if address and address not in _cached(f"a {name}", lambda: addresses_of(name)):
+        found.append(Check("server-name", "Points to this server", "missing",
+                           f"Add its A record on the domain's Authenticate page, pointing to {address}."))
+    else:
+        found.append(Check("server-name", "Points to this server", "ok", f"{name} leads to this server."))
+    proxy = f"{name} → someless-mail, port 17081, with SSL off (Someless Mail gets this certificate itself)."
+    if _cached(f"relay {name}", lambda: relay_reached(name)):
+        found.append(Check("proxy-host", "Proxy host", "ok", proxy))
+    else:
+        found.append(Check("proxy-host", "Proxy host", "missing",
+                           f"In Nginx Proxy Manager, add a proxy host: {proxy} Without a proxy, map port 80 to 17081."))
+    if address:
+        ptr = _cached(f"ptr {address}", lambda: reverse_name(address))
+        found.append(Check("reverse-dns", "Reverse DNS", "ok", f"{address} answers with {name}.") if ptr == name else Check(
+            "reverse-dns", "Reverse DNS", "warning", f"At your VPS provider, set the reverse DNS of {address} to {name}."))
+    if _has_certificate(name, _certificates()):
+        found.append(Check("certificate", "Certificate", "ok", "From Let's Encrypt. Someless Mail renews it by itself."))
+    else:
+        found.append(Check("certificate", "Certificate", "missing",
+                           "Let's Encrypt gives it once the proxy host works. Then click Check again."))
+    return found
+
+
 def run_checks(address):
     name = server_name()
     found = []
@@ -63,10 +133,7 @@ def run_checks(address):
                            f"{name} doesn't point to {address} yet: add its A record on the domain's Authenticate page."))
     else:
         found.append(Check("server-name", "Server name points here", "ok", name))
-    now = datetime.now(timezone.utc).isoformat()
-    has_certificate = bool(name) and any(
-        name in (cert.get("subjectAlternativeNames") or {}) and cert.get("notValidAfter", "") > now
-        for cert in (certificates or []))
+    has_certificate = _has_certificate(name, certificates)
     found.append(Check("certificate", "Certificate", "ok" if has_certificate else "missing", "" if has_certificate else (
         f"Let's Encrypt checks {name or 'the server name'} on port 80. In Nginx Proxy Manager, add a proxy host for it "
         "pointing to someless-mail on port 17081, with SSL left off (Someless Mail gets this certificate itself); "

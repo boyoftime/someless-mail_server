@@ -1,0 +1,126 @@
+{% extends "shell.html" %}
+{% from "copy-box.html" import copy_box %}
+{% block title %}Mail server name | Someless Mail{% endblock %}
+
+{% macro icon(name) %}
+  {%- if name == "server" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="17" height="7" rx="2"/><rect x="3.5" y="13" width="17" height="7" rx="2"/><path d="M7.5 7.5h.01M7.5 16.5h.01M11 7.5h5.5M11 16.5h5.5"/></svg>
+  {%- elif name == "tick" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg>
+  {%- elif name == "globe" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.3 2.4 3.5 5.2 3.5 8.5s-1.2 6.1-3.5 8.5c-2.3-2.4-3.5-5.2-3.5-8.5s1.2-6.1 3.5-8.5z"/></svg>
+  {%- endif -%}
+{% endmacro %}
+
+{% block content %}
+<header class="page-header">
+  <h1 class="page-title">Settings</h1>
+  <p class="page-subtitle">Manage your account and keep your information up to date.</p>
+</header>
+
+{% include "settings-tabs.html" %}
+
+<div class="settings-stack">
+  {# One card, open; its header still folds it away like the others (collapsible-cards.js) #}
+  <section class="settings-card is-open" aria-labelledby="mail-server-title" data-card>
+    <h2 class="card-heading">
+      <button type="button" class="card-head" data-card-toggle aria-controls="mail-server-body" aria-expanded="true">
+        <span class="card-badge">{{ icon("server") }}</span>
+        <span class="card-titles">
+          <span id="mail-server-title" class="card-title">Mail server name</span>
+          <span class="card-hint">The one name your mail server goes by: your apps connect to it, and its certificate and reverse DNS carry it.</span>
+        </span>
+        <span class="card-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg></span>
+      </button>
+    </h2>
+    <div class="card-body" id="mail-server-body">
+      <div class="card-body-clip">
+        <div class="card-body-content">
+          {% if not server_names %}
+          <div class="mail-server-empty">
+            <span class="empty-state-badge" aria-hidden="true">{{ icon("globe") }}</span>
+            <p class="empty-state-title">Authenticate a domain first</p>
+            <p class="empty-state-text">Your mail server takes the mail name of one of your authenticated domains, like mail.example.com.</p>
+            <a class="button card-button" href="{{ url_for('domains.index') }}">Go to Domains</a>
+          </div>
+          {% else %}
+          <div class="field">
+            <span class="field-label">Your mail server</span>
+            {{ copy_box(server_name, "Copy the mail server name") }}
+          </div>
+
+          {# Changing it asks first (settings-mail-server.js): apps and the reverse DNS must follow #}
+          <form method="post" action="{{ url_for('settings.save_mail_server') }}" class="card-form mail-server-form" data-server-name-form data-current="{{ server_name }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <fieldset class="key-choices">
+              <legend class="field-label">Choose its name</legend>
+              <div class="server-name-options">
+                {% for name in server_names %}
+                <label class="choice-card">
+                  <input type="radio" name="server_name" value="{{ name }}"{% if name == server_name %} checked{% endif %}>
+                  <span class="choice-tick" aria-hidden="true">{{ icon("tick") }}</span>
+                  <span class="choice-title">{{ name }}</span>
+                  <span class="choice-text">{{ "In use now" if name == server_name else "For " ~ name.split(".", 1)[1] }}</span>
+                </label>
+                {% endfor %}
+              </div>
+            </fieldset>
+            <div class="card-actions">
+              <button class="button card-button" type="submit" data-busy-label="Saving…">
+                <span class="button-spinner" aria-hidden="true"></span>
+                <span class="button-label">Save</span>
+              </button>
+            </div>
+          </form>
+
+          {# What the name needs, and how each stands (engine/checks.py) #}
+          <section class="mail-server-needs" aria-labelledby="needs-title">
+            <div class="ready-head">
+              <h3 class="smtp-title" id="needs-title">What {{ server_name }} needs</h3>
+              <form method="post" action="{{ url_for('settings.check_mail_server') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="button button-quiet" type="submit" data-busy-label="Checking…"><span class="button-spinner" aria-hidden="true"></span><span class="button-label">Check again</span></button>
+              </form>
+            </div>
+            <ul class="ready-list">
+              {% for check in needs %}
+              <li class="ready-item is-{{ check.state }}">
+                <span class="ready-mark" aria-hidden="true"></span>
+                <span class="ready-title">{{ check.title }}<span class="visually-hidden">: {{ {"ok": "done", "missing": "to do", "warning": "warning"}[check.state] }}</span></span>
+                {% if check.detail %}<span class="ready-detail">{{ check.detail }}</span>{% endif %}
+              </li>
+              {% endfor %}
+            </ul>
+          </section>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+{% if server_names %}
+<dialog class="rules-dialog domain-dialog is-wide" id="server-name-dialog" aria-labelledby="server-name-dialog-title">
+  <div class="rules-form">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("server") }}</span>
+      <div>
+        <h2 id="server-name-dialog-title" class="rules-title">Switch to <span data-new-name></span>?</h2>
+        <p class="rules-hint">Your mail server goes by one name. After switching:</p>
+      </div>
+    </div>
+    <ul class="switch-list">
+      <li>Apps and websites connecting to {{ server_name }} must use <strong data-new-name></strong> instead.</li>
+      <li>In Nginx Proxy Manager, add a proxy host for <strong data-new-name></strong>: someless-mail, port 17081, SSL off.</li>
+      <li>At your VPS provider, set your server's reverse DNS to <strong data-new-name></strong>.</li>
+    </ul>
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet" data-dialog-close>Cancel</button>
+      <button type="button" class="button rules-save" data-switch-confirm>Switch</button>
+    </div>
+  </div>
+</dialog>
+{% endif %}
+<script src="{{ url_for('static', filename='js/collapsible-cards.js') }}"></script>
+<script src="{{ url_for('static', filename='js/settings-mail-server.js') }}"></script>
+{% endblock %}

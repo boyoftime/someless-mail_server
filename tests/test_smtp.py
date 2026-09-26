@@ -311,24 +311,6 @@ def test_smtp_page_without_engine(client, login):
     assert "Ready to send" in page and "mail engine isn't running here" in page
 
 
-def test_the_server_name_is_chosen_from_the_authenticated_domains(client, login, app, engine):
-    from test_engine_sync import authenticated_domain
-    from someless import engine as engine_module
-    authenticated_domain(app, "cloudnix.net")
-    authenticated_domain(app, "pineloop.online")
-    login()
-
-    page = text(client.get("/smtp"))
-    assert '<option value="mail.pineloop.online"' in page  # two domains: a choice
-    client.post("/smtp/server-name", data={"server_name": "mail.pineloop.online"})
-    client.post("/smtp/server-name", data={"server_name": "mail.elsewhere.com"})  # not one of them: ignored
-
-    with app.app_context():
-        assert engine_module.state()["server_name"] == "mail.pineloop.online"
-    assert engine.objects["SystemSettings"]["singleton"]["defaultHostname"] == "mail.pineloop.online"
-    assert "mail.pineloop.online" in plain(text(client.get("/smtp")))  # the SMTP server apps use
-
-
 def test_check_again_looks_again(client, login, monkeypatch):
     from someless.engine import checks
     login()
