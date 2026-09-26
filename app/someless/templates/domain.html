@@ -196,4 +196,9 @@
     </button>
   </form>
 </div>
+{% if celebrate %}
+{# every record right, just now: confetti, gifts and stars over the screen (celebrate.js) #}
+<div data-celebrate hidden></div>
+<script src="{{ url_for('static', filename='js/celebrate.js') }}"></script>
+{% endif %}
 {% endblock %}

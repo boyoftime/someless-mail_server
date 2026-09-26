@@ -4,7 +4,7 @@ import json
 import re
 import time
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 
 from . import domain_records
 from .auth import login_required
@@ -111,6 +111,7 @@ def authenticate(domain_id):
     authenticating, receiving = domain_records.records(domain["name"], keys, address)
     return render_template(
         "domain.html", domain=domain, provider=provider, records=authenticating, receiving=receiving,
+        celebrate=session.pop("celebrate", None) == domain_id,   # just authenticated (check below)
         receive_note=domain_records.receive_note(domain["name"], keys),
         summary=domain_records.summary(domain["name"], keys, address),
         checks=json.loads(keys["checks"]) if keys["checks"] else {}, checked_ago=_ago(keys["checked_at"]),
@@ -129,6 +130,8 @@ def check(domain_id):
     _note_provider(domain_id, domain["name"])  # it may have moved its DNS since
     if domain_records.authenticated(results):
         flash(f"{domain['name']} is authenticated.", "authenticated")
+        if not domain["authenticated"]:
+            session["celebrate"] = domain_id   # it just became authenticated: the page celebrates, once
     else:
         still = [SHORT_NAMES[key] for key in domain_records.AUTHENTICATING if results[key]["state"] != "found"]
         flash(f"Still to add or fix: {', '.join(still)}. New records can take a while to show up, "

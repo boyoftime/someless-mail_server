@@ -742,3 +742,37 @@ def test_a_found_record_says_so_with_a_tick(client, login, app, dns):
     assert '<svg class="dns-status-tick"' in found and "Found" in found
     missing = re.search(r'<span class="dns-status is-missing">(.*?)</span>', record(page, "spf"), re.S).group(1)
     assert "dns-status-tick" not in missing   # only a found record gets the tick
+
+
+def test_a_domain_that_becomes_authenticated_is_celebrated(client, login, app, dns):
+    """Confetti, gifts and stars over the screen (celebrate.js), once: the moment it's authenticated."""
+    login()
+    domain_id = add_domain(client)
+    all_right(dns, app, domain_id)
+
+    client.post(f"/domains/{domain_id}/check")
+
+    assert "data-celebrate" in text(client.get(f"/domains/{domain_id}"))
+    assert "data-celebrate" not in text(client.get(f"/domains/{domain_id}"))   # not again on the next visit
+
+
+def test_checking_an_authenticated_domain_again_is_no_celebration(client, login, app, dns):
+    login()
+    domain_id = add_domain(client)
+    all_right(dns, app, domain_id)
+    client.post(f"/domains/{domain_id}/check")
+    client.get(f"/domains/{domain_id}")
+
+    client.post(f"/domains/{domain_id}/check")
+
+    page = text(client.get(f"/domains/{domain_id}"))
+    assert "is authenticated." in page and "data-celebrate" not in page
+
+
+def test_a_check_that_still_finds_something_missing_is_no_celebration(client, login, app, dns):
+    login()
+    domain_id = add_domain(client)
+
+    client.post(f"/domains/{domain_id}/check")
+
+    assert "data-celebrate" not in text(client.get(f"/domains/{domain_id}"))

@@ -3202,3 +3202,7 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
   .sender-form-actions .button { flex: 1 1 auto; }
   .email-parts { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* The celebration when a domain is authenticated (celebrate.js): over the page, under the
+   notice board, and clicks go straight through */
+.celebrate { position: fixed; inset: 0; z-index: 140; width: 100%; height: 100%; pointer-events: none; }

@@ -49,6 +49,7 @@ SIGNED_IN_PAGE_FILES = [
     "js/sender-form.js",
     "js/smtp-page.js",
     "js/settings-mail-server.js",
+    "js/celebrate.js",
     "js/smtp-docs.js",
     "js/page-flip.js",
     "lottie/programming.json",
