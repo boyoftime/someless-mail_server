@@ -1,4 +1,7 @@
-# Someless Mail Server
+<h1>
+  <img src="docs/logo.png" alt="Someless Mail logo" width="96" align="center">
+  Someless Mail Server
+</h1>
 
 Welcome to **Someless Mail Server**: your own mail server in a single Docker image. Install it on your server, open the web interface, connect your domain, and send email from your apps and websites through your own server, signed and trusted like mail from the big providers.
 
