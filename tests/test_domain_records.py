@@ -15,6 +15,11 @@ def text(response):
     return html.unescape(response.get_data(as_text=True))
 
 
+def plain(page):
+    """The page's words, without the tags between them."""
+    return re.sub(r"<[^>]+>", "", page)
+
+
 @pytest.fixture
 def client(app):
     """The panel opened by the server's public address (what the A and SPF records use)."""
@@ -230,6 +235,99 @@ def test_deleting_a_domain_deletes_its_keys(client, login, app):
 
     assert keys(app, domain_id) is None
     assert client.get(f"/domains/{domain_id}").status_code == 404
+
+
+NAMECHEAP = ["dns1.registrar-servers.com", "dns2.registrar-servers.com"]
+
+
+def test_adding_a_domain_finds_who_runs_its_dns(client, login, dns):
+    dns[("example.com", "NS")] = NAMECHEAP
+    login()
+
+    add_domain(client)
+
+    row = text(client.get("/domains"))
+    assert "DNS at Namecheap" in row
+
+
+@pytest.mark.parametrize("servers, provider", [
+    (["amy.ns.cloudflare.com", "bob.ns.cloudflare.com"], "Cloudflare"),
+    (["ns-1.awsdns-01.org"], "Amazon Route 53"),
+    (["ns41.domaincontrol.com"], "GoDaddy"),
+    (["ns1.some-dns.example"], "ns1.some-dns.example"),  # not one we know: its name server
+])
+def test_dns_providers_are_named(client, login, dns, servers, provider):
+    dns[("example.com", "NS")] = servers
+    login()
+
+    add_domain(client)
+
+    assert f"DNS at {provider}" in text(client.get("/domains"))
+
+
+def test_a_subdomain_uses_the_dns_of_its_parent_domain(client, login, dns):
+    dns[("cloudnix.net", "NS")] = NAMECHEAP  # mail.cloudnix.net has none of its own
+    login()
+
+    add_domain(client, "mail.cloudnix.net")
+
+    assert "DNS at Namecheap" in text(client.get("/domains"))
+
+
+def test_without_an_answer_no_provider_is_named(client, login):
+    login()
+
+    add_domain(client)
+
+    assert "DNS at" not in text(client.get("/domains"))
+
+
+def test_authenticate_page_says_where_to_add_the_records(client, login, dns):
+    dns[("example.com", "NS")] = NAMECHEAP
+    login()
+    domain_id = add_domain(client)
+
+    page = text(client.get(f"/domains/{domain_id}"))
+
+    assert "Your domain's DNS is at Namecheap" in plain(page)
+
+
+def test_the_check_notices_a_move_to_another_provider(client, login, dns):
+    dns[("example.com", "NS")] = NAMECHEAP
+    login()
+    domain_id = add_domain(client)
+    dns[("example.com", "NS")] = ["amy.ns.cloudflare.com"]
+
+    client.post(f"/domains/{domain_id}/check")
+
+    assert "DNS at Cloudflare" in text(client.get("/domains"))
+
+
+def test_domains_added_before_get_their_provider_on_their_page(client, login, dns, app):
+    login()
+    domain_id = add_domain(client)  # no answer at the time
+    dns[("example.com", "NS")] = NAMECHEAP
+
+    page = text(client.get(f"/domains/{domain_id}"))
+
+    assert "Your domain's DNS is at Namecheap" in plain(page)
+
+
+def test_older_databases_get_the_provider_column(tmp_path):
+    import sqlite3
+    from someless import create_app
+    with sqlite3.connect(tmp_path / "someless.db") as db:  # as the first Domains page left it
+        db.execute("CREATE TABLE domains (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE,"
+                   " authenticated INTEGER NOT NULL DEFAULT 0, added_at REAL NOT NULL)")
+        db.execute("INSERT INTO domains (name, added_at) VALUES ('example.com', 0)")
+
+    create_app({"TESTING": True, "DATA_DIR": str(tmp_path)})
+
+    with sqlite3.connect(tmp_path / "someless.db") as db:
+        columns = [row[1] for row in db.execute("PRAGMA table_info(domains)")]
+        kept = db.execute("SELECT name FROM domains").fetchall()
+    assert "provider" in columns
+    assert kept == [("example.com",)]
 
 
 def test_the_authenticate_page_needs_login(client):

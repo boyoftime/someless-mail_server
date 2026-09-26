@@ -45,7 +45,10 @@
     <tbody>
       {% for domain in domains %}
       <tr class="domain-row" data-domain="{{ domain.name }}"{% if not domain.shown %} hidden{% endif %}>
-        <td class="domain-name">{{ domain.name }}</td>
+        <td class="domain-name">
+          {{ domain.name }}
+          {% if domain.provider %}<span class="domain-provider">DNS at {{ domain.provider }}</span>{% endif %}
+        </td>
         <td>
           {% if domain.authenticated %}
           <span class="domain-status is-ok"><span class="status-dot" aria-hidden="true"></span>Authenticated</span>

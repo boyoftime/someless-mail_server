@@ -2058,6 +2058,7 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
 .domain-row { transition: background-color 0.2s ease; }
 .domain-row:hover { background: rgba(1, 149, 251, 0.05); }
 .domain-name { font-weight: 600; word-break: break-all; }
+.domain-provider { display: block; margin-top: 0.15rem; color: var(--muted); font-size: 0.8rem; font-weight: 500; }
 .domain-status { display: inline-flex; align-items: center; gap: 0.5rem; }
 .status-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: #ff5d6e; box-shadow: 0 0 8px rgba(255, 93, 110, 0.85); }
 .domain-status.is-ok .status-dot { background: #22c55e; box-shadow: 0 0 8px rgba(34, 197, 94, 0.85); }
@@ -2074,7 +2075,8 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
   cursor: help;
 }
 .help-dot:focus-visible { outline: 3px solid var(--airmail-blue); outline-offset: 2px; }
-.domain-action { color: var(--airmail-blue); font-weight: 600; }
+.domain-action { color: var(--airmail-blue); font-weight: 600; text-decoration: none; }
+.domain-action:hover { text-decoration: underline; text-underline-offset: 3px; }
 .domain-action.is-disabled { color: var(--muted); opacity: 0.6; cursor: not-allowed; }
 .domain-delete-cell { width: 1%; text-align: right; }
 .domain-delete { display: inline-flex; margin: 0; }

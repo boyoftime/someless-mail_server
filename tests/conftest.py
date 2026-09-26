@@ -1,6 +1,12 @@
 import pytest
 
-from someless import create_app
+from someless import create_app, domain_records
+
+
+@pytest.fixture(autouse=True)
+def no_real_dns(monkeypatch):
+    """Tests never ask the real DNS: nothing is found, unless a test's `dns` fixture says so."""
+    monkeypatch.setattr(domain_records, "lookup", lambda name, rdtype: [])
 
 
 @pytest.fixture

@@ -13,6 +13,7 @@ to this server. That one waits until the domain's mail is to move.
 import base64
 import ipaddress
 import json
+import re
 import secrets
 import socket
 import time
@@ -103,6 +104,60 @@ def records(domain, keys, address):
     return authenticating, receiving
 
 
+# Who runs a domain's DNS, told by the names of its name servers. The records go there.
+PROVIDERS = [
+    (r"(^|\.)(registrar-servers|namecheaphosting)\.com$", "Namecheap"),
+    (r"(^|\.)cloudflare\.com$", "Cloudflare"),
+    (r"(^|\.)google\.com$", "Google"),
+    (r"(^|\.)domaincontrol\.com$", "GoDaddy"),
+    (r"\.awsdns-\d+\.", "Amazon Route 53"),
+    (r"(^|\.)digitalocean\.com$", "DigitalOcean"),
+    (r"(^|\.)googledomains\.com$", "Google Cloud DNS"),
+    (r"(^|\.)hetzner\.(com|de)$", "Hetzner"),
+    (r"(^|\.)ovh\.(net|ca)$", "OVHcloud"),
+    (r"(^|\.)gandi\.net$", "Gandi"),
+    (r"(^|\.)porkbun\.com$", "Porkbun"),
+    (r"(^|\.)name\.com$", "Name.com"),
+    (r"(^|\.)(dns-parking|hostinger)\.com$", "Hostinger"),
+    (r"(^|\.)ui-dns\.(com|de|org|biz)$", "IONOS"),
+    (r"(^|\.)azure-dns\.(com|net|org|info)$", "Azure DNS"),
+    (r"(^|\.)wixdns\.net$", "Wix"),
+    (r"(^|\.)squarespacedns\.com$", "Squarespace"),
+    (r"(^|\.)linode\.com$", "Linode"),
+    (r"(^|\.)vultr\.com$", "Vultr"),
+    (r"(^|\.)dyna-ns\.net$", "Dynadot"),
+    (r"(^|\.)dnsowl\.com$", "NameSilo"),
+    (r"(^|\.)hover\.com$", "Hover"),
+    (r"(^|\.)name-services\.com$", "eNom"),
+    (r"(^|\.)dnsimple\.com$", "DNSimple"),
+    (r"(^|\.)vercel-dns\.com$", "Vercel"),
+    (r"(^|\.)contabo\.net$", "Contabo"),
+    (r"(^|\.)he\.net$", "Hurricane Electric"),
+    (r"(^|\.)zoho\.com$", "Zoho"),
+]
+
+
+def dns_provider(domain):
+    """Who runs the domain's DNS: a name we know, else its first name server, else None.
+    A subdomain without name servers of its own uses its parent domain's."""
+    labels = domain.split(".")
+    for start in range(len(labels) - 1):  # example.co.uk, then co.uk, never the top level alone
+        servers = sorted(server.rstrip(".").lower() for server in _answers(".".join(labels[start:]), "NS"))
+        if servers:
+            for pattern, name in PROVIDERS:
+                if any(re.search(pattern, server) for server in servers):
+                    return name
+            return servers[0]
+    return None
+
+
+def _answers(name, rdtype):
+    try:
+        return lookup(name, rdtype)
+    except Exception:
+        return []
+
+
 def lookup(name, rdtype):
     """The answers to one DNS question, as text: none if there are none, or if DNS
     doesn't answer in time."""
@@ -121,13 +176,8 @@ def lookup(name, rdtype):
 
 def _ask(questions):
     """All the DNS questions at once (so a slow DNS costs seconds, not minutes)."""
-    def one(question):
-        try:
-            return lookup(*question)
-        except Exception:
-            return []
     with ThreadPoolExecutor(max_workers=len(questions)) as pool:
-        return dict(zip(questions, pool.map(one, questions)))
+        return dict(zip(questions, pool.map(lambda question: _answers(*question), questions)))
 
 
 def check(domain, keys, address):

@@ -38,7 +38,8 @@ CREATE TABLE IF NOT EXISTS domains (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     authenticated INTEGER NOT NULL DEFAULT 0,  -- its DNS records all checked and right
-    added_at REAL NOT NULL
+    added_at REAL NOT NULL,
+    provider TEXT                              -- who runs its DNS (Namecheap, Cloudflare...)
 );
 -- Per domain: what its DNS records hold, and the last check of them (domain_records.py)
 CREATE TABLE IF NOT EXISTS domain_keys (
@@ -51,6 +52,17 @@ CREATE TABLE IF NOT EXISTS domain_keys (
     checked_at REAL
 );
 """
+
+
+# Columns that came after their table first shipped: databases from before get them on start
+LATER_COLUMNS = [("domains", "provider", "TEXT")]
+
+
+def _add_later_columns(db):
+    for table, column, kind in LATER_COLUMNS:
+        if column not in {row[1] for row in db.execute(f"PRAGMA table_info({table})")}:
+            db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
+    db.commit()
 
 
 def get_db():
@@ -71,6 +83,7 @@ def init_app(app):
     with app.app_context():
         db = get_db()
         db.executescript(SCHEMA)
+        _add_later_columns(db)
         if db.execute("SELECT 1 FROM admin").fetchone() is None:
             db.execute(
                 "INSERT INTO admin (id, username, password_hash) VALUES (1, ?, ?)",

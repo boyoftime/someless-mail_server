@@ -34,7 +34,7 @@ def _page(status=200, **context):
     query = request.args.get("q", "").strip()
     domains = [
         {"id": row["id"], "name": row["name"], "authenticated": row["authenticated"],
-         "shown": query.lower() in row["name"]}
+         "provider": row["provider"], "shown": query.lower() in row["name"]}
         for row in get_db().execute("SELECT * FROM domains ORDER BY name")
     ]
     return render_template("domains.html", domains=domains, query=query, **context), status
@@ -45,6 +45,15 @@ def _domain(domain_id):
     if domain is None:
         abort(404)
     return domain
+
+
+def _note_provider(domain_id, name):
+    """Who runs the domain's DNS, noted for the list and the Authenticate page."""
+    provider = domain_records.dns_provider(name)
+    db = get_db()
+    db.execute("UPDATE domains SET provider = ? WHERE id = ?", (provider, domain_id))
+    db.commit()
+    return provider
 
 
 def _ago(when):
@@ -77,6 +86,7 @@ def add():
     added = db.execute("INSERT INTO domains (name, added_at) VALUES (?, ?)", (name, time.time()))
     db.commit()
     domain_records.keys_for(added.lastrowid)  # its code and signing key, ready for its records
+    _note_provider(added.lastrowid, name)
     flash(f"{name} was added.", "added")
     return redirect(url_for("domains.index"))
 
@@ -87,10 +97,12 @@ def authenticate(domain_id):
     """The DNS records to add at the domain provider, and how the last check of them went."""
     domain = _domain(domain_id)
     keys = domain_records.keys_for(domain_id)
+    # domains added before providers were noted (or when DNS didn't answer) find out now
+    provider = domain["provider"] or _note_provider(domain_id, domain["name"])
     authenticating, receiving = domain_records.records(
         domain["name"], keys, domain_records.server_address(request.host))
     return render_template(
-        "domain.html", domain=domain, records=authenticating, receiving=receiving,
+        "domain.html", domain=domain, provider=provider, records=authenticating, receiving=receiving,
         checks=json.loads(keys["checks"]) if keys["checks"] else {}, checked_ago=_ago(keys["checked_at"]),
     )
 
@@ -103,6 +115,7 @@ def check(domain_id):
     results = domain_records.check(
         domain["name"], domain_records.keys_for(domain_id), domain_records.server_address(request.host))
     domain_records.save_check(domain_id, results)
+    _note_provider(domain_id, domain["name"])  # it may have moved its DNS since
     if domain_records.authenticated(results):
         flash(f"{domain['name']} is authenticated.", "authenticated")
     else:
