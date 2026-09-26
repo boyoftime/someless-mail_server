@@ -14,6 +14,12 @@
   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.2 12.3l2.6 2.6 5-5.2"/></svg>
   {%- elif name == "no" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
+  {%- elif name == "send" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 3.5L10 14"/><path d="M20.5 3.5l-6.6 17-3.9-6.5-6.5-3.9z"/></svg>
+  {%- elif name == "mail" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="M4 7l8 6 8-6"/></svg>
+  {%- elif name == "subject" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h9"/></svg>
   {%- elif name == "info" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5"/><path d="M12 7.6v.1"/></svg>
   {%- endif -%}
@@ -42,7 +48,7 @@
 
 <div class="sender-list">
   {% for sender in senders %}
-  <article class="sender-row" data-sender="{{ (sender.name ~ ' ' ~ sender.email) | lower }}"{% if not sender.shown %} hidden{% endif %}>
+  <article class="sender-row" data-sender-id="{{ sender.id }}" data-sender="{{ (sender.name ~ ' ' ~ sender.email) | lower }}"{% if not sender.shown %} hidden{% endif %}>
     <div class="sender-head">
       <span class="sender-avatar" aria-hidden="true">{{ sender.name[:1] | upper }}</span>
       <h2 class="sender-who"><span class="sender-name">{{ sender.name }}</span> <span class="sender-email">&lt;{{ sender.email }}&gt;</span></h2>
@@ -54,6 +60,10 @@
       </span>
       {% endif %}
       <div class="sender-actions">
+        {% if sender.ready %}
+        <button type="button" class="button button-quiet sender-test" data-test-sender="{{ sender.id }}" data-sender-name="{{ sender.name }} <{{ sender.email }}>"
+                data-test-url="{{ url_for('senders.send_test', sender_id=sender.id) }}" data-status-url="{{ url_for('senders.test_status', sender_id=sender.id, queue_id='QUEUE_ID') }}" aria-haspopup="dialog">{{ icon("send") }}<span>Send test email</span></button>
+        {% endif %}
         <a class="button button-quiet sender-edit" href="{{ url_for('senders.edit', sender_id=sender.id) }}">Edit</a>
         <form method="post" action="{{ url_for('senders.delete', sender_id=sender.id) }}" class="sender-delete">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -74,6 +84,22 @@
         <dt>DMARC</dt>
         <dd class="{{ 'is-yes' if sender.dmarc else 'is-no' }}">{{ "Set up" if sender.dmarc else "Not set up" }}{{ icon("yes" if sender.dmarc else "no") }}</dd>
       </div>
+      {% if sender.last_test %}
+      {% set test = sender.last_test %}
+      <div class="sender-last-test">
+        <dt>Last test</dt>
+        <dd>
+          <span class="test-result is-{{ test.status }}">
+            {%- if test.status == "delivered" -%}{{ test.detail or "Delivered" }}
+            {%- elif test.status == "bounced" -%}Bounced{% if test.detail %}: {{ test.detail }}{% endif %}
+            {%- elif test.status == "retrying" -%}Trying again later{% if test.detail %}: {{ test.detail }}{% endif %}
+            {%- else -%}On its way{%- endif -%}
+          </span>
+          {# in the admin's own time (local-time.js) #}
+          <span class="test-meta">To {{ test.recipient }}, <time datetime="{{ test.at }}" data-local-moment>{{ test.when }}</time></span>
+        </dd>
+      </div>
+      {% endif %}
     </dl>
   </article>
   {% endfor %}
@@ -86,6 +112,45 @@
   <p class="empty-state-text">Use Add sender above to add the first name and address your mail goes out from.</p>
 </section>
 {% endif %}
+
+{# A test email (senders-page.js): sent through the mail engine, then followed until it's
+   delivered, bounced or still on its way after a minute #}
+<dialog class="rules-dialog domain-dialog is-wide" id="test-dialog" aria-labelledby="test-title">
+  {# problems show on the board, as the server finds them (senders-page.js) #}
+  <form class="rules-form" novalidate data-test-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("send") }}</span>
+      <div>
+        <h2 id="test-title" class="rules-title">Send a test email</h2>
+        <p class="rules-hint">From <span data-test-from></span>. Send it to an inbox you can check, like your Gmail.</p>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="test-to">To</label>
+      <div class="input-wrap">
+        <span class="input-icon">{{ icon("mail") }}</span>
+        <input id="test-to" name="to" type="email" required autocomplete="email" placeholder="you@gmail.com">
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="test-subject">Subject</label>
+      <div class="input-wrap">
+        <span class="input-icon">{{ icon("subject") }}</span>
+        <input id="test-subject" name="subject" maxlength="200" value="Test from Someless Mail">
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="test-text">Message</label>
+      <textarea id="test-text" name="text" rows="4" maxlength="5000">It works! This is a test from Someless Mail.</textarea>
+    </div>
+    <p class="test-status" role="status" aria-live="polite" hidden></p>
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet" data-dialog-close>Close</button>
+      <button type="submit" class="button rules-save" data-busy-label="Sending…"><span class="button-spinner" aria-hidden="true"></span><span class="button-label">Send</span></button>
+    </div>
+  </form>
+</dialog>
 
 {# Deleting asks first (senders-page.js). Without JavaScript the trash button deletes. #}
 <dialog class="rules-dialog domain-dialog is-danger" id="delete-sender-dialog" aria-labelledby="delete-sender-title">

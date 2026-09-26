@@ -1,13 +1,13 @@
 """The SMTP guide (/smtp/docs): sending mail through this server from code, with a working
 example in six of the most used languages. Each example is filled in with the server's own
-settings, and reads the key from the SOMELESS_SMTP_KEY environment variable, so it never
-sits in the code. highlight() colours the code as HTML, the rest of it escaped."""
+settings, and reads the key's login and the key from the SOMELESS_SMTP_LOGIN and
+SOMELESS_SMTP_KEY environment variables, so the key never sits in the code. highlight() colours the code as HTML, the rest of it escaped."""
 import re
 
 from markupsafe import Markup, escape
 
 # Each example: its tab (with the language's logo, static/img/lang, from Devicon), the file it
-# would be, what to install first, and the code, where @SERVER@, @PORT@, @LOGIN@, @FROM@ and @TO@
+# would be, what to install first, and the code, where @SERVER@, @PORT@, @FROM@ and @TO@
 # become the real values.
 EXAMPLES = [
     {"key": "python", "name": "Python", "icon": "python", "file": "send.py", "install": None, "code": '''\
@@ -23,7 +23,7 @@ message.set_content("It works!")
 
 with smtplib.SMTP("@SERVER@", @PORT@) as smtp:
     smtp.starttls()  # encrypted before the login goes out
-    smtp.login("@LOGIN@", os.environ["SOMELESS_SMTP_KEY"])
+    smtp.login(os.environ["SOMELESS_SMTP_LOGIN"], os.environ["SOMELESS_SMTP_KEY"])
     smtp.send_message(message)
 '''},
     {"key": "node", "name": "Node.js", "icon": "nodejs", "file": "send.mjs", "install": "npm install nodemailer", "code": '''\
@@ -34,7 +34,7 @@ const transport = nodemailer.createTransport({
   port: @PORT@,
   secure: false, // starts plain, then STARTTLS...
   requireTLS: true, // ...before the login goes out
-  auth: { user: "@LOGIN@", pass: process.env.SOMELESS_SMTP_KEY },
+  auth: { user: process.env.SOMELESS_SMTP_LOGIN, pass: process.env.SOMELESS_SMTP_KEY },
 });
 
 await transport.sendMail({
@@ -56,7 +56,7 @@ $mail->Host = "@SERVER@";
 $mail->Port = @PORT@;
 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
 $mail->SMTPAuth = true;
-$mail->Username = "@LOGIN@";
+$mail->Username = getenv("SOMELESS_SMTP_LOGIN");
 $mail->Password = getenv("SOMELESS_SMTP_KEY");
 
 $mail->setFrom("@FROM@");
@@ -82,7 +82,7 @@ public class SendMail {
         Session session = Session.getInstance(settings, new Authenticator() {
             @Override
             protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication("@LOGIN@", System.getenv("SOMELESS_SMTP_KEY"));
+                return new PasswordAuthentication(System.getenv("SOMELESS_SMTP_LOGIN"), System.getenv("SOMELESS_SMTP_KEY"));
             }
         });
 
@@ -108,7 +108,7 @@ message.Body = new TextPart("plain") { Text = "It works!" };
 
 using var smtp = new SmtpClient();
 await smtp.ConnectAsync("@SERVER@", @PORT@, SecureSocketOptions.StartTls);
-await smtp.AuthenticateAsync("@LOGIN@", Environment.GetEnvironmentVariable("SOMELESS_SMTP_KEY"));
+await smtp.AuthenticateAsync(Environment.GetEnvironmentVariable("SOMELESS_SMTP_LOGIN"), Environment.GetEnvironmentVariable("SOMELESS_SMTP_KEY"));
 await smtp.SendAsync(message);
 await smtp.DisconnectAsync(true);
 '''},
@@ -122,7 +122,7 @@ import (
 )
 
 func main() {
-	auth := smtp.PlainAuth("", "@LOGIN@", os.Getenv("SOMELESS_SMTP_KEY"), "@SERVER@")
+	auth := smtp.PlainAuth("", os.Getenv("SOMELESS_SMTP_LOGIN"), os.Getenv("SOMELESS_SMTP_KEY"), "@SERVER@")
 	message := []byte("From: @FROM@\\r\\n" +
 		"To: @TO@\\r\\n" +
 		"Subject: Hello from Someless Mail\\r\\n" +
@@ -147,12 +147,12 @@ KEYWORDS = {
 }
 
 
-def examples(server, port, login, sender, recipient="friend@example.org"):
+def examples(server, port, sender, recipient="friend@example.org"):
     """The examples, filled in with these settings."""
     filled = []
     for example in EXAMPLES:
         code = example["code"]
-        for token, value in (("@SERVER@", server), ("@PORT@", str(port)), ("@LOGIN@", login),
+        for token, value in (("@SERVER@", server), ("@PORT@", str(port)),
                              ("@FROM@", sender), ("@TO@", recipient)):
             code = code.replace(token, value)
         filled.append({**example, "code": code, "html": highlight(code, example["key"])})

@@ -1163,6 +1163,18 @@ html.js .reveal-panel:not(.is-open) { display: none; }
   font: inherit;
 }
 .field input:focus-visible { outline-offset: 0; border-color: var(--airmail-blue); }
+.field textarea {
+  width: 100%;
+  min-height: 6rem;
+  padding: 0.75rem 0.9rem;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--field);
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+.field textarea:focus-visible { outline-offset: 0; border-color: var(--airmail-blue); }
 
 /* Login: in the picked theme, with mail icons floating behind the card */
 body.auth {
@@ -2563,6 +2575,72 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
   font-size: 0.92rem;
 }
 .smtp-note svg { flex: none; width: 19px; height: 19px; margin-top: 0.1rem; fill: none; stroke: var(--airmail-blue); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* Ready to send: the checklist at the top of SMTP & API (engine/checks.py). A green glow
+   once it can send; each check a mark: a green tick, a red ring to do, an amber warning. */
+.ready-card {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0 0 2rem;
+  padding: 1.2rem 1.4rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+}
+.ready-card.is-ready {
+  border-color: rgba(34, 197, 94, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.1), 0 0 34px -10px rgba(34, 197, 94, 0.85);
+}
+.ready-card.is-ready .smtp-title { color: var(--ok-text); }
+.ready-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1rem; }
+.ready-catching-up { margin: 0; color: #f59e0b; font-size: 0.9rem; }
+.ready-list { display: grid; margin: 0; padding: 0; list-style: none; }
+.ready-item {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.15rem 0.8rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--line);
+}
+.ready-item:first-child { border-top: 0; }
+.ready-mark {
+  position: relative;
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ff5d6e;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(255, 93, 110, 0.55);
+}
+.ready-item.is-ok .ready-mark { border-color: #22c55e; background: #22c55e; box-shadow: 0 0 10px rgba(34, 197, 94, 0.75); }
+.ready-item.is-ok .ready-mark::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 5px;
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.ready-item.is-warning .ready-mark { border-color: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.6); }
+.ready-item.is-warning .ready-mark::after {
+  content: "!";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #f59e0b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.ready-title { font-weight: 600; }
+.ready-detail { grid-column: 2; color: var(--muted); font-size: 0.9rem; }
+.server-name-form { display: grid; gap: 0.4rem; max-width: 360px; }
+
 .smtp-card {
   display: grid;
   gap: 1rem;
@@ -2579,6 +2657,10 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
 .smtp-keys .domain-search { margin: 0; }
 .key-hint { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 0.9rem; color: var(--muted); }
 .key-label { display: none; color: var(--muted); }
+/* each key's own login, copied with its button */
+.key-login .copy-box { padding: 0.1rem 0.15rem 0.1rem 0.6rem; }
+.key-login .copy-box-text { font-size: 0.85rem; word-break: normal; white-space: nowrap; }
+.key-login .copy-box .copy-button { width: 28px; height: 28px; }
 
 /* the new key, in a green dialog */
 .domain-dialog.is-success {
@@ -2719,8 +2801,9 @@ select[data-dropdown-ready] { display: none; }
 @media (max-width: 640px) {
   .smtp-card { padding: 1.1rem; }
   .smtp-fields { grid-template-columns: minmax(0, 1fr); }
-  .key-row .domain-delete-cell { grid-row: 1 / span 5; }
+  .key-row .domain-delete-cell { grid-row: 1 / span 6; }
   .key-row .key-label { display: inline; }
+  .key-row .key-login { display: flex; align-items: center; gap: 0.4rem; }
   .variant-options { grid-template-columns: minmax(0, 1fr); }
 }
 
@@ -2912,6 +2995,42 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
 .sender-facts dd.is-yes svg { stroke: #22c55e; filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.7)); }
 .sender-facts dd.is-no svg { stroke: #ff5d6e; }
 .sender-none { margin: 0; color: var(--muted); }
+.sender-test { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.5rem 1rem; font-size: 0.92rem; }
+.sender-test svg { flex: none; width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* the last test email, across the card; and the one being sent, in its dialog */
+.sender-last-test { grid-column: 1 / -1; }
+.sender-last-test dd { flex-wrap: wrap; gap: 0.2rem 0.75rem; }
+.test-meta { color: var(--muted); font-size: 0.85rem; font-weight: 500; }
+.test-result, .test-status { color: var(--muted); }
+.test-result.is-delivered, .test-status.is-delivered { color: var(--ok-text); }
+.test-result.is-bounced, .test-status.is-bounced { color: #ff5d6e; }
+.test-result.is-retrying, .test-status.is-retrying { color: #f59e0b; }
+.test-status {
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.test-status.is-queued::before {
+  content: "";
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-right: 0.55rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -0.05rem;
+  animation: spin 0.8s linear infinite;
+}
+.test-status.is-delivered { border-color: rgba(34, 197, 94, 0.55); box-shadow: 0 0 22px -10px rgba(34, 197, 94, 0.9); }
+.test-status.is-bounced { border-color: rgba(255, 93, 110, 0.55); }
+.test-status.is-retrying { border-color: rgba(245, 158, 11, 0.55); }
+@media (prefers-reduced-motion: reduce) {
+  .test-status.is-queued::before { animation-duration: 2.4s; }
+}
 .smtp-note a { color: var(--airmail-blue); font-weight: 600; }
 .empty-state-action { margin-top: 0.4rem; }
 

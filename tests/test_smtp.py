@@ -7,6 +7,7 @@ import pytest
 
 from someless import smtp
 from someless.db import get_db
+from someless.logins import make_login
 
 
 def text(response):
@@ -69,11 +70,9 @@ def test_the_smtp_settings_say_how_to_connect(client, login, app):
 
     page = plain(text(client.get("/smtp")))
 
-    with app.app_context():
-        login_name = get_db().execute("SELECT login FROM smtp_settings").fetchone()[0]
-    assert re.fullmatch(r"smtp-[0-9a-f]{8}", login_name)
-    assert "194.163.167.106" in page and "587" in page and login_name in page
-    assert "the mail engine" in page  # keys work once it's in; the page says so
+    assert "194.163.167.106" in page and "587" in page
+    assert "The login of the key you use" in page  # each key has its own
+    assert "Ready to send" in page  # and whether it can, yet
 
 
 def test_an_authenticated_domain_names_the_smtp_server(client, login, app):
@@ -230,8 +229,6 @@ def test_the_guide_needs_login(client):
 
 def test_the_guide_shows_six_languages_with_these_settings(client, login, app):
     login()
-    with app.app_context():
-        login_name = get_db().execute("SELECT login FROM smtp_settings").fetchone()[0]
 
     page = guide(client)
 
@@ -244,7 +241,7 @@ def test_the_guide_shows_six_languages_with_these_settings(client, login, app):
     assert len(samples) == 6
     for language, sample in zip(LANGUAGES, samples):
         code = plain(sample)
-        assert "194.163.167.106" in code and "587" in code and login_name in code, language
+        assert "194.163.167.106" in code and "587" in code and "SOMELESS_SMTP_LOGIN" in code, language
         assert "SOMELESS_SMTP_KEY" in code, language  # the key comes from the environment, never the code
     assert re.search(r'<a class="back-link" href="/smtp" data-page-flip="back"', page)
     menu = page[page.index('<dialog class="side-menu"'):page.index("</dialog>")]
@@ -271,3 +268,73 @@ def test_the_guide_sends_from_an_authenticated_domain(client, login, app):
         db.commit()
 
     assert "hello@example.com" in plain(guide(client))
+
+
+def test_logins_are_made_from_the_key_name():
+    assert re.fullmatch(r"website-[0-9a-f]{4}", make_login("Website", set()))
+    assert re.fullmatch(r"my-shop-2026-[0-9a-f]{4}", make_login("My Shop 2026!", set()))
+    assert re.fullmatch(r"unicode-[0-9a-f]{4}", make_login("Ünïcödé ✨", set()))
+    assert re.fullmatch(r"key-[0-9a-f]{4}", make_login("✨✨", set()))
+    assert len(make_login("a" * 50, set())) == 25
+
+
+def test_a_new_key_comes_with_its_own_login(client, login, app):
+    login()
+
+    page = text(generate(client))
+
+    row = keys_in_db(app)[0]
+    assert re.fullmatch(r"website-[0-9a-f]{4}", row["login"])
+    dialog = page[page.index('id="key-dialog"'):]
+    assert f'data-copy="{row["login"]}"' in dialog     # copied with its own button
+    assert row["login"] in plain(text(client.get("/smtp")))  # and listed with the key
+
+
+def test_keys_from_before_get_a_login(tmp_path):
+    import sqlite3
+    from someless import create_app
+    with sqlite3.connect(tmp_path / "someless.db") as db:
+        db.execute("CREATE TABLE smtp_keys (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, key_hash TEXT NOT NULL,"
+                   " hint TEXT NOT NULL, variant TEXT NOT NULL, created_at REAL NOT NULL, expires_at REAL)")
+        db.execute("INSERT INTO smtp_keys (name, key_hash, hint, variant, created_at) VALUES ('Old app', 'h', 'xxxx', 'standard', 0)")
+
+    create_app({"TESTING": True, "DATA_DIR": str(tmp_path)})
+
+    with sqlite3.connect(tmp_path / "someless.db") as db:
+        (login,) = db.execute("SELECT login FROM smtp_keys").fetchone()
+    assert re.fullmatch(r"old-app-[0-9a-f]{4}", login)
+
+
+def test_smtp_page_without_engine(client, login):
+    login()
+    page = plain(text(client.get("/smtp")))
+    assert "Ready to send" in page and "mail engine isn't running here" in page
+
+
+def test_the_server_name_is_chosen_from_the_authenticated_domains(client, login, app, engine):
+    from test_engine_sync import authenticated_domain
+    from someless import engine as engine_module
+    authenticated_domain(app, "cloudnix.net")
+    authenticated_domain(app, "pineloop.online")
+    login()
+
+    page = text(client.get("/smtp"))
+    assert '<option value="mail.pineloop.online"' in page  # two domains: a choice
+    client.post("/smtp/server-name", data={"server_name": "mail.pineloop.online"})
+    client.post("/smtp/server-name", data={"server_name": "mail.elsewhere.com"})  # not one of them: ignored
+
+    with app.app_context():
+        assert engine_module.state()["server_name"] == "mail.pineloop.online"
+    assert engine.objects["SystemSettings"]["singleton"]["defaultHostname"] == "mail.pineloop.online"
+    assert "mail.pineloop.online" in plain(text(client.get("/smtp")))  # the SMTP server apps use
+
+
+def test_check_again_looks_again(client, login, monkeypatch):
+    from someless.engine import checks
+    login()
+    client.get("/smtp")
+    monkeypatch.setattr(checks, "port25_open", lambda: False)
+
+    client.post("/smtp/checks")
+
+    assert "blocks outgoing port 25" in plain(text(client.get("/smtp")))

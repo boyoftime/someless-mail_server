@@ -4,6 +4,9 @@ services:
     container_name: someless-mail
     restart: unless-stopped
     ports:
-      - "17080:17080"   # web interface
+      - "17080:17080"   # web interface (behind Nginx Proxy Manager you can drop this line: see Step 3)
+      - "587:17587"     # your apps send mail here (STARTTLS)
+      - "465:17465"     # your apps send mail here (TLS from the start)
+      # - "80:17081"    # only without a reverse proxy: Let's Encrypt's check of your mail server's name
     volumes:
       - ./data:/data    # all your data, in a "data" folder next to this file

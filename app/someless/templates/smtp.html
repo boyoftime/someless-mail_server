@@ -34,7 +34,37 @@
   </div>
 </header>
 
-<p class="smtp-note">{{ icon("info") }}<span>Sending starts with the mail engine, which comes next. Keys you make now will work as soon as it's in.</span></p>
+{# Ready to send? What's done, and what to do next (engine/checks.py) #}
+<section class="ready-card{% if can_send %} is-ready{% endif %}" aria-labelledby="ready-title">
+  <div class="ready-head">
+    <h2 class="smtp-title" id="ready-title">{{ "Ready to send" if can_send else "Ready to send? Not yet" }}</h2>
+    <form method="post" action="{{ url_for('smtp.check_again') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="button button-quiet" type="submit" data-busy-label="Checking…"><span class="button-spinner" aria-hidden="true"></span><span class="button-label">Check again</span></button>
+    </form>
+  </div>
+  {% if engine_error %}<p class="ready-catching-up">Mail engine catching up… ({{ engine_error }})</p>{% endif %}
+  <ul class="ready-list">
+    {% for check in checks %}
+    <li class="ready-item is-{{ check.state }}">
+      <span class="ready-mark" aria-hidden="true"></span>
+      <span class="ready-title">{{ check.title }}<span class="visually-hidden">: {{ {"ok": "done", "missing": "to do", "warning": "warning"}[check.state] }}</span></span>
+      {% if check.detail %}<span class="ready-detail">{{ check.detail }}</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% if server_names | length > 1 %}
+  {# choosing one saves it (smtp-page.js); without JavaScript, the button does #}
+  <form method="post" action="{{ url_for('smtp.choose_server_name') }}" class="server-name-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="field-label" for="server-name">Server name</label>
+    <select id="server-name" name="server_name" data-dropdown data-submit-on-change>
+      {% for name in server_names %}<option value="{{ name }}"{% if name == server_name %} selected{% endif %}>{{ name }}</option>{% endfor %}
+    </select>
+    <noscript><button class="button button-quiet" type="submit">Use this name</button></noscript>
+  </form>
+  {% endif %}
+</section>
 
 <section class="smtp-card" aria-labelledby="smtp-settings-title">
   <h2 class="smtp-title" id="smtp-settings-title">Your SMTP settings</h2>
@@ -44,7 +74,7 @@
     <dt>Port</dt>
     <dd>{{ copy_box(port | string, "Copy the port") }}<span class="dns-full">With STARTTLS</span></dd>
     <dt>Login</dt>
-    <dd>{{ copy_box(login, "Copy the login") }}</dd>
+    <dd><span class="dns-box is-placeholder">The login of the key you use</span><span class="dns-full">Each key has its own, shown with it below.</span></dd>
     <dt>Password</dt>
     <dd><span class="dns-box is-placeholder">One of your SMTP keys</span></dd>
   </dl>
@@ -65,6 +95,7 @@
         <tr>
           <th scope="col">Name</th>
           <th scope="col">Key</th>
+          <th scope="col">Login</th>
           <th scope="col">Created</th>
           <th scope="col">Expires</th>
           <th scope="col">Status</th>
@@ -76,6 +107,7 @@
         <tr class="domain-row key-row" data-key-name="{{ key.name | lower }}"{% if not key.shown %} hidden{% endif %}>
           <td class="domain-name">{{ key.name }}<span class="domain-provider">{{ "Standard" if key.variant == "standard" else "Short" }}</span></td>
           <td><code class="key-hint" title="The key's last characters">…{{ key.hint }}</code></td>
+          <td class="key-login"><span class="key-label">Login </span>{{ copy_box(key.login, "Copy the login") }}</td>
           {# dates in the admin's own time zone (local-time.js) #}
           <td><span class="key-label">Created </span><time datetime="{{ key.created_at }}" data-local-date>{{ key.created }}</time></td>
           <td><span class="key-label">Expires </span>{% if key.expires %}<time datetime="{{ key.expires_at }}" data-local-date>{{ key.expires }}</time>{% else %}Never{% endif %}</td>
@@ -95,7 +127,7 @@
         </tr>
         {% endfor %}
         <tr class="domain-none"{% if keys | selectattr("shown") | list %} hidden{% endif %}>
-          <td colspan="6">No keys match “<span data-search-text>{{ query }}</span>”.</td>
+          <td colspan="7">No keys match “<span data-search-text>{{ query }}</span>”.</td>
         </tr>
       </tbody>
     </table>
@@ -179,9 +211,13 @@
       </div>
     </div>
     <div class="field">
+      <span class="field-label">Login</span>
+      {{ copy_box(new_login, "Copy the login") }}
+    </div>
+    <div class="field">
       <span class="field-label">SMTP key</span>
       {{ copy_box(new_key, "Copy the key") }}
-      <span class="dns-full">Use it as the password, with the login {{ login }}.</span>
+      <span class="dns-full">Use them together: the login, and this key as the password.</span>
     </div>
     <div class="rules-actions">
       <button type="button" class="button rules-save" data-dialog-close>OK</button>

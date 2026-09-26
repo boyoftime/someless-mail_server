@@ -1,7 +1,8 @@
-"""SMTP (the SMTP & API page): how apps and websites send mail through this server. They log
-in with the server's SMTP login, and one of the admin's SMTP keys as the password. A key is
+"""SMTP (the SMTP & API page): how apps and websites send mail through this server. Each of
+the admin's SMTP keys has its own login (logins.py), and the key is its password. A key is
 shown once, when it's made: only its SHA-256 fingerprint is kept, so a lost key can't be read
-back, only replaced. Keys work once the mail engine is in (it checks them with key_works())."""
+back, only replaced. The mail engine gets each key's login and fingerprint (engine/sync.py);
+the checklist at the top says whether it's ready to send (engine/checks.py)."""
 import calendar
 import datetime
 import hashlib
@@ -11,10 +12,12 @@ import time
 
 from flask import Blueprint, flash, make_response, redirect, render_template, request, url_for
 
-from . import smtp_guide
+from . import domain_records, engine, smtp_guide
 from .auth import login_required
 from .db import get_db
-from .domain_records import HOST_CHOICES
+from .engine import checks, names
+from .engine import sync as engine_sync
+from .logins import make_login
 
 bp = Blueprint("smtp", __name__, url_prefix="/smtp")
 
@@ -67,13 +70,11 @@ def _expires_at(expiry, now):
 
 
 def _server_name():
-    """The name mail apps reach this server by: an authenticated domain's mail server name
-    (the one its certificate will be for), else the address the panel was opened at."""
-    row = get_db().execute(
-        "SELECT domains.name, domain_keys.mail_host FROM domains JOIN domain_keys ON domain_keys.domain_id = domains.id"
-        " WHERE domains.authenticated = 1 ORDER BY domains.name LIMIT 1").fetchone()
-    if row:
-        return f"{row['mail_host'] or HOST_CHOICES[0]}.{row['name']}"
+    """The name mail apps reach this server by: the server name (engine/names.py, the one its
+    certificate is for), else the address the panel was opened at."""
+    name = names.server_name()
+    if name:
+        return name
     host = request.host
     return host[:host.index("]") + 1] if host.startswith("[") else host.rsplit(":", 1)[0]
 
@@ -90,15 +91,17 @@ def _page(status=200, typed=None, **context):
          "expires": _date(row["expires_at"]) if row["expires_at"] is not None else None,
          "expires_at": _moment(row["expires_at"]) if row["expires_at"] is not None else None,
          "expired": row["expires_at"] is not None and row["expires_at"] <= now,
-         "shown": query.lower() in row["name"].lower()}
+         "login": row["login"], "shown": query.lower() in row["name"].lower()}
         for row in db.execute("SELECT * FROM smtp_keys ORDER BY created_at DESC, id DESC")
     ]
     expiries = [{"value": value, "label": label, "days": days, "months": months,
                  "until": None if days is None else _date(_expires_at(value, now))}
                 for value, label, days, months in EXPIRIES]
+    found = checks.run_checks(domain_records.server_address(request.host))
     return render_template(
-        "smtp.html", keys=keys, query=query, server=_server_name(), port=PORT,
-        login=db.execute("SELECT login FROM smtp_settings").fetchone()["login"], expiries=expiries,
+        "smtp.html", keys=keys, query=query, server=_server_name(), port=PORT, expiries=expiries,
+        checks=found, can_send=checks.can_send(found), server_names=names.server_names(), server_name=names.server_name(),
+        engine_error=engine.state()["sync_error"] if engine.enabled() else None,
         typed=typed or {"name": "", "variant": "standard", "expiry": DEFAULT_EXPIRY}, **context,
     ), status
 
@@ -131,12 +134,33 @@ def generate():
         return _page(400, typed=typed, generate_error=problem)
     key = "".join(secrets.choice(KEY_CHARACTERS) for _ in range(VARIANTS[typed["variant"]]))
     now = time.time()
-    db.execute("INSERT INTO smtp_keys (name, key_hash, hint, variant, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
-               (typed["name"], fingerprint(key), key[-4:], typed["variant"], now, _expires_at(typed["expiry"], now)))
+    login = make_login(typed["name"], {row[0] for row in db.execute("SELECT login FROM smtp_keys")})
+    db.execute("INSERT INTO smtp_keys (name, key_hash, hint, variant, created_at, expires_at, login) VALUES (?, ?, ?, ?, ?, ?, ?)",
+               (typed["name"], fingerprint(key), key[-4:], typed["variant"], now, _expires_at(typed["expiry"], now), login))
     db.commit()
-    response = make_response(_page(new_key=key, new_name=typed["name"]))
+    engine_sync.after_change()
+    response = make_response(_page(new_key=key, new_name=typed["name"], new_login=login))
     response.headers["Cache-Control"] = "no-store"  # the key is in it: nothing keeps a copy
     return response
+
+
+@bp.post("/server-name")
+@login_required
+def choose_server_name():
+    chosen = request.form.get("server_name", "")
+    if chosen in names.server_names():
+        engine.remember(server_name=chosen)
+        engine_sync.after_change()
+        flash(f"The server is {chosen} now.", "success")
+    return redirect(url_for("smtp.index"))
+
+
+@bp.post("/checks")
+@login_required
+def check_again():
+    checks.forget()
+    engine_sync.ask_for_certificate()   # the proxy host may be there now (README, Step 5)
+    return redirect(url_for("smtp.index"))
 
 
 @bp.get("/docs")
@@ -144,12 +168,11 @@ def generate():
 def docs():
     """The guide: sending through this server from code, in six languages."""
     db = get_db()
-    login = db.execute("SELECT login FROM smtp_settings").fetchone()["login"]
     # the examples send from one of the admin's domains: an authenticated one if there is one
     domain = db.execute("SELECT name FROM domains ORDER BY authenticated DESC, name LIMIT 1").fetchone()
     sender = f"hello@{domain['name'] if domain else 'yourdomain.com'}"
-    return render_template("smtp-docs.html", server=_server_name(), port=PORT, login=login,
-                           examples=smtp_guide.examples(_server_name(), PORT, login, sender))
+    return render_template("smtp-docs.html", server=_server_name(), port=PORT,
+                           examples=smtp_guide.examples(_server_name(), PORT, sender))
 
 
 @bp.post("/<int:key_id>/delete")
@@ -160,5 +183,6 @@ def delete(key_id):
     if key:
         db.execute("DELETE FROM smtp_keys WHERE id = ?", (key_id,))
         db.commit()
+        engine_sync.after_change()
         flash(f"{key['name']} was deleted.", "deleted")
     return redirect(url_for("smtp.index"))

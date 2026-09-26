@@ -9,6 +9,7 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, u
 from . import domain_records
 from .auth import login_required
 from .db import get_db
+from .engine import sync as engine_sync
 
 bp = Blueprint("domains", __name__, url_prefix="/domains")
 
@@ -105,6 +106,7 @@ def authenticate(domain_id):
         # a domain checked before is checked again, so what the check says fits the records
         # the page shows now
         domain_records.save(domain_id, host, found, results if keys["checks"] else None)
+        engine_sync.after_change()  # a re-check can authenticate the domain, or undo it
         keys = domain_records.keys_for(domain_id)
     authenticating, receiving = domain_records.records(domain["name"], keys, address)
     return render_template(
@@ -123,6 +125,7 @@ def check(domain_id):
     host, found, results = domain_records.look(
         domain["name"], domain_records.keys_for(domain_id), domain_records.server_address(request.host))
     domain_records.save(domain_id, host, found, results)
+    engine_sync.after_change()
     _note_provider(domain_id, domain["name"])  # it may have moved its DNS since
     if domain_records.authenticated(results):
         flash(f"{domain['name']} is authenticated.", "authenticated")
@@ -143,5 +146,6 @@ def delete(domain_id):
         db.execute("DELETE FROM domain_keys WHERE domain_id = ?", (domain_id,))
         db.execute("DELETE FROM senders WHERE domain_id = ?", (domain_id,))  # its addresses go with it
         db.commit()
+        engine_sync.after_change()
         flash(f"{domain['name']} was deleted.", "deleted")
     return redirect(url_for("domains.index"))

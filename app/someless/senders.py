@@ -1,6 +1,8 @@
 """Senders: the names and addresses mail goes out from, like PineLoop INC
 <no-reply@pineloop.online>. An address can be a sender only at one of the admin's domains, once
-it's authenticated (the Domains page), so other mail servers trust mail from it."""
+it's authenticated (the Domains page), so other mail servers trust mail from it. Each can send
+a test email, and its card shows what became of the last one (engine/deliveries.py)."""
+import datetime
 import json
 import re
 import time
@@ -9,6 +11,9 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, u
 
 from .auth import login_required
 from .db import get_db
+from .domain_records import server_address
+from .engine import checks, deliveries, enabled
+from .engine import sync as engine_sync
 
 bp = Blueprint("senders", __name__, url_prefix="/senders")
 
@@ -61,6 +66,17 @@ def _sender(sender_id):
     return sender
 
 
+def _moment(when):
+    """The moment itself, for <time datetime>, which local-time.js reads."""
+    return datetime.datetime.fromtimestamp(when, datetime.timezone.utc).isoformat(timespec="seconds")
+
+
+def _when(when):
+    """As the server sees it: what shows until local-time.js puts it in the admin's time zone."""
+    moment = datetime.datetime.fromtimestamp(when)
+    return f"{moment:%b} {moment.day}, {moment.year}, {moment:%H:%M}"
+
+
 @bp.get("")
 @login_required
 def index():
@@ -72,12 +88,15 @@ def index():
             "SELECT senders.*, domains.name AS domain, domains.authenticated, domain_keys.checks FROM senders"
             " JOIN domains ON domains.id = senders.domain_id LEFT JOIN domain_keys ON domain_keys.domain_id = domains.id"
             " ORDER BY senders.name, senders.email"):
-        checks = json.loads(row["checks"]) if row["checks"] else {}
+        found = json.loads(row["checks"]) if row["checks"] else {}
+        last = deliveries.last_for(row["id"])
         senders.append({
             "id": row["id"], "name": row["name"], "email": row["email"], "domain": row["domain"],
             "ready": bool(row["authenticated"]),
-            "dkim": checks.get("dkim", {}).get("state") == "found",
-            "dmarc": checks.get("dmarc", {}).get("state") == "found",
+            "dkim": found.get("dkim", {}).get("state") == "found",
+            "dmarc": found.get("dmarc", {}).get("state") == "found",
+            "last_test": last and {"status": last["status"], "detail": last["detail"], "recipient": last["recipient"],
+                                   "at": _moment(last["updated_at"]), "when": _when(last["updated_at"])},
             "shown": query.lower() in f"{row['name']} {row['email']}".lower(),
         })
     return render_template("senders.html", senders=senders, query=query,
@@ -101,6 +120,7 @@ def add():
     db.execute("INSERT INTO senders (name, email, domain_id, created_at) VALUES (?, ?, ?, ?)",
                (name, email, domain_id, time.time()))
     db.commit()
+    engine_sync.after_change()
     flash(f"{name} <{email}> was added.", "added")
     return redirect(url_for("senders.index"))
 
@@ -123,6 +143,7 @@ def update(sender_id):
     db = get_db()
     db.execute("UPDATE senders SET name = ?, email = ?, domain_id = ? WHERE id = ?", (name, email, domain_id, sender_id))
     db.commit()
+    engine_sync.after_change()
     flash(f"{name} <{email}> was saved.", "success")
     return redirect(url_for("senders.index"))
 
@@ -135,5 +156,37 @@ def delete(sender_id):
     if sender:
         db.execute("DELETE FROM senders WHERE id = ?", (sender_id,))
         db.commit()
+        engine_sync.after_change()
         flash(f"{sender['name']} <{sender['email']}> was deleted.", "deleted")
     return redirect(url_for("senders.index"))
+
+
+def ready_to_send():
+    return enabled() and checks.can_send(checks.run_checks(server_address(request.host)))
+
+
+@bp.post("/<int:sender_id>/test")
+@login_required
+def send_test(sender_id):
+    """A test email from this sender, through the mail engine (senders-page.js asks for it)."""
+    sender = _sender(sender_id)
+    data = request.get_json(silent=True) or {}
+    to = (data.get("to") or "").strip()
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", to):
+        return {"problem": "Type the address to send the test to, like you@gmail.com."}, 400
+    if not ready_to_send():
+        return {"problem": "The mail engine isn't ready to send yet: see Ready to send on the SMTP & API page."}, 409
+    try:
+        queue_id = deliveries.send_test(sender["email"], sender_id, to,
+                                        (data.get("subject") or "Test from Someless Mail").strip()[:200],
+                                        (data.get("text") or "It works!").strip()[:5000])
+    except deliveries.SendFailed as error:
+        return {"problem": f"The mail engine refused it: {error}"}, 502
+    return {"queue_id": queue_id}
+
+
+@bp.get("/<int:sender_id>/tests/<queue_id>")
+@login_required
+def test_status(sender_id, queue_id):
+    found = deliveries.status(queue_id)
+    return found if found else ({"problem": "No such test email."}, 404)

@@ -68,7 +68,8 @@ CREATE TABLE IF NOT EXISTS smtp_keys (
     hint TEXT NOT NULL,           -- its last characters, to tell the keys apart
     variant TEXT NOT NULL,        -- standard (64 characters) or short (15)
     created_at REAL NOT NULL,
-    expires_at REAL               -- NULL: it never expires
+    expires_at REAL,              -- NULL: it never expires
+    login TEXT                    -- the key's own SMTP login, like website-7f3a (engine/logins.py)
 );
 -- Senders (the Senders page, senders.py): the names and addresses mail goes out from, each at
 -- one of the domains, authenticated when it was added
@@ -79,17 +80,56 @@ CREATE TABLE IF NOT EXISTS senders (
     domain_id INTEGER NOT NULL,   -- the domain the address is at (deleting it deletes the sender)
     created_at REAL NOT NULL
 );
+-- The mail engine, Stalwart (someless/engine/): how the panel reaches it, and how far its
+-- first-time setup and the last sync got
+CREATE TABLE IF NOT EXISTS engine (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    recovery_password TEXT,     -- Stalwart's recovery admin, for first-time setup only
+    admin_login TEXT,           -- the admin account first-time setup made: the panel's management login
+    admin_password TEXT,
+    webhook_secret TEXT,        -- signs Stalwart's delivery reports to the panel
+    panel_password TEXT,        -- the panel's own sending account (test emails)
+    server_name TEXT,           -- chosen by the admin; empty: the default (engine/names.py)
+    setup_step TEXT NOT NULL DEFAULT 'new',   -- new, bootstrapped, provisioned, ready
+    synced_at REAL,
+    sync_error TEXT,
+    certificate_asked_at REAL   -- the last time "Check again" asked Let's Encrypt for the server name's certificate
+);
+INSERT OR IGNORE INTO engine (id) VALUES (1);
+-- Test emails the panel sent, and what became of them (Stalwart's delivery reports, engine/deliveries.py)
+CREATE TABLE IF NOT EXISTS deliveries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    queue_id TEXT NOT NULL,       -- Stalwart's, in hex, as its reply to the mail gave it
+    sender_id INTEGER,
+    recipient TEXT NOT NULL,
+    status TEXT NOT NULL,         -- queued, delivered, retrying, bounced
+    detail TEXT,
+    created_at REAL NOT NULL,
+    updated_at REAL NOT NULL
+);
 """
 
 
 # Columns that came after their table first shipped: databases from before get them on start
-LATER_COLUMNS = [("domains", "provider", "TEXT"), ("domain_keys", "mail_host", "TEXT"), ("domain_keys", "found", "TEXT")]
+LATER_COLUMNS = [("domains", "provider", "TEXT"), ("domain_keys", "mail_host", "TEXT"), ("domain_keys", "found", "TEXT"),
+                 ("smtp_keys", "login", "TEXT"), ("engine", "certificate_asked_at", "REAL")]
 
 
 def _add_later_columns(db):
     for table, column, kind in LATER_COLUMNS:
         if column not in {row[1] for row in db.execute(f"PRAGMA table_info({table})")}:
             db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
+    db.commit()
+
+
+def _fill_key_logins(db):
+    """Keys made before each had a login get one (logins.py)."""
+    from .logins import make_login
+    taken = {row[0] for row in db.execute("SELECT login FROM smtp_keys WHERE login IS NOT NULL")}
+    for key_id, name in db.execute("SELECT id, name FROM smtp_keys WHERE login IS NULL").fetchall():
+        login = make_login(name, taken)
+        taken.add(login)
+        db.execute("UPDATE smtp_keys SET login = ? WHERE id = ?", (login, key_id))
     db.commit()
 
 
@@ -112,6 +152,7 @@ def init_app(app):
         db = get_db()
         db.executescript(SCHEMA)
         _add_later_columns(db)
+        _fill_key_logins(db)
         if db.execute("SELECT 1 FROM admin").fetchone() is None:
             db.execute(
                 "INSERT INTO admin (id, username, password_hash) VALUES (1, ?, ?)",

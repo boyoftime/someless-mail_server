@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # the image copies the mail engine from that workflow's build: once a new one is out, build again
+  workflow_run:
+    workflows: ["Build Stalwart (open source)"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -14,6 +18,7 @@ env:
 
 jobs:
   test:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -39,33 +44,60 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # The version lives in one place: VERSION in app/someless/__init__.py
+      # The version lives in one place: VERSION in app/someless/__init__.py; the mail
+      # engine's in stalwart/VERSION
       - name: Read version
         id: version
         run: |
           version=$(sed -n 's/^VERSION = "\(.*\)"$/\1/p' app/someless/__init__.py)
           test -n "$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "stalwart=$(cat stalwart/VERSION)" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-qemu-action@v4
 
       - uses: docker/setup-buildx-action@v4
 
+      # The image copies the mail engine from ghcr.io/boyoftime/someless-stalwart (built by
+      # stalwart.yml), which only this repository's workflows can read
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # On the first push with a new mail engine version, "Build Stalwart (open source)" starts
+      # at the same time and takes far longer: the image waits for it (see workflow_run above)
+      - name: Is the mail engine built?
+        id: engine
+        run: |
+          if docker buildx imagetools inspect "ghcr.io/boyoftime/someless-stalwart:${{ steps.version.outputs.stalwart }}" > /dev/null; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::the mail engine isn't built yet (${{ steps.version.outputs.stalwart }}): the image is built when Build Stalwart (open source) finishes"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build image for smoke test
+        if: steps.engine.outputs.ready == 'true'
         uses: docker/build-push-action@v7
         with:
           context: .
+          build-args: STALWART_IMAGE=ghcr.io/boyoftime/someless-stalwart:${{ steps.version.outputs.stalwart }}
           load: true
           tags: someless-mail:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Smoke test
+        if: steps.engine.outputs.ready == 'true'
         run: |
           # a data folder owned by root, like the one Docker makes next to docker-compose.yml
           sudo mkdir smoke-data
-          docker run -d --name smoke -p 17080:17080 -v "$PWD/smoke-data:/data" someless-mail:test
-          for i in $(seq 1 30); do
+          docker run -d --name smoke -p 17080:17080 -p 17587:17587 -v "$PWD/smoke-data:/data" someless-mail:test
+          # the first start sets the mail engine up before the panel starts
+          for i in $(seq 1 120); do
             curl -fsS http://127.0.0.1:17080/healthz && break
             sleep 1
           done
@@ -77,24 +109,53 @@ jobs:
           sudo test -f smoke-data/someless/someless.db
           test "$(sudo stat -c %u smoke-data/someless/someless.db)" = 2001
           docker exec smoke grep -Eq '^Uid:[[:space:]]+2001[[:space:]]' /proc/1/status
+          # the mail engine: set up, running as the app's user, its data in data/stalwart
+          docker exec -u someless smoke flask --app someless engine status
+          sudo test -f smoke-data/stalwart/config.json
+          docker exec smoke sh -c 'grep -l "^Name:[[:space:]]*stalwart$" /proc/[0-9]*/status | xargs grep -h "^Uid:"'             | grep -Eq '^Uid:[[:space:]]+2001[[:space:]]'
+          # a key logs in on the submission port (published, as on a server) and may send as
+          # a Sender, and as nothing else; no Let's Encrypt from here
+          docker exec -u someless -i smoke python - <<'EOF'
+          import hashlib, time
+          from someless import create_app
+          from someless.db import get_db
+          from someless.domain_records import new_keys
+          from someless.engine import state, sync
+          app = create_app()
+          app.config["ENGINE_ACME_DIRECTORY"] = ""
+          with app.app_context():
+              db = get_db()
+              domain_id = db.execute("INSERT INTO domains (name, authenticated, added_at) VALUES ('example.com', 1, 0)").lastrowid
+              keys = new_keys()
+              db.execute("INSERT INTO domain_keys (domain_id, code, dkim_selector, dkim_private, dkim_public) VALUES (?, ?, 'someless', ?, ?)",
+                         (domain_id, keys["code"], keys["dkim_private"], keys["dkim_public"]))
+              db.execute("INSERT INTO senders (name, email, domain_id, created_at) VALUES ('Shop', 'shop@example.com', ?, 0)", (domain_id,))
+              db.execute("INSERT INTO smtp_keys (name, key_hash, hint, variant, created_at, login) VALUES ('Smoke', ?, 'xxxx', 'standard', ?, 'smoke-0001')",
+                         (hashlib.sha256(b"smoke-key-0123456789").hexdigest(), time.time()))
+              db.commit()
+              assert sync.run(), state()["sync_error"]
+          EOF
+          python3 - <<'EOF'
+          import smtplib, ssl
+          with smtplib.SMTP("127.0.0.1", 17587, timeout=20) as smtp:
+              smtp.starttls(context=ssl._create_unverified_context())
+              smtp.login("smoke-0001", "smoke-key-0123456789")
+              assert smtp.mail("shop@example.com")[0] == 250
+              smtp.rset()
+              assert smtp.mail("someone-else@example.com")[0] == 501
+          print("submission port: a key sends as its Senders only")
+          EOF
           if docker logs smoke 2>&1 | grep "\[ERROR\]"; then
             echo "Container logged errors"
             exit 1
           fi
 
       - name: Show container logs
-        if: always()
+        if: always() && steps.engine.outputs.ready == 'true'
         run: docker logs smoke || true
 
-      - name: Log in to GitHub Container Registry
-        if: github.ref == 'refs/heads/main'
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Image tags and labels
+        if: steps.engine.outputs.ready == 'true'
         id: meta
         uses: docker/metadata-action@v6
         with:
@@ -105,9 +166,11 @@ jobs:
             type=sha
 
       - name: Build and publish (amd64 + arm64)
+        if: steps.engine.outputs.ready == 'true'
         uses: docker/build-push-action@v7
         with:
           context: .
+          build-args: STALWART_IMAGE=ghcr.io/boyoftime/someless-stalwart:${{ steps.version.outputs.stalwart }}
           platforms: linux/amd64,linux/arm64
           push: ${{ github.ref == 'refs/heads/main' }}
           tags: ${{ steps.meta.outputs.tags }}

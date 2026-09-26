@@ -89,6 +89,8 @@ def create_app(test_config=None):
     app = Flask(__name__)
     app.config.from_mapping(
         DATA_DIR=os.environ.get("SOMELESS_DATA_DIR", "/data/someless"),
+        # a mail engine (Stalwart) runs beside the panel: in the container, not on a dev machine
+        ENGINE_ENABLED=os.environ.get("SOMELESS_ENGINE") == "1",
         SESSION_COOKIE_SAMESITE="Lax",
         SEND_FILE_MAX_AGE_DEFAULT=STATIC_CACHE_SECONDS,
     )
@@ -104,8 +106,11 @@ def create_app(test_config=None):
     csrf.init_app(app)
 
     from . import auth, db, domains, errors, pages, senders, settings, smtp, two_factor
+    from .engine import cli as engine_cli
+    from .engine import deliveries as engine_deliveries
     db.init_app(app)
     app.cli.add_command(two_factor.cli)
+    app.cli.add_command(engine_cli.cli)
     app.register_blueprint(auth.bp)
     app.register_blueprint(pages.bp)
     app.register_blueprint(domains.bp)
@@ -113,6 +118,9 @@ def create_app(test_config=None):
     app.register_blueprint(smtp.bp)
     app.register_blueprint(settings.bp)
     app.register_blueprint(errors.bp)
+    # Stalwart's delivery reports: signed with the webhook secret instead of a CSRF token
+    app.register_blueprint(engine_deliveries.bp)
+    csrf.exempt(engine_deliveries.bp)
 
     @app.url_defaults
     def fingerprint_static_links(endpoint, values):

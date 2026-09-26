@@ -21,9 +21,9 @@
     <dt>Port</dt>
     <dd>{{ copy_box(port | string, "Copy the port") }}<span class="dns-full">With STARTTLS</span></dd>
     <dt>Login</dt>
-    <dd>{{ copy_box(login, "Copy the login") }}</dd>
+    <dd><span class="dns-box is-placeholder">The login of your key (on SMTP &amp; API)</span><span class="dns-full">Keep it in the SOMELESS_SMTP_LOGIN environment variable where your code runs.</span></dd>
     <dt>Password</dt>
-    <dd><span class="dns-box is-placeholder">One of your SMTP keys</span><span class="dns-full">Make one on <a href="{{ url_for('smtp.index') }}" data-page-flip="back">SMTP &amp; API</a>, and keep it in the SOMELESS_SMTP_KEY environment variable where your code runs.</span></dd>
+    <dd><span class="dns-box is-placeholder">Your SMTP key</span><span class="dns-full">Make one on <a href="{{ url_for('smtp.index') }}" data-page-flip="back">SMTP &amp; API</a>, and keep it in the SOMELESS_SMTP_KEY environment variable.</span></dd>
   </dl>
 </section>
 
@@ -59,7 +59,7 @@
 <section class="guide-notes" aria-labelledby="guide-notes-title">
   <h2 class="smtp-title" id="guide-notes-title">Good to know</h2>
   <ul class="guide-list">
-    <li><strong>Keep the key out of your code.</strong> Every example reads it from the SOMELESS_SMTP_KEY environment variable, so it never ends up in a repository or a screenshot.</li>
+    <li><strong>Keep the key out of your code.</strong> Every example reads the login and the key from the SOMELESS_SMTP_LOGIN and SOMELESS_SMTP_KEY environment variables, so the key never ends up in a repository or a screenshot.</li>
     <li><strong>Send from a domain you've authenticated</strong> on the Domains page. Other mail servers check it, and may turn away mail from anywhere else.</li>
     <li><strong>Port {{ port }} starts plain and switches to encryption</strong> (STARTTLS) before the login goes out: that's why each example turns TLS on first.</li>
     <li><strong>"535 Authentication failed"</strong> means the login or the key is wrong, or the key has expired. <strong>"Connection refused"</strong> or a timeout means the mail engine isn't in yet, or the network your code runs on blocks port {{ port }}.</li>
@@ -73,7 +73,7 @@
     <dt>Host</dt><dd><code class="guide-value">{{ server }}</code></dd>
     <dt>Port</dt><dd><code class="guide-value">{{ port }}</code></dd>
     <dt>Encryption</dt><dd><code class="guide-value">STARTTLS</code><span class="dns-full">Some apps call it TLS</span></dd>
-    <dt>Username</dt><dd><code class="guide-value">{{ login }}</code></dd>
+    <dt>Username</dt><dd><span class="dns-box is-placeholder">The login of your key</span></dd>
     <dt>Password</dt><dd><span class="dns-box is-placeholder">One of your SMTP keys</span></dd>
   </dl>
 </section>

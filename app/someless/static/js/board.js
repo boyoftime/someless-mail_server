@@ -5,6 +5,8 @@
 //   somelessBoard.show({ type: "error", title: "Couldn't log you in", message: "..." })
 //
 // Server messages marked data-board (see shell.html) are shown this way on page load.
+// While a dialog is open (showModal), the board hangs inside it: anything outside an open
+// dialog sits under it, can't be clicked and isn't read out.
 (function () {
   var STAY_MS = 3000;
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -60,8 +62,25 @@
     wrap.classList.add("is-up");
   }
 
+  // the open dialog on top, if any, else the page
+  function home() {
+    var open = document.querySelectorAll("dialog[open]");
+    for (var i = open.length - 1; i >= 0; i -= 1) {
+      try {
+        if (open[i].matches(":modal")) return open[i];
+      } catch (error) {
+        return document.body; // a browser without :modal
+      }
+    }
+    return document.body;
+  }
+
   function show(options) {
     if (!wrap) build();
+    var host = home();
+    [wrap, politeNews, urgentNews].forEach(function (el) {
+      if (el.parentNode !== host) host.appendChild(el);
+    });
     clearTimeout(timer);
     var type = options.type === "error" ? "error" : "success";
     wrap.dataset.type = type;

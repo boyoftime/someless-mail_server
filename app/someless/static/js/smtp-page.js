@@ -6,6 +6,7 @@
 // - The trash button asks first, in a dialog; "Delete" there sends the row's form.
 // - The search box filters the keys as you type (Enter asks the server instead, which also
 //   works without JavaScript).
+// - Choosing another server name saves it at once.
 // Dialogs close with Cancel, Escape or a click outside, fading away.
 (function () {
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -95,4 +96,9 @@
       none.querySelector("[data-search-text]").textContent = search.value.trim();
     });
   }
+
+  // The server name: saved when chosen
+  document.querySelectorAll("select[data-submit-on-change]").forEach(function (select) {
+    select.addEventListener("change", function () { select.form.requestSubmit(); });
+  });
 })();

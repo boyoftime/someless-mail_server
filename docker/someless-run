@@ -1,0 +1,4 @@
+#!/bin/sh
+# The container's main process, as the someless user: the mail engine (Stalwart) and the panel,
+# side by side (app/someless/engine/supervisor.py).
+exec python -m someless.engine.supervisor "$@"
