@@ -70,7 +70,8 @@ services:
       # these two lines and run docker compose up -d again: then they open only through it.
       - "17080:17080"   # web interface
       - "17090:17090"   # webmail
-      # Only without Nginx Proxy Manager: remove the # below, for Let's Encrypt's check (Step 5)
+      # Using Nginx Proxy Manager? Leave the next line as it is, with its #: Nginx Proxy Manager
+      # passes Let's Encrypt's check on for you (Step 5). Only with no proxy at all, remove the #.
       # - "80:17081"
     expose:             # what Nginx Proxy Manager reaches, over the nginx-proxy network
       - "17080"         # web interface (Step 3)
