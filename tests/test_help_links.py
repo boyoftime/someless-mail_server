@@ -211,3 +211,29 @@ def test_the_page_says_how_to_add_records_at_the_provider(app, client, domain_id
 
     assert "Advanced DNS" in page   # Namecheap's own words
     assert re.search(r"<ol[^>]*class=\"help-steps\"", page)
+
+
+def test_every_link_shows_its_address_masked(app, client, domain_id):
+    first = token_of(create(client, domain_id))
+    answer = create(client, domain_id)
+    second = token_of(answer)
+
+    listing = client.get(f"/domains/{domain_id}/help-links").get_json()["html"]
+
+    for token in (first, second):
+        masked = f"http://194.163.167.106:17080/help/{token[:4]}**********{token[-4:]}"
+        assert masked in listing, token
+        assert token not in listing
+    assert links(app)[0]["shown"].endswith(f"{first[:4]}**********{first[-4:]}")
+    assert answer.get_json()["count"] == 2
+
+
+def test_the_dialog_has_a_tab_for_new_links_and_one_for_the_links(app, client, domain_id):
+    create(client, domain_id)
+
+    page = text(client.get(f"/domains/{domain_id}"))
+
+    dialog = page[page.index('id="help-dialog"'):page.index("</dialog>", page.index('id="help-dialog"'))]
+    tabs = re.findall(r'<button[^>]*role="tab"[^>]*>(.*?)</button>', dialog, re.S)
+    assert [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", tab)).strip() for tab in tabs] == ["New link", "Links 1"]
+    assert 'id="help-panel-new"' in dialog and re.search(r'id="help-panel-links"[^>]*hidden', dialog)

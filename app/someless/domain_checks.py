@@ -9,17 +9,17 @@ import time
 from . import domain_records
 from .db import get_db
 
-PRESETS = (1, 2, 6, 12, 24)   # hours, offered as choices; any other is custom
-LONGEST = 30 * 24             # hours: a custom time can be up to 30 days
+PRESETS = (60, 120, 360, 720, 1440)   # minutes (1, 2, 6, 12 hours, 1 day), offered as choices; any other is custom
+LONGEST = 30 * 24 * 60                 # minutes: a custom time is from 1 minute up to 30 days
 
 
 def settings():
     return get_db().execute("SELECT * FROM domain_checks WHERE id = 1").fetchone()
 
 
-def save(enabled, every_hours):
+def save(enabled, every_minutes):
     db = get_db()
-    db.execute("UPDATE domain_checks SET enabled = ?, every_hours = ? WHERE id = 1", (1 if enabled else 0, every_hours))
+    db.execute("UPDATE domain_checks SET enabled = ?, every_minutes = ? WHERE id = 1", (1 if enabled else 0, every_minutes))
     db.commit()
 
 
@@ -33,20 +33,18 @@ def remember_address(address):
         db.commit()
 
 
-def describe(hours):
-    """A number of hours as people say it: 6 hours, 1 day, 1 day and 6 hours."""
-    days, rest = divmod(hours, 24)
-    parts = []
-    if days:
-        parts.append(f"{days} day{'s' if days != 1 else ''}")
-    if rest:
-        parts.append(f"{rest} hour{'s' if rest != 1 else ''}")
-    return " and ".join(parts)
+def describe(minutes):
+    """A number of minutes as people say it: 45 minutes, 6 hours, 1 day and 6 hours."""
+    days, rest = divmod(minutes, 24 * 60)
+    hours, minutes = divmod(rest, 60)
+    parts = [f"{count} {unit}{'s' if count != 1 else ''}"
+             for count, unit in ((days, "day"), (hours, "hour"), (minutes, "minute")) if count]
+    return ", ".join(parts[:-1]) + " and " + parts[-1] if len(parts) > 1 else "".join(parts)
 
 
 def due():
     row = settings()
-    return bool(row["enabled"]) and (row["last_run"] is None or time.time() - row["last_run"] >= row["every_hours"] * 3600)
+    return bool(row["enabled"]) and (row["last_run"] is None or time.time() - row["last_run"] >= row["every_minutes"] * 60)
 
 
 def run():

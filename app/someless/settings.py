@@ -217,13 +217,16 @@ def check_mail_server():
 def _misc_page(status=200, problem=None, typed=None, lock_problem=None, lock_typed=None, address_problem=None,
                address_typed=None):
     row = domain_checks.settings()
-    every = row["every_hours"]
+    every = row["every_minutes"]
     tries, minutes = webmail_lock.settings()
+    # a custom time shows in the biggest unit it's whole in: 2 days, 36 hours, 45 minutes
+    custom_unit = "days" if every % 1440 == 0 else "hours" if every % 60 == 0 else "minutes"
     return render_template(
-        "settings-misc.html", checks=row, presets=[(hours, domain_checks.describe(hours)) for hours in domain_checks.PRESETS],
+        "settings-misc.html", checks=row, presets=[(value, domain_checks.describe(value)) for value in domain_checks.PRESETS],
         every=every, every_text=domain_checks.describe(every), custom=every not in domain_checks.PRESETS,
-        custom_days=every % 24 == 0 and every >= 24, problem=problem, typed=typed or {},
-        last_run=row["last_run"] and _moment(row["last_run"]), longest_days=domain_checks.LONGEST // 24,
+        custom_unit=custom_unit, custom_amount=every // {"days": 1440, "hours": 60, "minutes": 1}[custom_unit],
+        problem=problem, typed=typed or {},
+        last_run=row["last_run"] and _moment(row["last_run"]), longest_days=domain_checks.LONGEST // 1440,
         lock={"tries": tries, "wait": minutes // 60 if minutes % 60 == 0 else minutes,
               "unit": "hours" if minutes % 60 == 0 else "minutes", "text": webmail_lock.describe(minutes)},
         lock_problem=lock_problem, lock_typed=lock_typed or {}, most_tries=webmail_lock.MOST_TRIES,
@@ -232,16 +235,19 @@ def _misc_page(status=200, problem=None, typed=None, lock_problem=None, lock_typ
     ), status
 
 
-def _chosen_hours(form):
-    """How often, as chosen: (hours, None, typed), or (None, problem, typed)."""
+UNIT_MINUTES = {"minutes": 1, "hours": 60, "days": 1440}
+
+
+def _chosen_minutes(form):
+    """How often, as chosen: (minutes, None, typed), or (None, problem, typed)."""
     every = form.get("every", "")
     if every == "custom":
         amount, unit = form.get("amount", "").strip(), form.get("unit", "hours")
-        hours = int(amount) * (24 if unit == "days" else 1) if amount.isdigit() else 0
-        if not 1 <= hours <= domain_checks.LONGEST:
-            return None, (f"Choose a time between 1 hour and {domain_checks.LONGEST // 24} days, "
-                          "in whole hours or days."), {"amount": amount, "unit": unit}
-        return hours, None, {}
+        minutes = int(amount) * UNIT_MINUTES[unit] if amount.isdigit() and unit in UNIT_MINUTES else 0
+        if not 1 <= minutes <= domain_checks.LONGEST:
+            return None, (f"Choose a time between 1 minute and {domain_checks.LONGEST // 1440} days, "
+                          "in whole minutes, hours or days."), {"amount": amount, "unit": unit}
+        return minutes, None, {}
     if every.isdigit() and int(every) in domain_checks.PRESETS:
         return int(every), None, {}
     return None, "Choose how often to check.", {}
@@ -262,13 +268,13 @@ def misc():
 @login_required
 def save_domain_checks():
     enabled = request.form.get("enabled") == "on"
-    hours, problem, typed = _chosen_hours(request.form)
+    minutes, problem, typed = _chosen_minutes(request.form)
     if problem and not enabled:   # switched off: how often doesn't matter, the last one is kept
-        hours, problem = domain_checks.settings()["every_hours"], None
+        minutes, problem = domain_checks.settings()["every_minutes"], None
     if problem:
         return _misc_page(400, typed={**typed, "enabled": enabled}, problem=problem)
-    domain_checks.save(enabled, hours)
-    flash(f"Automatic domain checks are on: every {domain_checks.describe(hours)}." if enabled
+    domain_checks.save(enabled, minutes)
+    flash(f"Automatic domain checks are on: every {domain_checks.describe(minutes)}." if enabled
           else "Automatic domain checks are off.", "success")
     return redirect(url_for("settings.misc"))
 

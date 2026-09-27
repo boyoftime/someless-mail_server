@@ -131,6 +131,7 @@ CREATE TABLE IF NOT EXISTS help_links (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     domain_id INTEGER NOT NULL,
     token_hash TEXT NOT NULL UNIQUE,
+    shown TEXT,                -- the link with most of its secret starred out, for the list
     password_hash TEXT,
     created_at REAL NOT NULL,
     expires_at REAL,
@@ -171,7 +172,8 @@ CREATE TABLE IF NOT EXISTS mailbox_aliases (
 CREATE TABLE IF NOT EXISTS domain_checks (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     enabled INTEGER NOT NULL DEFAULT 0,
-    every_hours INTEGER NOT NULL DEFAULT 6,
+    every_hours INTEGER NOT NULL DEFAULT 6,      -- before minutes could be chosen; every_minutes now
+    every_minutes INTEGER NOT NULL DEFAULT 360,
     last_run REAL,
     server_address TEXT        -- this server's public IP, as the panel last saw it
 );
@@ -192,13 +194,16 @@ CREATE TABLE IF NOT EXISTS deliveries (
 
 # Columns that came after their table first shipped: databases from before get them on start
 LATER_COLUMNS = [("domains", "provider", "TEXT"), ("domain_keys", "mail_host", "TEXT"), ("domain_keys", "found", "TEXT"),
-                 ("smtp_keys", "login", "TEXT"), ("engine", "certificate_asked_at", "REAL")]
+                 ("smtp_keys", "login", "TEXT"), ("engine", "certificate_asked_at", "REAL"),
+                 ("domain_checks", "every_minutes", "INTEGER"), ("help_links", "shown", "TEXT")]
 
 
 def _add_later_columns(db):
     for table, column, kind in LATER_COLUMNS:
         if column not in {row[1] for row in db.execute(f"PRAGMA table_info({table})")}:
             db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
+    # automatic domain checks were set in hours before minutes could be chosen
+    db.execute("UPDATE domain_checks SET every_minutes = every_hours * 60 WHERE every_minutes IS NULL")
     db.commit()
 
 

@@ -43,6 +43,11 @@ def _fingerprint(token):
     return hashlib.sha256(token.encode()).hexdigest()
 
 
+def _masked(url, token):
+    """The link as the list shows it, most of its secret starred out: …/help/v6Wu**********hUC8."""
+    return url[:-len(token)] + token[:4] + "*" * 10 + token[-4:]
+
+
 def _wants_json():
     return request.accept_mimetypes.best == "application/json"
 
@@ -81,12 +86,16 @@ def _describe(row):
     else:
         until = f"Expires in {_within(row['expires_at'] - now)}"
     return {"id": row["id"], "state": state, "state_text": text, "until": until, "password": bool(row["password_hash"]),
-            "made": _ago(row["created_at"])}
+            "made": _ago(row["created_at"]), "shown": row["shown"]}
 
 
 def list_html(domain_id, fresh=None):
     rows = get_db().execute("SELECT * FROM help_links WHERE domain_id = ? ORDER BY id DESC", (domain_id,)).fetchall()
     return render_template("help-links-list.html", links=[_describe(row) for row in rows], fresh=fresh, domain_id=domain_id)
+
+
+def count(domain_id):
+    return get_db().execute("SELECT COUNT(*) FROM help_links WHERE domain_id = ?", (domain_id,)).fetchone()[0]
 
 
 def _domain(domain_id):
@@ -102,7 +111,7 @@ def _domain(domain_id):
 @login_required
 def list_links(domain_id):
     _domain(domain_id)
-    return {"html": list_html(domain_id)}
+    return {"html": list_html(domain_id), "count": count(domain_id)}
 
 
 @bp.post("/domains/<int:domain_id>/help-links")
@@ -122,17 +131,17 @@ def create(domain_id):
         flash(problem, "not-authenticated")
         return redirect(url_for("domains.authenticate", domain_id=domain_id))
     token = secrets.token_urlsafe(24)
+    url = url_for("help_links.page", token=token, _external=True)
     now = time.time()
     lasts = EXPIRES[expires]
     db = get_db()
-    link_id = db.execute("INSERT INTO help_links (domain_id, token_hash, password_hash, created_at, expires_at)"
-                         " VALUES (?, ?, ?, ?, ?)",
-                         (domain_id, _fingerprint(token), password and mail_password.hash_password(password), now,
-                          now + lasts if lasts else None)).lastrowid
+    link_id = db.execute("INSERT INTO help_links (domain_id, token_hash, shown, password_hash, created_at, expires_at)"
+                         " VALUES (?, ?, ?, ?, ?, ?)",
+                         (domain_id, _fingerprint(token), _masked(url, token), password and mail_password.hash_password(password),
+                          now, now + lasts if lasts else None)).lastrowid
     db.commit()
-    url = url_for("help_links.page", token=token, _external=True)
     if _wants_json():
-        return {"url": url, "html": list_html(domain_id, fresh={"id": link_id, "url": url})}
+        return {"url": url, "html": list_html(domain_id, fresh={"id": link_id, "url": url}), "count": count(domain_id)}
     flash(f"Share this link: {url}", "success")   # without JavaScript: shown once, on the board
     return redirect(url_for("domains.authenticate", domain_id=domain_id))
 
@@ -145,7 +154,7 @@ def delete(domain_id, link_id):
     db.execute("DELETE FROM help_links WHERE id = ? AND domain_id = ?", (link_id, domain_id))
     db.commit()
     if _wants_json():
-        return {"html": list_html(domain_id)}
+        return {"html": list_html(domain_id), "count": count(domain_id)}
     return redirect(url_for("domains.authenticate", domain_id=domain_id))
 
 

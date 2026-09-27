@@ -123,9 +123,10 @@ def authenticate(domain_id):
 
 
 def _help_links(domain_id):
-    """The Need help? dialog's list, as it is now (help_links.py imports this module)."""
+    """The Need help? dialog's list, as it is now, and how many links it has (help_links.py
+    imports this module)."""
     from . import help_links
-    return help_links.list_html(domain_id)
+    return {"html": help_links.list_html(domain_id), "count": help_links.count(domain_id)}
 
 
 def check_now(domain, host):

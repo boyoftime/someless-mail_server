@@ -160,12 +160,12 @@ def test_domains_are_checked_when_it_is_time(app, monkeypatch):
     ran = []
     monkeypatch.setattr(domain_checks, "run", lambda: ran.append("checked") or [])
     with app.app_context():
-        domain_checks.save(enabled=True, every_hours=1)
+        domain_checks.save(enabled=True, every_minutes=60)
 
     supervisor.check_domains_if_due(app)
     assert ran == ["checked"]
 
     with app.app_context():
-        domain_checks.save(enabled=False, every_hours=1)
+        domain_checks.save(enabled=False, every_minutes=60)
     supervisor.check_domains_if_due(app)
     assert ran == ["checked"]   # off: nothing

@@ -67,19 +67,20 @@
                 {% endfor %}
                 <label class="every-choice"><input type="radio" name="every" value="custom" data-every-custom{% if custom or typed.amount %} checked{% endif %}><span>Custom</span></label>
               </div>
-              {% set custom_amount = typed.amount if typed.amount else ((every // 24) if custom_days else every) %}
-              {% set custom_unit = typed.unit if typed.unit else ("days" if custom_days else "hours") %}
+              {% set custom_amount = typed.amount if typed.amount else custom_amount %}
+              {% set custom_unit = typed.unit if typed.unit else custom_unit %}
               <div class="every-custom" data-custom-row>
                 <label class="visually-hidden" for="every-amount">Every</label>
                 <div class="field input-wrap every-amount">
                   <span class="input-icon">{{ icon("clock") }}</span>
-                  <input id="every-amount" name="amount" inputmode="numeric" autocomplete="off" value="{{ custom_amount if (custom or typed.amount) else '' }}" placeholder="{{ 'e.g. 3' if custom_unit == 'days' else 'e.g. 36' }}" aria-describedby="every-in-days">
+                  <input id="every-amount" name="amount" inputmode="numeric" autocomplete="off" value="{{ custom_amount if (custom or typed.amount) else '' }}" placeholder="{{ {'days': 'e.g. 3', 'hours': 'e.g. 36', 'minutes': 'e.g. 30'}[custom_unit] }}" aria-describedby="every-in-days">
                 </div>
-                <div class="unit-switch" role="radiogroup" aria-label="Hours or days">
-                  <label><input type="radio" name="unit" value="hours"{% if custom_unit != "days" %} checked{% endif %}><span>Hours</span></label>
-                  <label><input type="radio" name="unit" value="days"{% if custom_unit == "days" %} checked{% endif %}><span>Days</span></label>
+                <div class="unit-switch" role="radiogroup" aria-label="Minutes, hours or days">
+                  {% for value, label in (("minutes", "Minutes"), ("hours", "Hours"), ("days", "Days")) %}
+                  <label><input type="radio" name="unit" value="{{ value }}"{% if custom_unit == value %} checked{% endif %}><span>{{ label }}</span></label>
+                  {% endfor %}
                 </div>
-                <p class="every-in-days" id="every-in-days" aria-live="polite" data-custom-hint>From 1 hour to {{ longest_days }} days.</p>
+                <p class="every-in-days" id="every-in-days" aria-live="polite" data-custom-hint>From 1 minute to {{ longest_days }} days.</p>
               </div>
             </fieldset>
 
@@ -106,7 +107,7 @@
         <span class="card-badge">{{ icon("link") }}</span>
         <span class="card-titles">
           <span id="webmail-address-title" class="card-title">Webmail address</span>
-          <span class="card-hint">{{ webmail_saved or webmail_beside }}</span>
+          <span class="card-hint">Opens at {{ webmail_saved or webmail_beside }}</span>
         </span>
         <span class="card-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg></span>
       </button>
@@ -116,19 +117,20 @@
         <div class="card-body-content">
           {% if address_problem %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't save the address">{{ address_problem }}</p>{% endif %}
           <p class="checks-about">
-            Where the webmail opens when you click a mailbox's webmail button on the Mailboxes page.
-            Leave it empty while it opens beside the panel, at <strong>{{ webmail_beside }}</strong>.
-            Once Nginx Proxy Manager gives it a name of its own (Step 12), type that here, like https://webmail.example.com.
+            The domain the webmail opens at, when you click a mailbox's webmail button on the Mailboxes page: the one you gave
+            the webmail in Nginx Proxy Manager, in its proxy host (Step 12), like <strong>https://webmail.example.com</strong>.
+            No domain for it yet? Leave this empty: the webmail then opens beside the panel, at <strong>{{ webmail_beside }}</strong>.
           </p>
-          <form method="post" action="{{ url_for('settings.save_webmail_address') }}" class="card-form"{% if not address_problem %} data-save-when-changed{% endif %}>
+          <form method="post" action="{{ url_for('settings.save_webmail_address') }}" class="form card-form"{% if not address_problem %} data-save-when-changed{% endif %}>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="field">
-              <label class="field-label" for="webmail-address">Webmail address</label>
+              <label class="field-label" for="webmail-address">Webmail's domain</label>
               <div class="input-wrap">
                 <span class="input-icon">{{ icon("link") }}</span>
                 <input id="webmail-address" name="address" type="url" inputmode="url" autocomplete="off" autocapitalize="none" spellcheck="false"
-                       placeholder="{{ webmail_beside }}" value="{{ address_typed if address_problem else (webmail_saved or '') }}">
+                       placeholder="https://webmail.example.com" value="{{ address_typed if address_problem else (webmail_saved or '') }}" aria-describedby="webmail-address-hint">
               </div>
+              <p class="field-hint" id="webmail-address-hint">As in its Nginx Proxy Manager proxy host, with https:// in front.</p>
             </div>
             <div class="card-actions">
               <button class="button card-button" type="submit" data-busy-label="Saving…">
@@ -164,7 +166,7 @@
             Mail apps aren't affected.
           </p>
           {# Save waits for a change (save-when-changed.js); after a problem, what's typed can be saved as it is #}
-          <form method="post" action="{{ url_for('settings.save_webmail_lock') }}" class="card-form lock-form"{% if not lock_problem %} data-save-when-changed{% endif %}>
+          <form method="post" action="{{ url_for('settings.save_webmail_lock') }}" class="form card-form lock-form"{% if not lock_problem %} data-save-when-changed{% endif %}>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="lock-fields">
               <div class="field">

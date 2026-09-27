@@ -1330,6 +1330,21 @@ body.auth {
 .button.is-busy { cursor: progress; }
 .button.is-busy .button-spinner { display: inline-block; }
 @keyframes spin { to { rotate: 360deg; } }
+/* an icon button whose form is on its way: a spinner where its icon was (busy-button.js) */
+.icon-button.is-busy { cursor: progress; }
+.icon-button.is-busy svg { opacity: 0; }
+.icon-button.is-busy::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 18px;
+  height: 18px;
+  margin: auto;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
 .auth-footer {
   position: relative;
   z-index: 1;
@@ -2250,6 +2265,7 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
 .domain-delete { display: inline-flex; margin: 0; }
 .domain-none td { color: var(--muted); text-align: center; }
 .icon-button {
+  position: relative;
   display: grid;
   place-items: center;
   width: 36px;
@@ -3312,6 +3328,30 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
 .unit-switch span { display: inline-block; padding: 0.45rem 0.95rem; border-radius: 999px; font-weight: 600; cursor: pointer; color: var(--muted); transition: background-color 0.2s ease, color 0.2s ease; }
 .unit-switch input:checked + span { background: linear-gradient(135deg, #0d9488, #2dd4bf); color: #fff; box-shadow: 0 0 14px -4px rgba(45, 212, 191, 0.9); }
 .every-in-days { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 0.9rem; }
+/* the highlight glides between Minutes, Hours and Days (settings-misc.js); a converted number
+   fades in */
+.unit-switch.has-glider { position: relative; isolation: isolate; }
+.unit-switch.has-glider span { position: relative; z-index: 1; }
+.unit-switch.has-glider input:checked + span { background: transparent; box-shadow: none; }
+.unit-switch-glider {
+  position: absolute;
+  top: 0.2rem;
+  bottom: 0.2rem;
+  left: 0;
+  z-index: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #0d9488, #2dd4bf);
+  box-shadow: 0 0 14px -4px rgba(45, 212, 191, 0.9);
+  pointer-events: none;
+  transition: transform 0.38s var(--menu-ease), width 0.38s var(--menu-ease);
+}
+.unit-switch.is-settling .unit-switch-glider { transition: none; }
+.every-amount input.is-converted { animation: amount-in 0.35s ease; }
+@keyframes amount-in { from { color: transparent; } }
+@media (prefers-reduced-motion: reduce) {
+  .unit-switch-glider { transition: none; }
+  .every-amount input.is-converted { animation: none; }
+}
 .checks-status { margin: 0; color: var(--muted); font-size: 0.9rem; }
 @media (max-width: 640px) {
   .every-custom { grid-template-columns: minmax(0, 1fr); }
@@ -3505,6 +3545,71 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
 .help-link-state.is-authenticated { border-color: rgba(34, 197, 94, 0.5); color: var(--ok-text); }
 .help-link-delete { display: inline-flex; margin: 0; }
 .help-link-none { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.help-link-url {
+  justify-self: start;
+  max-width: 100%;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--muted);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+.help-panel { display: grid; gap: 1.1rem; }
+.help-panel[hidden] { display: none; }
+/* the dialog's two tabs, the highlight gliding to the one open (help-links.js) */
+.dialog-tabs {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  padding: 0.25rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--input-bg);
+}
+.dialog-tab {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.25s ease;
+}
+.dialog-tab[aria-selected="true"] { color: #fff; }
+.dialog-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dialog-tab-count {
+  min-width: 1.4rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(1, 149, 251, 0.18);
+  font-size: 0.8rem;
+}
+.dialog-tab[aria-selected="true"] .dialog-tab-count { background: rgba(255, 255, 255, 0.22); }
+.dialog-tabs-glider {
+  position: absolute;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  left: 0;
+  z-index: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1463f3, #0195fb);
+  box-shadow: 0 0 16px -4px rgba(1, 149, 251, 0.85);
+  pointer-events: none;
+  transition: transform 0.38s var(--menu-ease), width 0.38s var(--menu-ease);
+}
+.dialog-tabs.is-settling .dialog-tabs-glider { transition: none; }
+@media (prefers-reduced-motion: reduce) { .dialog-tabs-glider { transition: none; } }
 @media (max-width: 640px) {
   .dns-actions .help-open { margin-right: 0; }
   .help-link { grid-template-columns: minmax(0, 1fr) auto; }

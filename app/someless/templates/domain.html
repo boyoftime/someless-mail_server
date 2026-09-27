@@ -182,6 +182,15 @@
         <p class="rules-hint">A link for your developer or IT: it shows {{ domain.name }}'s records, how to add them{% if provider %} at {{ provider }}{% endif %}, and a button to check them. Once they're all right, the link closes.</p>
       </div>
     </div>
+    {# two tabs: a new link, and the links made (help-links.js) #}
+    <div class="dialog-tabs" role="tablist" aria-label="Share the records">
+      <i class="dialog-tabs-glider" aria-hidden="true"></i>
+      <button type="button" class="dialog-tab" role="tab" id="help-tab-new" aria-controls="help-panel-new" aria-selected="true" data-help-tab>New link</button>
+      <button type="button" class="dialog-tab" role="tab" id="help-tab-links" aria-controls="help-panel-links" aria-selected="false" tabindex="-1" data-help-tab>
+        Links <span class="dialog-tab-count" data-help-count>{{ help_links.count }}</span>
+      </button>
+    </div>
+    <div class="help-panel" role="tabpanel" id="help-panel-new" aria-labelledby="help-tab-new">
     <form method="post" action="{{ url_for('help_links.create', domain_id=domain.id) }}" class="help-create" novalidate data-help-create>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label class="rule-toggle">
@@ -220,10 +229,13 @@
         </button>
       </div>
     </form>
-    <section class="help-links" aria-labelledby="help-links-title">
-      <h3 class="config-title" id="help-links-title">Links for {{ domain.name }}</h3>
-      <div data-help-list>{{ help_links | safe }}</div>
-    </section>
+    </div>
+    <div class="help-panel" role="tabpanel" id="help-panel-links" aria-labelledby="help-tab-links" hidden>
+      <div data-help-list>{{ help_links.html | safe }}</div>
+      <div class="rules-actions">
+        <button type="button" class="button button-quiet" data-dialog-close>Close</button>
+      </div>
+    </div>
   </div>
 </dialog>
 <script src="{{ url_for('static', filename='js/password-toggle.js') }}"></script>
