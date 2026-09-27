@@ -134,3 +134,32 @@ def test_the_panel_remembers_its_public_address(app, client, login):
     client.get(f"/domains/{domain_id}")
 
     assert saved(app)["server_address"] == "194.163.167.106"
+
+
+def test_switching_off_needs_no_interval(app, client, login):
+    """The switch off greys How often out; switching off still saves (with the interval kept)."""
+    login()
+    save(client, enabled="on", every="12")
+
+    response = save(client)   # nothing but the switch, now off
+
+    assert response.headers["Location"] == "/settings/miscellaneous"
+    assert (saved(app)["enabled"], saved(app)["every_hours"]) == (0, 12)
+
+
+def test_save_waits_for_a_change(client, login):
+    """Save is locked until something in the form changes (save-when-changed.js)."""
+    login()
+
+    page = text(client.get("/settings/miscellaneous"))
+
+    assert re.search(r'<form[^>]*class="card-form checks-form"[^>]*data-save-when-changed', page)
+
+
+def test_after_a_problem_save_is_ready_at_once(client, login):
+    login()
+
+    page = text(save(client, enabled="on", every="custom", amount="0", unit="hours"))
+
+    form = re.search(r'<form[^>]*class="card-form checks-form"[^>]*>', page).group(0)
+    assert "data-save-when-changed" not in form   # what's typed isn't saved yet: it can be saved as it is

@@ -159,3 +159,12 @@ def test_a_missing_proxy_host_lists_its_settings(app, client, login, engine):
         assert re.search(rf"<dt>{label}</dt>\s*<dd>.*?{re.escape(value)}", fields, re.S), label
     assert 'data-copy="someless-mail"' in fields and 'data-copy="17081"' in fields
     assert "SSL" in plain(fields) and "Force SSL" in plain(fields)
+
+
+def test_the_mail_server_names_save_waits_for_a_change(app, client, login):
+    authenticated_domain(app)
+    login()
+
+    page = text(client.get("/settings/mail-server"))
+
+    assert re.search(r'<form[^>]*data-server-name-form[^>]*data-save-when-changed', page)

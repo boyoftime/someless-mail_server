@@ -40,7 +40,8 @@
             A domain whose records have all appeared is authenticated by itself.
           </p>
           {% set on = typed.enabled if typed else checks.enabled %}
-          <form method="post" action="{{ url_for('settings.save_domain_checks') }}" class="card-form checks-form" data-checks-form>
+          {# Save waits for a change (save-when-changed.js); after a problem, what's typed can be saved as it is #}
+          <form method="post" action="{{ url_for('settings.save_domain_checks') }}" class="card-form checks-form" data-checks-form{% if not problem %} data-save-when-changed{% endif %}>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label class="rule-toggle">
               <span class="rule-toggle-text">

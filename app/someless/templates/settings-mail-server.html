@@ -50,7 +50,7 @@
           </div>
 
           {# Changing it asks first (settings-mail-server.js): apps and the reverse DNS must follow #}
-          <form method="post" action="{{ url_for('settings.save_mail_server') }}" class="card-form mail-server-form" data-server-name-form data-current="{{ server_name }}">
+          <form method="post" action="{{ url_for('settings.save_mail_server') }}" class="card-form mail-server-form" data-server-name-form data-current="{{ server_name }}" data-save-when-changed>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <fieldset class="key-choices">
               <legend class="field-label">Choose its name</legend>

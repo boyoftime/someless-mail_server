@@ -1,7 +1,8 @@
-// Settings > Miscellaneous > Automatic domain checks. How often is greyed out while the switch
-// is off; Custom opens a box for a number of hours or days, and under it the same time said
-// the other way ("30 hours = 1 day and 6 hours"). Switching between Hours and Days keeps the
-// time when it's whole days (48 hours = 2 days).
+// Settings > Miscellaneous > Automatic domain checks. How often is greyed out (and out of reach)
+// while the switch is off, but still sent with the form, so switching off keeps the interval.
+// Custom opens a box for a number of hours or days, and under it the same time said the other
+// way ("30 hours = 1 day and 6 hours"). Switching between Hours and Days keeps the time when
+// it's whole days (48 hours = 2 days).
 (function () {
   var form = document.querySelector("[data-checks-form]");
   if (!form) return;
@@ -22,7 +23,7 @@
   function unit() { return form.querySelector("input[name=unit]:checked").value; }
 
   function show() {
-    every.disabled = !on.checked;
+    every.inert = !on.checked; // not disabled: a disabled choice wouldn't be sent
     every.classList.toggle("is-off", !on.checked);
     row.hidden = !custom.checked;
     var n = /^\d+$/.test(amount.value.trim()) ? Number(amount.value.trim()) : 0;

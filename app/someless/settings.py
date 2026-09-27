@@ -224,6 +224,21 @@ def _misc_page(status=200, problem=None, typed=None):
     ), status
 
 
+def _chosen_hours(form):
+    """How often, as chosen: (hours, None, typed), or (None, problem, typed)."""
+    every = form.get("every", "")
+    if every == "custom":
+        amount, unit = form.get("amount", "").strip(), form.get("unit", "hours")
+        hours = int(amount) * (24 if unit == "days" else 1) if amount.isdigit() else 0
+        if not 1 <= hours <= domain_checks.LONGEST:
+            return None, (f"Choose a time between 1 hour and {domain_checks.LONGEST // 24} days, "
+                          "in whole hours or days."), {"amount": amount, "unit": unit}
+        return hours, None, {}
+    if every.isdigit() and int(every) in domain_checks.PRESETS:
+        return int(every), None, {}
+    return None, "Choose how often to check.", {}
+
+
 def _moment(when):
     import datetime
     return datetime.datetime.fromtimestamp(when, datetime.timezone.utc).isoformat(timespec="seconds")
@@ -239,17 +254,11 @@ def misc():
 @login_required
 def save_domain_checks():
     enabled = request.form.get("enabled") == "on"
-    every = request.form.get("every", "")
-    if every == "custom":
-        amount, unit = request.form.get("amount", "").strip(), request.form.get("unit", "hours")
-        hours = int(amount) * (24 if unit == "days" else 1) if amount.isdigit() else 0
-        if not 1 <= hours <= domain_checks.LONGEST:
-            return _misc_page(400, typed={"amount": amount, "unit": unit, "enabled": enabled},
-                              problem=f"Choose a time between 1 hour and {domain_checks.LONGEST // 24} days, in whole hours or days.")
-    elif every.isdigit() and int(every) in domain_checks.PRESETS:
-        hours = int(every)
-    else:
-        return _misc_page(400, typed={"enabled": enabled}, problem="Choose how often to check.")
+    hours, problem, typed = _chosen_hours(request.form)
+    if problem and not enabled:   # switched off: how often doesn't matter, the last one is kept
+        hours, problem = domain_checks.settings()["every_hours"], None
+    if problem:
+        return _misc_page(400, typed={**typed, "enabled": enabled}, problem=problem)
     domain_checks.save(enabled, hours)
     flash(f"Automatic domain checks are on: every {domain_checks.describe(hours)}." if enabled
           else "Automatic domain checks are off.", "success")

@@ -3295,7 +3295,7 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
   box-shadow: 0 0 18px -6px rgba(45, 212, 191, 0.9);
 }
 .every-choice input:focus-visible + span, .unit-switch input:focus-visible + span { outline: 2px solid #2dd4bf; outline-offset: 2px; }
-.checks-every:disabled .every-choice span, .checks-every:disabled .unit-switch span { cursor: default; }
+.checks-every.is-off .every-choice span, .checks-every.is-off .unit-switch span { cursor: default; }
 .every-custom { display: grid; grid-template-columns: minmax(0, 12rem) auto; align-items: center; gap: 0.5rem 0.75rem; }
 .every-custom[hidden] { display: none; }
 .every-amount input { padding-left: 2.6rem; background: var(--input-bg); }   /* room for the clock */
@@ -3306,4 +3306,14 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
 .checks-status { margin: 0; color: var(--muted); font-size: 0.9rem; }
 @media (max-width: 640px) {
   .every-custom { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* A Save that waits for a change (save-when-changed.js): grey and locked until then */
+.button.is-locked, .button.is-locked:hover {
+  background: var(--input-bg);
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--line);
+  filter: none;
+  cursor: not-allowed;
+  transform: none;
 }
