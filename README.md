@@ -5,11 +5,28 @@
   </picture>
 </p>
 
-Welcome to **Someless Mail Server**: your own mail server in a single Docker image. Install it on your server, open the web interface, connect your domain, send email from your apps and websites through your own server, signed and trusted like mail from the big providers, and receive it in your own mailboxes.
+<h3 align="center">The powerful mail server for businesses and enterprises, on your own server.</h3>
+
+Welcome to **Someless Mail Server**: your own mail server in a single Docker image. Install it on your server, open the web interface, connect your domain, send email from your apps and websites through your own server, signed and trusted like mail from the big providers, and receive it in your own mailboxes. No monthly fee per user, no one else holding your company's mail: just your server, your domains and your rules.
 
 **Version:** 1.0.0
 
 > **Status:** sending and receiving work. Connect and authenticate your domain, add the addresses your mail comes from, create mailboxes, and read them in any mail app. The webmail's sign-in works; its inbox comes next.
+
+## Why Someless Mail
+
+Hosted suites charge for every user, every month, and keep your mail on their servers. Classic mail servers take days of setup across many separate programs. Someless Mail is one install, with a panel that does the hard parts for you:
+
+- **Your mail, your server.** Every message and mailbox stays on your own server. Nobody else keeps it or reads it.
+- **No fee per mailbox.** Create as many mailboxes, aliases and domains as your server holds, for a team of five or five thousand.
+- **Trusted delivery.** Every message is signed with DKIM, with SPF and DMARC in place, so it lands like mail from the big providers.
+- **DNS made simple.** The panel shows the exact records for your provider, checks them for you, and can hand them over as a file or a link for your developer.
+- **Built for your apps.** Websites and apps send through SMTP keys of their own, with expiry dates, apart from your team's mailboxes.
+- **On every device.** IMAP, POP3 and SMTP for any mail app, with quick setup for Android, iPhone and Windows.
+- **Secure by design.** Two-factor sign-in for the web interface, a lock after wrong passwords in the webmail, and encrypted connections for every mail app.
+- **A modern engine.** Built on [Stalwart](https://github.com/stalwartlabs/stalwart), a fast, secure mail engine written in Rust, in a single Docker image you update with one command.
+
+Try it now: it takes minutes to install, and your first message goes out as soon as your domain is authenticated.
 
 This guide takes you from installing to your first email landing in a Gmail inbox, and your first reply landing in your own mailbox. Follow the steps in order; each one takes a few minutes, apart from waiting for DNS changes to show up.
 
@@ -186,9 +203,13 @@ Add them all, then click **Authenticate this email domain**. Someless Mail looks
 
 The **MX** record is needed too: a domain is authenticated once its mail comes to your server. From then on, all new mail for the domain comes here, so create its mailboxes right after ([Step 11](#step-11-mailboxes-receive-mail)): mail to an address without one is refused.
 
+### Add them all at once
+
+Some DNS providers can import records from a file. Click **Download zone file** at the top of the domain's **Authenticate** page for all six in one file. At Cloudflare, open the domain, then **DNS → Records → Import and Export**, upload the file, and leave **Proxy imported DNS records** off: mail doesn't go through Cloudflare's proxy. A record the domain has already is left out of the file, and so is one to change by hand: if the domain has an SPF record of its own, edit it to the one on the page, since a domain can have only one.
+
 ### Someone else looks after the DNS?
 
-Click **Need help?** at the bottom of the domain's **Authenticate** page, and make a link to send to your developer or IT. It opens a page of its own, on your web interface's address, with no login: the records, how to add them at your DNS provider, and an **Authenticate** button. You choose when the link expires (1 hour to 30 days, or never) and whether it asks for a password. The dialog shows whether each link was opened, and you can delete one at any time. Once its check finds all six records right, the domain is authenticated and the link closes.
+Click **Need help?** at the bottom of the domain's **Authenticate** page, and make a link to send to your developer or IT. It opens a page of its own, on your web interface's address, with no login: the records, how to add them at your DNS provider (or all at once, with the zone file), and an **Authenticate** button. You choose when the link expires (1 hour to 30 days, or never) and whether it asks for a password. The dialog shows whether each link was opened, and you can delete one at any time. Once its check finds all six records right, the domain is authenticated and the link closes.
 
 ### A domain that already has mail
 
@@ -321,6 +342,8 @@ Each mailbox's card shows how much of its storage is used, and has buttons to op
   | Incoming (IMAP) | `mail.example.com`, port `993`, SSL/TLS |
   | Incoming (POP3) | `mail.example.com`, port `995`, SSL/TLS |
   | Outgoing (SMTP) | `mail.example.com`, port `465` with SSL/TLS, or `587` with STARTTLS |
+
+  Click the phone at the top right of **Configuration details**, and the card turns over to **Set it up on a device**: step by step for the Gmail app on Android, for an iPhone, and for Outlook on Windows. The iPhone gets a configuration profile that sets up its Mail app: scan the QR code with the iPhone's camera (the link works for an hour), or download the profile and send it to the iPhone. It asks for the mailbox's password while it's installed, and it works on a Mac too.
 
 The domain's **MX** record, added when you authenticated it ([Step 4](#step-4-connect-and-authenticate-your-domain)), already sends its mail here. If it ever points elsewhere, the Mailboxes page says so, and the domain is no longer authenticated. Mail to an address at the domain that isn't a mailbox or an alias is refused.
 
@@ -471,6 +494,36 @@ The mail engine in the image is built from source by the **Build Stalwart (open 
 
 ## Credits
 
+<p align="center">
+  <img src="docs/images/someless-tricks.png" alt="Someless Tricks" width="420">
+</p>
+
+All the credit goes to **Someless Tricks**, who brought this mail server to life.
+
+<p align="center">
+  <img src="docs/images/someless.png" alt="Someless" width="180">
+</p>
+
+<p align="center"><b>Someless</b><br>Web developer, and the maker of Someless Mail</p>
+
+> *"Every business deserves mail it truly owns: fast, trusted and private, on its own server. That's why I built Someless Mail."*
+
+I've been a web developer for more than three years. I build my tools with the help of AI, to move faster as technology grows day by day, and Someless Mail is the biggest of them yet.
+
+It was never easy to make. A mail server has to get countless small things right before the rest of the internet trusts it, and Someless Mail brings them all together: a mail engine built from source, DNS checks that know how each provider works, a signing key for every domain, mailboxes and aliases, the webmail, two-factor sign-in, and a web interface that makes all of it simple. Every piece was built, tested, and built again, over many long nights, until it felt effortless to use. And it isn't finished: more updates will keep coming to make it even more powerful.
+
+Thanks to the **Stalwart team**: their open-source mail engine is the heart of Someless Mail. Thank you for building it in the open.
+
+### Support Someless Mail
+
+Your donation is what lets me keep building, and keep making this tool better with every update. Together, we build a community.
+
+<p align="center"><a href="https://nowpayments.io/donation/someless"><b>❤ Donate to Someless Mail</b></a></p>
+
+The same thanks, and the donate button, are in the web interface too: **Credits**, at the end of the menu.
+
+### Open-source software it's built with
+
 - Mail engine: [Stalwart](https://github.com/stalwartlabs/stalwart) v0.16.23, built from source without its Enterprise features (AGPL-3.0). Its licence and a link to its source are in the image at `/usr/share/doc/stalwart/`.
 - Profile pictures: [Pillow](https://github.com/python-pillow/Pillow) 12.3.0 (MIT-CMU).
 - Font: [Google Sans](https://github.com/googlefonts/googlesans), SIL Open Font License 1.1 (`app/someless/static/fonts/OFL.txt`).
@@ -480,3 +533,5 @@ The mail engine in the image is built from source by the **Build Stalwart (open 
 - DKIM signing keys: [cryptography](https://github.com/pyca/cryptography) 50.0.1 (Apache-2.0 or BSD-3-Clause).
 - DNS checks: [dnspython](https://github.com/rthalley/dnspython) 2.8.0 (ISC).
 - Programming language logos in the SMTP guide: [Devicon](https://github.com/devicons/devicon) 2.16.0 (MIT). The logos belong to their owners.
+- Android, Apple and Windows logos in the device setup: [Iconify's "logos"](https://github.com/gilbarbara/logos) and [Simple Icons](https://github.com/simple-icons/simple-icons) sets (CC0). The logos belong to their owners.
+- iPhone setup QR codes: [segno](https://github.com/heuer/segno), as above; the phone animation is from [LottieFiles](https://lottiefiles.com/).

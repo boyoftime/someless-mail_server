@@ -227,6 +227,17 @@ def unlock(token):
                    problem="That's not the link's password. Ask whoever shared it.")
 
 
+@bp.get("/help/<token>/zone")
+def zone(token):
+    """The records as a zone file, while the link's page shows them."""
+    row, domain = _open(_link(token))
+    if row is None:
+        abort(404)
+    if not _unlocked(row) or row["authenticated_at"] or domain["authenticated"]:
+        return redirect(url_for("help_links.page", token=token))
+    return domains.zone_download(domain, request.host)
+
+
 @bp.post("/help/<token>/check")
 def check(token):
     row, domain = _open(_link(token))

@@ -9,6 +9,8 @@
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12.5l4 4 8-8.5"/></svg>
   {%- elif name == "lock" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>
+  {%- elif name == "download" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5v10.5"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M5 19.5h14"/></svg>
   {%- elif name == "gone" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4.2 4.2 0 0 0 6 0l3-3a4.2 4.2 0 0 0-6-6l-1 1"/><path d="M14 10a4.2 4.2 0 0 0-6 0l-3 3a4.2 4.2 0 0 0 6 6l1-1"/><path d="M4 4l16 16"/></svg>
   {%- endif -%}
@@ -84,6 +86,13 @@
       <li>Come back here and press Authenticate. New records can take a few minutes to show up.</li>
     </ol>
     <p class="help-note">A host of <code>@</code> means the domain itself; if your provider doesn't take <code>@</code>, leave the host empty.</p>
+    <div class="help-import">
+      <p class="help-import-text">
+        {%- if provider == "Cloudflare" %}Or add them all at once: download them as a file, then in Cloudflare open DNS → Records → Import and Export, and upload it. Leave Proxy imported DNS records off.
+        {%- else %}Can your DNS provider import a zone file, like Cloudflare? Then add them all at once: download it, and upload it there.
+        {%- endif %}</p>
+      <a class="help-import-button" href="{{ url_for('help_links.zone', token=token) }}" download>{{ badge("download") }}<span>Download zone file</span></a>
+    </div>
   </section>
 
   <section class="help-records" aria-labelledby="help-records-title">

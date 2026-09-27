@@ -9,6 +9,7 @@ bp = Blueprint("pages", __name__)
 # done once the setup is past the step it's named with (engine/setup.py)
 PREPARING_STEPS = [("new", "Setting up the mail engine"), ("bootstrapped", "Getting it ready to send"),
                    ("provisioned", "Almost there")]
+DONATE = "https://nowpayments.io/donation/someless"   # Credits: where to support Someless Mail
 
 
 def preparing_page():
@@ -56,6 +57,13 @@ def dashboard():
 @login_required
 def api_keys():
     return render_template("api-keys.html")
+
+
+@bp.get("/credits")
+@login_required
+def credits():
+    """Who made Someless Mail, why it's worth running, the thanks, and where to donate."""
+    return render_template("credits.html", donate=DONATE)
 
 
 @bp.get("/healthz")

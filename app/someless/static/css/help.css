@@ -47,6 +47,38 @@ body.help-page .dns-record { background: #fff; border-color: var(--help-line); b
 .help-steps li::marker { color: #0195fb; font-weight: 700; }
 .help-note { margin: 0.85rem 0 0; color: var(--muted); font-size: 0.9rem; }
 .help-note code { padding: 0.05rem 0.35rem; border-radius: 6px; background: #eef2f9; font-weight: 700; }
+/* Or all at once: the records as a zone file, for providers that import one */
+.help-import {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--help-line);
+}
+.help-import-text { flex: 1 1 16rem; margin: 0; font-size: 0.92rem; line-height: 1.5; text-wrap: pretty; }
+.help-import-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex: none;
+  padding: 0.65rem 1.15rem;
+  border: 1px solid #cfdcf3;
+  border-radius: 999px;
+  background: #f1f6ff;
+  color: #1463f3;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+.help-import-button:hover { border-color: #0195fb; background: #e3eeff; }
+.help-import-button:focus-visible { outline: 2px solid #0195fb; outline-offset: 2px; }
+.help-import-button svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 520px) {
+  .help-import-button { flex: 1 1 100%; }
+}
 
 .help-records { display: grid; gap: 0.9rem; }
 .help-records-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 1rem; }

@@ -3,7 +3,7 @@
 // it on hover, and on focus, for the keyboard and for a tap on a phone. The card sits on the
 // page itself, above the element (below it when there's no room), so a table that clips its
 // rows can't cut it off. The pointer can move onto the card to read it; moving away, Escape,
-// scrolling or leaving the page puts it away.
+// scrolling or leaving the page puts it away, and so does a "someless:tips-away" event.
 (function () {
   var GAP = 10;   // between the element and the card
   var EDGE = 12;  // the least room kept between the card and the window's edges
@@ -86,4 +86,6 @@
   window.addEventListener("scroll", function () { hide(false); }, { passive: true });
   window.addEventListener("resize", function () { hide(false); });
   document.addEventListener("someless:navigate", function () { hide(false); });
+  // what it was for changes on the spot (a card turning over: config-devices.js)
+  document.addEventListener("someless:tips-away", function () { hide(false); });
 })();

@@ -10,7 +10,7 @@ import time
 
 from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, url_for
 
-from . import mail_password, webmail_site
+from . import mail_password, mail_profile, webmail_site
 from .auth import login_required
 from .db import get_db
 from .domain_records import HOST_CHOICES
@@ -169,7 +169,7 @@ def _page(status=200, **context):
                 "available": size_text(max(0, quota - in_use))},
         })
     domains = _authenticated_domains()
-    server = names.server_name() or (f"{HOST_CHOICES[0]}.{boxes[0]['domain']}" if boxes else None)
+    server = _server_for(boxes[0]["domain"]) if boxes else names.server_name()
     free = _free_space()
     return render_template(
         "mailboxes.html", mailboxes=boxes, domains=[domain["name"] for domain in domains],
@@ -179,6 +179,11 @@ def _page(status=200, **context):
         sync_error=state()["sync_error"] if enabled() else None,
         opened=request.args.get("aliases", type=int), **context,
     ), status
+
+
+def _server_for(domain):
+    """The name mail apps connect to: the mail server name, or mail.<domain> before there's one."""
+    return names.server_name() or f"{HOST_CHOICES[0]}.{domain}"
 
 
 def _mailbox(mailbox_id):
@@ -247,6 +252,39 @@ def open_webmail(mailbox_id):
     minute (webmail_site.py)."""
     _mailbox(mailbox_id)
     return redirect(f"{webmail_site.address(request.host)}/enter?ticket={webmail_site.new_ticket(mailbox_id)}")
+
+
+@bp.get("/<int:mailbox_id>/profile")
+@login_required
+def profile(mailbox_id):
+    """The mailbox as a configuration profile, for an iPhone or a Mac (mail_profile.py)."""
+    return _profile(_mailbox(mailbox_id))
+
+
+@bp.get("/<int:mailbox_id>/profile-link")
+@login_required
+def profile_link(mailbox_id):
+    """A new link to the profile, with its QR code for the iPhone's camera: good for an hour."""
+    _mailbox(mailbox_id)
+    url = url_for("mailboxes.profile_by_link", token=mail_profile.new_link(mailbox_id), _external=True)
+    return {"url": url, "qr": mail_profile.qr_code(url)}
+
+
+@bp.get("/profile/<token>")
+def profile_by_link(token):
+    """The profile, on the iPhone that scanned the code: no login, while the link lasts."""
+    mailbox_id = mail_profile.link_for(token)
+    if mailbox_id == "expired":
+        abort(410)
+    mailbox = mailbox_id and get_db().execute("SELECT * FROM mailboxes WHERE id = ?", (mailbox_id,)).fetchone()
+    if not mailbox:
+        abort(404)
+    return _profile(mailbox)
+
+
+def _profile(mailbox):
+    email = mailbox["email"]
+    return mail_profile.download(email, _server_for(email.rsplit("@", 1)[1]), MAIL_APPS)
 
 
 @bp.post("/<int:mailbox_id>/password")

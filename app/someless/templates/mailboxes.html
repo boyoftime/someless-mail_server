@@ -30,8 +30,22 @@
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
   {%- elif name == "enter" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4.5h3.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H14"/><path d="M4.5 12h10"/><path d="M11 8.5l3.5 3.5-3.5 3.5"/></svg>
+  {%- elif name == "phone" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.6"/><path d="M10.5 18.5h3"/></svg>
   {%- elif name == "globe" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.3 2.5 3.5 5.3 3.5 8.5s-1.2 6-3.5 8.5c-2.3-2.5-3.5-5.3-3.5-8.5s1.2-6 3.5-8.5z"/></svg>
+  {%- endif -%}
+{% endmacro %}
+
+{# The platforms, as their makers draw them (Iconify's "logos" and Simple Icons sets, CC0): in
+   colour, and in white on the chosen tab #}
+{% macro platform(name) %}
+  {%- if name == "android" -%}
+  <svg class="platform-icon is-android" viewBox="0 0 256 150" aria-hidden="true"><path fill="#34a853" d="M255.285 143.47c-.084-.524-.164-1.042-.251-1.56a128.1 128.1 0 0 0-12.794-38.288a128.8 128.8 0 0 0-23.45-31.86a129.2 129.2 0 0 0-22.713-18.005c.049-.08.09-.168.14-.25c2.582-4.461 5.172-8.917 7.755-13.38l7.576-13.068c1.818-3.126 3.632-6.26 5.438-9.386q.643-1.115 1.023-2.297a11.78 11.78 0 0 0-.36-8.188q-.32-.76-.743-1.472a11.7 11.7 0 0 0-4.08-4.064a11.85 11.85 0 0 0-5.005-1.61a12 12 0 0 0-2.218.02q-.912.094-1.814.33a11.74 11.74 0 0 0-7.154 5.467c-1.814 3.127-3.628 6.26-5.438 9.386l-7.576 13.069c-2.583 4.462-5.173 8.918-7.755 13.38c-.282.487-.567.973-.848 1.467q-.586-.237-1.172-.462c-14.24-5.43-29.688-8.4-45.836-8.4c-.442 0-.879 0-1.324.006c-14.357.143-28.152 2.64-41.022 7.12a119 119 0 0 0-4.42 1.642c-.262-.455-.532-.911-.79-1.367c-2.583-4.462-5.173-8.918-7.755-13.38l-7.576-13.07a3915 3915 0 0 1-5.439-9.386A11.74 11.74 0 0 0 48.5.048a11.7 11.7 0 0 0-5.01 1.612a11.7 11.7 0 0 0-4.077 4.063c-.281.474-.532.967-.742 1.473a11.8 11.8 0 0 0-.365 8.188c.259.786.594 1.554 1.023 2.296a3973 3973 0 0 1 5.439 9.386q3.793 6.535 7.58 13.069c2.582 4.462 5.168 8.918 7.75 13.38c.02.038.046.075.065.112A129 129 0 0 0 45.32 64.38a129.7 129.7 0 0 0-22.2 24.015a128 128 0 0 0-9.34 15.24a128.2 128.2 0 0 0-10.843 28.764a131 131 0 0 0-1.951 9.524c-.087.518-.167 1.042-.247 1.56A125 125 0 0 0 0 149.118h256q-.307-2.837-.734-5.636z"/></svg>
+  {%- elif name == "iphone" -%}
+  <svg class="platform-icon is-apple" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04c-2.04.027-3.91 1.183-4.961 3.014c-2.117 3.675-.546 9.103 1.519 12.09c1.013 1.454 2.208 3.09 3.792 3.039c1.52-.065 2.09-.987 3.935-.987c1.831 0 2.35.987 3.96.948c1.637-.026 2.676-1.48 3.676-2.948c1.156-1.688 1.636-3.325 1.662-3.415c-.039-.013-3.182-1.221-3.22-4.857c-.026-3.04 2.48-4.494 2.597-4.559c-1.429-2.09-3.623-2.324-4.39-2.376c-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83c-1.207.052-2.662.805-3.532 1.818c-.78.896-1.454 2.338-1.273 3.714c1.338.104 2.715-.688 3.559-1.701"/></svg>
+  {%- elif name == "windows" -%}
+  <svg class="platform-icon is-windows" viewBox="0 0 256 256" aria-hidden="true"><path fill="#0078d4" d="M0 0h121.329v121.329H0zm134.671 0H256v121.329H134.671zM0 134.671h121.329V256H0zm134.671 0H256V256H134.671z"/></svg>
   {%- endif -%}
 {% endmacro %}
 
@@ -152,7 +166,8 @@
       <span class="mailbox-badge" aria-hidden="true">{{ icon("inbox") }}</span>
       <h2 class="mailbox-who">{{ box.email }}</h2>
       <div class="mailbox-actions">
-        <button type="button" class="button button-quiet mailbox-button" data-config-email="{{ box.email }}" aria-haspopup="dialog">{{ icon("gear") }}<span>Configuration details</span></button>
+        <button type="button" class="button button-quiet mailbox-button" data-config-email="{{ box.email }}"
+                data-config-profile="{{ url_for('mailboxes.profile', mailbox_id=box.id) }}" data-config-link="{{ url_for('mailboxes.profile_link', mailbox_id=box.id) }}" aria-haspopup="dialog">{{ icon("gear") }}<span>Configuration details</span></button>
         <button type="button" class="button button-quiet mailbox-button" data-dialog-open="aliases-dialog-{{ box.id }}" aria-haspopup="dialog">{{ icon("at") }}<span>Aliases</span>{% if box.aliases %}<span class="mailbox-count">{{ box.aliases | length }}</span>{% endif %}</button>
         {# its webmail, in a new tab, signed in already (a one-time ticket: webmail_site.py) #}
         <form method="post" action="{{ url_for('mailboxes.open_webmail', mailbox_id=box.id) }}" target="_blank" class="mailbox-open" data-full-load>
@@ -249,8 +264,17 @@
 {% if mailboxes %}
 {# How a mail app connects: the same server for every mailbox; the username is the mailbox's
    address, filled in when the dialog opens (mailboxes-page.js) #}
-<dialog class="rules-dialog domain-dialog is-wide" id="config-dialog" aria-labelledby="config-title">
+<dialog class="rules-dialog domain-dialog is-wider config-dialog" id="config-dialog" aria-labelledby="config-title">
   <div class="rules-form">
+    {# The phone turns the card over, to how to set the mailbox up on a device, and back
+       (config-devices.js) #}
+    <button type="button" class="docs-button config-flip" data-config-flip
+            aria-label="Set it up on a phone or computer" data-tip="Set it up on a phone or computer"
+            data-tip-front="Set it up on a phone or computer" data-tip-back="Back to the configuration details">
+      <span class="docs-button-anim" aria-hidden="true" data-config-lottie="{{ url_for('static', filename='lottie/phone.json') }}"></span>
+      <span class="docs-button-still" aria-hidden="true">{{ icon("phone") }}</span>
+    </button>
+    <div class="config-face" data-config-face="details">
     <div class="rules-head">
       <span class="card-badge" aria-hidden="true">{{ icon("gear") }}</span>
       <div>
@@ -281,6 +305,65 @@
       <h3 class="config-title" id="config-pop3">POP3 <span>Incoming mail, moved to one device</span></h3>
       {{ config_row("POP3", server, ports.pop3, "SSL/TLS") }}
     </section>
+    </div>
+
+    {# The back: the same mailbox on Android (Gmail), an iPhone (a profile: mail_profile.py) and
+       Windows (Outlook), a tab each #}
+    <div class="config-face" data-config-face="devices" hidden>
+      <div class="rules-head">
+        <span class="card-badge" aria-hidden="true">{{ icon("phone") }}</span>
+        <div>
+          <h2 class="rules-title">Set it up on a device</h2>
+          <p class="rules-hint">Add <span data-config-name></span> to a phone or computer.</p>
+        </div>
+      </div>
+      <div class="dialog-tabs device-tabs" role="tablist" aria-label="Devices">
+        <i class="dialog-tabs-glider" aria-hidden="true"></i>
+        {% for key, label in [("android", "Android"), ("iphone", "iPhone"), ("windows", "Windows PC")] %}
+        <button type="button" class="dialog-tab" role="tab" id="device-tab-{{ key }}" aria-controls="device-panel-{{ key }}"
+                aria-selected="{{ 'true' if loop.first else 'false' }}"{% if not loop.first %} tabindex="-1"{% endif %} data-device-tab>{{ platform(key) }}<span>{{ label }}</span></button>
+        {% endfor %}
+      </div>
+
+      <section class="device-panel" role="tabpanel" id="device-panel-android" aria-labelledby="device-tab-android">
+        <p class="device-lead">In the <b>Gmail</b> app:</p>
+        <ol class="device-steps">
+          <li>Tap your profile picture at the top right, then <b>Add another account</b>, and choose <b>Other</b>.</li>
+          <li>Type <code data-config-name></code>, and tap <b>Manual setup</b>. Choose <b>Personal (IMAP)</b>, and type the mailbox's password.</li>
+          <li>Incoming server: <code>{{ server }}</code>, with the whole address as the username. If it asks, port <code>{{ ports.imap }}</code> and <b>SSL/TLS</b>.</li>
+          <li>Outgoing server: <code>{{ server }}</code>, with <b>Require sign-in</b> on. If it asks, port <code>{{ ports.smtp_ssl }}</code> and <b>SSL/TLS</b>.</li>
+          <li>Choose how often to check for mail, type your name as people see it on your mail, and tap <b>Next</b>. The mail shows up in Gmail.</li>
+        </ol>
+      </section>
+
+      <section class="device-panel" role="tabpanel" id="device-panel-iphone" aria-labelledby="device-tab-iphone" hidden>
+        <div class="device-profile">
+          <div class="device-code">
+            <div class="device-qr" data-device-qr></div>
+            <a class="button button-quiet device-download" href="" data-device-download download>Download profile</a>
+          </div>
+          <ol class="device-steps">
+            <li>Point the iPhone's camera at this code, and tap the link that shows up. Safari asks to download a configuration profile: tap <b>Allow</b>.</li>
+            <li>Open <b>Settings</b>, and tap <b>Profile Downloaded</b> near the top (or <b>General → VPN &amp; Device Management</b>).</li>
+            <li>Tap <b>Install</b>, and type the iPhone's passcode. It says <b>Not Signed</b>: that's expected for a profile from your own server. Tap <b>Install</b> again.</li>
+            <li>Type your name, as people see it on your mail, and the mailbox's password. The mail shows up in the <b>Mail</b> app.</li>
+          </ol>
+        </div>
+        <p class="device-note">The code works for an hour, on an iPhone that can reach this panel. On the iPhone already? Tap <b>Download profile</b>. It works on a Mac too: open it, then install it in System Settings, under <b>Profiles</b> or <b>Device Management</b>.</p>
+      </section>
+
+      <section class="device-panel" role="tabpanel" id="device-panel-windows" aria-labelledby="device-tab-windows" hidden>
+        <p class="device-lead">In <b>Outlook</b>, the mail app of Windows 11:</p>
+        <ol class="device-steps">
+          <li>Open <b>Settings</b> (the gear at the top right), then <b>Accounts → Email accounts</b>, and click <b>Add account</b>.</li>
+          <li>Type <code data-config-name></code>, click <b>Continue</b>, and choose <b>IMAP</b>.</li>
+          <li>Type the mailbox's password, and click <b>Show more</b>.</li>
+          <li>Incoming (IMAP) server: <code>{{ server }}</code>, port <code>{{ ports.imap }}</code>, <b>SSL/TLS</b>. Outgoing (SMTP) server: <code>{{ server }}</code>, port <code>{{ ports.smtp_ssl }}</code>, <b>SSL/TLS</b>, with the same username and password.</li>
+          <li>Click <b>Continue</b>. The mail shows up in Outlook.</li>
+        </ol>
+        <p class="device-note">Classic Outlook: <b>File → Add Account</b>, then <b>Advanced options → Let me set up my account manually</b>, and choose <b>IMAP</b>, with the same settings. Thunderbird or another app: use the details on the other side of this card.</p>
+      </section>
+    </div>
     <div class="rules-actions">
       <button type="button" class="button rules-save" data-dialog-close>Done</button>
     </div>
@@ -414,4 +497,5 @@
 <script src="{{ url_for('static', filename='js/password-toggle.js') }}"></script>
 <script src="{{ url_for('static', filename='js/password-rules-dialog.js') }}"></script>
 <script src="{{ url_for('static', filename='js/mailboxes-page.js') }}"></script>
+<script src="{{ url_for('static', filename='js/config-devices.js') }}"></script>
 {% endblock %}

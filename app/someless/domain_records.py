@@ -219,6 +219,57 @@ def receive_tip(domain, keys):
             f"• nobody@{domain}, neither: refused")
 
 
+ZONE_TTL = 3600  # seconds, for each record in the zone file
+
+
+def zone_file(domain, keys, address):
+    """The records as a zone file (BIND format), for DNS providers that import one, like
+    Cloudflare. A record the domain has already, or has to change by hand (its own SPF record:
+    never a second one), is a note there, and isn't imported."""
+    authenticating, receiving = records(domain, keys, address)
+    lines = [f"; Mail records for {domain}, from Someless Mail",
+             ";",
+             "; Import this file where the domain's DNS is managed, or add each record by hand.",
+             "; At Cloudflare: open the domain, then DNS > Records > Import and Export, and",
+             '; leave "Proxy imported DNS records" off: mail doesn\'t go through the proxy.',
+             "; Lines that start with ; are notes: they aren't imported.",
+             ""]
+    for record in [*authenticating, receiving]:
+        lines.append(f"; {record.title}: {record.hint[:1].lower()}{record.hint[1:]}")
+        value = record.value or "YOUR.SERVER.IP.ADDRESS"
+        if record.type == "TXT":
+            value = _zone_text(value)
+        elif record.type == "MX":
+            value = f"{record.priority} {value}."
+        line = "\t".join([f"{record.full_host}.", str(ZONE_TTL), "IN", record.type, value])
+        if record.type == "A":
+            line += " ; cf_tags=cf-proxied:false"   # Cloudflare: DNS only, never through its proxy
+        kind = record.advice.kind if record.advice else None
+        if kind == "keep":
+            lines.append("; Already there, so it isn't imported: keep it.")
+        elif kind == "edit" and record.key == "spf":
+            lines.append(f"; {record.advice.short.rstrip('.')} by hand: a domain can have only one SPF record, "
+                         "so this one isn't imported.")
+        elif kind == "edit":
+            lines.append(f"; {record.advice.short} This one's there already, so it isn't imported.")
+        elif record.value is None:
+            lines.append("; Put your server's public IP address in this one, then remove the ; at its start.")
+        lines.append(f"; {line}" if kind in ("keep", "edit") or record.value is None else line)
+        lines.append("")
+    others = [server for server in found_in(keys)["mx"] if server != receiving.value]
+    if others:
+        lines.insert(-1, f"; Then delete your other MX records ({', '.join(others)}): "
+                         "a domain's mail should go to one place.")
+    return "\n".join(lines)
+
+
+def _zone_text(value):
+    """A TXT value as zone files write it: in quotes, at most 255 characters in each (DNS holds
+    no longer strings; a long DKIM key takes several, joined up again when it's read)."""
+    chunks = [value[start:start + 255] for start in range(0, len(value), 255)] or [""]
+    return " ".join('"' + chunk.replace("\\", "\\\\").replace('"', '\\"') + '"' for chunk in chunks)
+
+
 def summary(domain, keys, address):
     """What other mail services have on the domain, and what to do about it, for the end of the
     page: {"services", "todo": [{"kind", "text", "now"}], "clean": cleanup()}. None when there's

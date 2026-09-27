@@ -2519,6 +2519,39 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
   .dns-ready::after { animation: none; display: none; }
 }
 
+/* Add them all at once: the records as a zone file, for DNS providers that import one */
+.dns-import {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.8rem 0.95rem;
+  margin: 0 0 1.75rem;
+  padding: 0.95rem 1.1rem 0.95rem 1.3rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: linear-gradient(100deg, rgba(1, 149, 251, 0.1), rgba(139, 92, 246, 0.06));
+}
+.dns-import-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1463f3, #0195fb);
+  color: #fff;
+  box-shadow: 0 0 18px -4px rgba(1, 149, 251, 0.85);
+}
+.dns-import-icon svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
+.dns-import-text { min-width: 0; }
+.dns-import-title { margin: 0; font-size: 1.02rem; font-weight: 700; }
+.dns-import-hint { margin: 0.15rem 0 0; color: var(--muted); font-size: 0.9rem; line-height: 1.45; text-wrap: pretty; }
+.dns-import-button { padding: 0.7rem 1.3rem; }
+@media (max-width: 640px) {
+  .dns-import { grid-template-columns: auto minmax(0, 1fr); }
+  .dns-import-button { grid-column: 1 / -1; }   /* the whole width, under the words */
+}
+
 /* On a record's card, when the domain has that record already: one line on what to do */
 .dns-action {
   --tone: var(--airmail-blue);
@@ -3075,6 +3108,158 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
   .docs-button, .docs-button::after, .back-link { animation: none !important; transition: none; }
 }
 
+/* Credits (credits.html): the Someless Tricks logo rises onto a stage of warm light (the one
+   moment of motion), then the maker's photo and quote, the hard work, why Someless Mail, the
+   thanks, and the donation */
+.credits { --accent: #0195fb; --badge: linear-gradient(135deg, #1463f3, #0195fb); display: grid; gap: 1.5rem; max-width: 66rem; }
+.credits .page-header { margin: 0; }
+.credits a:not(.button) { color: var(--accent); font-weight: 600; }
+.credits-stage {
+  display: grid;
+  justify-items: center;
+  gap: 1.1rem;
+  padding: clamp(1.75rem, 5vw, 3.25rem) clamp(1rem, 4vw, 2.5rem) clamp(1.5rem, 4vw, 2.25rem);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: radial-gradient(ellipse 58% 68% at 50% 40%, rgba(255, 146, 28, 0.24), transparent 72%), var(--card-bg);
+  box-shadow: var(--card-shadow);
+  text-align: center;
+}
+.credits-logo {
+  width: min(100%, 580px);
+  height: auto;
+  filter: drop-shadow(0 18px 34px rgba(255, 112, 0, 0.35));
+  animation: credits-rise 1s var(--menu-ease) both;
+}
+@keyframes credits-rise { from { opacity: 0; transform: translateY(22px) scale(0.93); filter: drop-shadow(0 0 0 rgba(255, 112, 0, 0)); } }
+.credits-lead { max-width: 34rem; margin: 0; color: var(--muted); font-size: 1.12rem; line-height: 1.5; text-wrap: balance; }
+.credits-lead strong { color: var(--ink); }
+
+.credits-maker,
+.credits-card,
+.credits-features li,
+.credits-donate {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+}
+.credits-maker {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(1.25rem, 4vw, 2.5rem);
+  padding: clamp(1.25rem, 3.5vw, 2.25rem);
+}
+.credits-photo {
+  width: clamp(150px, 19vw, 210px);
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border: 4px solid transparent;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1463f3, #0195fb 55%, #ff9a1f) border-box;   /* the ring */
+  box-shadow: 0 0 42px -8px rgba(1, 149, 251, 0.85);
+}
+.credits-name { margin: 0; font-size: 1.65rem; font-weight: 700; letter-spacing: -0.02em; }
+.credits-role { margin: 0.1rem 0 1rem; color: var(--muted); }
+.credits-quote {
+  margin: 0 0 1rem;
+  padding: 0.9rem 1.1rem 0.9rem 1.25rem;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 14px 14px 0;
+  background: rgba(1, 149, 251, 0.09);
+  font-size: 1.12rem;
+  font-weight: 600;
+  line-height: 1.5;
+  quotes: "\201C" "\201D";
+}
+.credits-quote p { margin: 0; text-wrap: pretty; }
+.credits-quote p::before { content: open-quote; }
+.credits-quote p::after { content: close-quote; }
+.credits-maker-words > p { margin: 0; line-height: 1.65; }
+
+.credits-card { padding: clamp(1.25rem, 3vw, 1.75rem); }
+.credits-card p { max-width: 72ch; margin: 0.65rem 0 0; line-height: 1.65; }
+.credits-heading { margin: 0; font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; }
+.credits-built { color: var(--muted); font-size: 0.92rem; }
+
+.credits-why { display: grid; gap: 1rem; }
+.credits-why-lead { max-width: 72ch; margin: 0; color: var(--muted); line-height: 1.6; }
+.credits-features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; margin: 0; padding: 0; list-style: none; }
+.credits-features li { padding: 1.15rem 1.2rem 1.2rem; border-radius: 18px; }
+.credits-feature-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--badge);
+  color: #fff;
+  box-shadow: 0 8px 20px -8px rgba(1, 149, 251, 0.9);
+}
+.credits-feature-icon svg, .credits-donate svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.credits-features h3 { margin: 0.85rem 0 0.3rem; font-size: 1.02rem; font-weight: 700; }
+.credits-features p { margin: 0; color: var(--muted); font-size: 0.92rem; line-height: 1.55; }
+.credits-compare { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; }
+.credits-option { padding: 1rem 1.15rem; border: 1px dashed var(--line); border-radius: 16px; color: var(--muted); }
+.credits-option h3 { margin: 0 0 0.3rem; font-size: 0.98rem; font-weight: 700; }
+.credits-option p { margin: 0; font-size: 0.9rem; line-height: 1.5; }
+.credits-option.is-ours {
+  border: 1px solid rgba(1, 149, 251, 0.7);
+  background: rgba(1, 149, 251, 0.1);
+  color: var(--ink);
+  box-shadow: 0 0 30px -10px rgba(1, 149, 251, 0.9);
+}
+
+.credits-donate {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem 1.25rem;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  border-color: rgba(244, 63, 94, 0.45);
+  background: linear-gradient(110deg, rgba(244, 63, 94, 0.14), rgba(1, 149, 251, 0.07)), var(--card-bg);
+}
+.credits-donate-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e11d48, #fb7185);
+  color: #fff;
+  box-shadow: 0 0 26px -6px rgba(244, 63, 94, 0.9);
+}
+.credits-donate-icon svg { fill: currentColor; }
+.credits-donate-words p { margin: 0.35rem 0 0; color: var(--muted); line-height: 1.6; }
+.button.credits-donate-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.6rem;
+  background: linear-gradient(135deg, #e11d48, #f43f5e);
+  box-shadow: 0 12px 26px -12px rgba(244, 63, 94, 0.95);
+}
+.button.credits-donate-button:hover { filter: brightness(1.08); }
+.credits-donate-button svg { width: 18px; height: 18px; fill: currentColor; }
+@media (max-width: 900px) {
+  .credits-features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .credits-compare { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .credits-maker { grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; }
+  .credits-quote { border-left: 0; border-top: 3px solid var(--accent); border-radius: 0 0 14px 14px; text-align: left; }
+  .credits-maker-words > p { text-align: left; }
+  .credits-features { grid-template-columns: minmax(0, 1fr); }
+  .credits-donate { grid-template-columns: auto minmax(0, 1fr); }
+  .button.credits-donate-button { grid-column: 1 / -1; justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .credits-logo { animation: none; }
+}
+
 /* Senders (senders.html): a card per sender, its name and address with a round initial, and
    what makes other mail servers trust it (its domain, DKIM, DMARC) */
 .sender-list { display: grid; gap: 0.9rem; margin-top: 1.25rem; }
@@ -3486,6 +3671,82 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
 .config-cell .copy-box-text { overflow-wrap: anywhere; }
 .config-plain { display: flex; align-items: center; min-height: 2.6rem; font-weight: 600; }
 .config-or { display: flex; align-items: center; justify-content: flex-end; min-height: 2.6rem; color: var(--muted); font-style: italic; }
+
+/* Set it up on a device (config-devices.js): the phone at the top right turns the card over, to
+   a tab each for Android, iPhone and Windows PC */
+.config-dialog .rules-form { position: relative; }
+.config-face { display: grid; gap: 1.35rem; min-width: 0; }
+.config-face[hidden] { display: none; }
+.config-dialog .rules-head { min-height: 64px; padding-right: 4.75rem; }   /* room for the phone */
+.docs-button.config-flip {
+  position: absolute;
+  top: 1.2rem;
+  right: clamp(1.1rem, 4vw, 1.75rem);
+  z-index: 2;
+  width: 64px;
+  height: 64px;
+  padding: 4px;
+  cursor: pointer;
+}
+.config-flip .docs-button-still { display: grid; place-items: center; color: #0195fb; }
+.config-flip .docs-button-still svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.config-flip.is-back { border-color: #4db3ff; }   /* on the back: the way back */
+
+.device-tabs .dialog-tab { padding-inline: 0.75rem; white-space: nowrap; }
+.platform-icon { flex: none; height: 18px; width: auto; }
+.platform-icon.is-android { height: 13px; }
+.platform-icon path { transition: fill 0.25s ease; }
+.dialog-tab[aria-selected="true"] .platform-icon path { fill: #fff; }   /* white on the blue */
+.device-panel { display: grid; gap: 0.9rem; min-width: 0; }
+.device-panel[hidden] { display: none; }
+.device-lead { margin: 0; font-weight: 600; }
+.device-steps { display: grid; gap: 0.6rem; margin: 0; padding-left: 1.35rem; line-height: 1.55; }
+.device-steps li { padding-left: 0.2rem; }
+.device-steps li::marker { color: var(--accent); font-weight: 700; }
+.device-steps code, .device-note code {
+  padding: 0.08rem 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--input-bg);
+  font-size: 0.9em;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.device-note { margin: 0; padding-top: 0.85rem; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.88rem; line-height: 1.5; }
+.device-profile { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 1.1rem 1.35rem; }
+.device-code { display: grid; justify-items: center; gap: 0.7rem; }
+.device-qr {
+  display: grid;
+  place-items: center;
+  width: 164px;
+  height: 164px;
+  padding: 6px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--line), 0 0 28px -8px rgba(1, 149, 251, 0.75);
+}
+.device-qr svg { display: block; width: 100%; height: 100%; opacity: 0; transform: scale(0.94); transition: opacity 0.35s ease, transform 0.45s var(--menu-ease); }
+.device-qr.is-ready svg { opacity: 1; transform: none; }
+.device-qr-wait {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(1, 149, 251, 0.25);
+  border-top-color: #0195fb;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.device-download { width: 100%; padding: 0.6rem 1rem; justify-content: center; font-size: 0.9rem; }
+@media (max-width: 640px) {
+  .device-tabs .dialog-tab { gap: 0.35rem; padding-inline: 0.45rem; font-size: 0.9rem; }
+  .device-profile { grid-template-columns: minmax(0, 1fr); }
+  .device-code { justify-self: center; }
+  .docs-button.config-flip { width: 56px; height: 56px; }
+  .config-dialog .rules-head { padding-right: 4rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .device-qr svg { transition: none; }
+  .device-qr-wait { animation: none; }
+}
 @media (max-width: 640px) {
   .mailbox-facts { grid-template-columns: minmax(0, 1fr); }
   .mailbox-actions { width: 100%; margin-left: 0; }

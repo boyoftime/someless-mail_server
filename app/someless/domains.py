@@ -4,7 +4,7 @@ import json
 import re
 import time
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, abort, flash, redirect, render_template, request, session, url_for
 
 from . import domain_checks, domain_records
 from .auth import login_required
@@ -120,6 +120,21 @@ def authenticate(domain_id):
         summary=domain_records.summary(domain["name"], keys, address),
         checks=json.loads(keys["checks"]) if keys["checks"] else {}, checked_ago=_ago(keys["checked_at"]),
     )
+
+
+@bp.get("/<int:domain_id>/zone")
+@login_required
+def zone(domain_id):
+    """Download zone file: the records in one file, for DNS providers that import them."""
+    return zone_download(_domain(domain_id), request.host)
+
+
+def zone_download(domain, host):
+    """The domain's records as a zone file to download (here, and on the pages its help links open)."""
+    zone = domain_records.zone_file(domain["name"], domain_records.keys_for(domain["id"]),
+                                    domain_records.server_address(host))
+    return Response(zone, mimetype="text/plain", headers={
+        "Content-Disposition": f'attachment; filename="{domain["name"]}-zone.txt"', "Cache-Control": "no-store"})
 
 
 def _help_links(domain_id):

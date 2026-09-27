@@ -15,6 +15,8 @@ PAGES = {
           "There's nothing at this address. It may have been typed wrong, or the page has moved."),
     405: ("not-found", "This page can't be opened directly",
           "This address only works from a button in Someless Mail, not from the address bar."),
+    410: ("not-found", "This link has expired",
+          "It only worked for a while. Ask for a new one: for a mail app, from the mailbox's Configuration details."),
     500: ("error", "Something went wrong",
           "The server ran into a problem and couldn't finish this. Try again in a moment."),
 }

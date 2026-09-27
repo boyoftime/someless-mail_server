@@ -123,7 +123,7 @@
     document.querySelectorAll("[data-config-email]").forEach(function (button) {
       button.addEventListener("click", function () {
         var email = button.dataset.configEmail;
-        config.querySelector("[data-config-name]").textContent = email;
+        config.querySelectorAll("[data-config-name]").forEach(function (name) { name.textContent = email; });
         config.querySelector("[data-config-username]").textContent = email;
         config.querySelector("[data-config-copy]").dataset.copy = email;
         config.showModal();

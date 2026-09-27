@@ -93,6 +93,9 @@
       {% call nav_item(url_for('pages.api_keys'), "API keys", here == 'pages.api_keys', soon=true) %}
         <svg class="side-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15.5" r="4"/><path d="M10.9 12.6l8.6-8.6"/><path d="M16.5 7l2.5 2.5"/><path d="M14.3 9.2l2 2"/></svg>
       {% endcall %}
+      {% call nav_item(url_for('pages.credits'), "Credits", here == 'pages.credits') %}
+        <svg class="side-menu-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="5.5"/><path d="M12 6.6l.8 1.6 1.7.2-1.3 1.2.3 1.7-1.5-.8-1.5.8.3-1.7-1.3-1.2 1.7-.2z"/><path d="M8.6 13.4L7 20.5l5-2.6 5 2.6-1.6-7.1"/></svg>
+      {% endcall %}
     </nav>
 
     {% set account_open = request.blueprint == 'settings' %}
