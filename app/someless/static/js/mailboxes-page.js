@@ -73,7 +73,8 @@
   var rulesDialog = document.getElementById("mailbox-rules-dialog");
   if (rulesDialog) {
     rulesDialog.addEventListener("someless:password-rules", function (event) {
-      lists.forEach(function (list) {
+      var around = document.querySelector("dialog[open]:not([data-rules-picker])");   // the dialog it was opened from
+      var rebuild = function () { lists.forEach(function (list) {
         list.dataset.minLength = event.detail.min_length;
         var ul = list.querySelector("ul");
         ul.replaceChildren.apply(ul, event.detail.rules.map(function (rule) {
@@ -85,7 +86,9 @@
         }));
         var input = document.getElementById(list.dataset.for);
         if (input && input.somelessCheck) input.somelessCheck();
-      });
+      }); };
+      if (around && window.somelessResize) window.somelessResize(around, rebuild);   // glides to its new height
+      else rebuild();
     });
   }
 

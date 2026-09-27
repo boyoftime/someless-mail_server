@@ -4,6 +4,13 @@ from someless import create_app, domain_records
 
 
 @pytest.fixture(autouse=True)
+def known_first_password(monkeypatch):
+    """A new install makes a random first password (first_password.py); the tests log in with admin
+    as before, unless a test says otherwise."""
+    monkeypatch.setenv("SOMELESS_INITIAL_PASSWORD", "admin")
+
+
+@pytest.fixture(autouse=True)
 def no_real_dns(monkeypatch):
     """Tests never ask the real DNS: nothing is found, unless a test's `dns` fixture says so."""
     monkeypatch.setattr(domain_records, "lookup", lambda name, rdtype: [])

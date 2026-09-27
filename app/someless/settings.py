@@ -1,10 +1,10 @@
 import re
 from collections import namedtuple
 
-from flask import Blueprint, flash, g, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, g, redirect, render_template, request, send_file, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from . import domain_checks, engine, two_factor, webmail_lock, webmail_site
+from . import avatar, domain_checks, engine, first_password, two_factor, webmail_lock, webmail_site
 from .auth import login_required
 from .db import get_db
 from .domain_records import server_address
@@ -48,10 +48,20 @@ def password_checks(rules):
     return checks
 
 
+def _secure():
+    """What the Secure the panel and webmail card fills its tables in with: the mail server
+    name's domain (example.com before there is one), this server's address, and whether this
+    very page came over HTTPS."""
+    name = names.server_name()
+    domain = name.split(".", 1)[1] if name else "example.com"
+    return {"domain": domain, "mail_name": name or f"mail.{domain}", "address": server_address(request.host),
+            "https": request.scheme == "https"}
+
+
 def _settings_page(status=200, **context):
     rules = password_rules()
     return render_template(
-        "settings.html", rules=rules, checks=password_checks(rules), tf=two_factor.state(), **context
+        "settings.html", rules=rules, checks=password_checks(rules), tf=two_factor.state(), secure=_secure(), **context
     ), status
 
 
@@ -63,6 +73,47 @@ def _current_password_ok():
 @login_required
 def index():
     return _settings_page()
+
+
+# The profile picture (avatar.py): uploaded from the username card, placed in a dialog
+# (settings-avatar.js), and shown in the top right corner
+
+@bp.get("/avatar")
+@login_required
+def avatar_image():
+    picture = avatar.path()
+    if not picture.exists():
+        abort(404)
+    # its address changes with it (?v=), so browsers may keep it
+    return send_file(picture, mimetype="image/webp", max_age=31536000 if request.args.get("v") else 0)
+
+
+@bp.post("/avatar")
+@login_required
+def upload_avatar():
+    wants_json = request.accept_mimetypes.best == "application/json"
+    upload = request.files.get("picture")
+    data = upload.read(avatar.LARGEST + 1) if upload else b""
+    problem = avatar.save(data, request.form.get("x"), request.form.get("y"), request.form.get("size")) if data \
+        else "Choose a picture first."
+    if problem:
+        if wants_json:
+            return {"problem": problem}, 400
+        return _settings_page(400, avatar_error=problem)
+    if wants_json:
+        return {"url": avatar.url()}
+    flash("Profile picture saved.", "success")
+    return redirect(url_for("settings.index"))
+
+
+@bp.post("/avatar/delete")
+@login_required
+def delete_avatar():
+    avatar.remove()
+    if request.accept_mimetypes.best == "application/json":   # settings-avatar.js: the page stays put
+        return {"removed": True}
+    flash("Profile picture removed.", "success")
+    return redirect(url_for("settings.index"))
 
 
 @bp.post("/username")
@@ -101,6 +152,7 @@ def change_password():
         (generate_password_hash(new_password), g.admin["id"]),
     )
     db.commit()
+    first_password.forget()   # the first one isn't kept, nor shown, any more
     flash("Password changed.", "success")
     return redirect(url_for("settings.index"))
 

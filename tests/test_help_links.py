@@ -44,16 +44,16 @@ def test_need_help_shows_while_the_domain_isnt_authenticated(app, client, domain
     assert 'id="help-dialog"' not in text(client.get(f"/domains/{domain_id}"))
 
 
-def test_a_link_is_made_and_kept_only_as_a_fingerprint(app, client, domain_id):
+def test_a_link_is_made(app, client, domain_id):
     answer = create(client, domain_id, expires="1d")
 
     assert answer.status_code == 200
     url, token = answer.get_json()["url"], token_of(answer)
     assert url.startswith("http://194.163.167.106:17080/help/") and len(token) >= 30
     (row,) = links(app)
-    assert token not in row["token_hash"] and row["password_hash"] is None
+    assert token not in row["token_hash"] and row["password_hash"] is None   # found again by its fingerprint
     assert 86000 < row["expires_at"] - row["created_at"] <= 86400
-    assert url in answer.get_json()["html"]   # shown this once, in the dialog's list
+    assert url in answer.get_json()["html"]   # in the dialog's list
 
 
 def test_a_link_with_a_password_needs_one(app, client, domain_id):
@@ -213,19 +213,16 @@ def test_the_page_says_how_to_add_records_at_the_provider(app, client, domain_id
     assert re.search(r"<ol[^>]*class=\"help-steps\"", page)
 
 
-def test_every_link_shows_its_address_masked(app, client, domain_id):
-    first = token_of(create(client, domain_id))
-    answer = create(client, domain_id)
-    second = token_of(answer)
+def test_every_link_shows_in_full_with_its_copy_button(app, client, domain_id):
+    urls = [create(client, domain_id).get_json()["url"] for _ in range(2)]
 
     listing = client.get(f"/domains/{domain_id}/help-links").get_json()["html"]
 
-    for token in (first, second):
-        masked = f"http://194.163.167.106:17080/help/{token[:4]}**********{token[-4:]}"
-        assert masked in listing, token
-        assert token not in listing
-    assert links(app)[0]["shown"].endswith(f"{first[:4]}**********{first[-4:]}")
-    assert answer.get_json()["count"] == 2
+    for url in urls:
+        assert f'data-copy="{url}"' in listing, url
+    assert listing.count('class="glow-divider') == 1   # between the two
+    assert links(app)[0]["url"] == urls[0]
+    assert client.get(f"/domains/{domain_id}/help-links").get_json()["count"] == 2
 
 
 def test_the_dialog_has_a_tab_for_new_links_and_one_for_the_links(app, client, domain_id):

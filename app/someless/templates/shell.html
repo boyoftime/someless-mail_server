@@ -52,7 +52,9 @@
   <a class="wordmark" href="{{ url_for('pages.dashboard') }}">Someless Mail</a>
   {# data-swap-refresh: page-swap.js updates it along with the main area #}
   <span class="topbar-user" id="topbar-user" data-swap-refresh title="Signed in as {{ g.admin.username }}">
-    <span class="topbar-avatar" aria-hidden="true">{{ g.admin.username[:1] | upper }}</span>
+    {% set picture = avatar_url() %}
+    {% if picture %}<img class="topbar-avatar is-picture" src="{{ picture }}" alt="" width="34" height="34">
+    {% else %}<span class="topbar-avatar" aria-hidden="true">{{ g.admin.username[:1] | upper }}</span>{% endif %}
     <span class="topbar-user-name">{{ g.admin.username }}</span>
   </span>
 </header>
@@ -160,6 +162,7 @@
 <script src="{{ url_for('static', filename='js/account-panel.js') }}"></script>
 <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 <script src="{{ url_for('static', filename='js/busy-button.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/smooth-size.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/save-when-changed.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/copy-button.js') }}" defer></script>
 <script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>

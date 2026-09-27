@@ -2,7 +2,8 @@
 made from the domain's Authenticate page. The link opens a page of its own on the panel's address,
 without a login: the records, how to add them at the domain's DNS provider, and a button to check
 them. It closes once that check finds them all right, when it expires, or when it's deleted; with a
-password, it asks for that first. The link's secret and its password are kept only as fingerprints."""
+password, it asks for that first. The link is kept, for the dialog to show and copy again, and
+found by its fingerprint; its password is kept only as a fingerprint."""
 import hashlib
 import json
 import secrets
@@ -43,11 +44,6 @@ def _fingerprint(token):
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def _masked(url, token):
-    """The link as the list shows it, most of its secret starred out: …/help/v6Wu**********hUC8."""
-    return url[:-len(token)] + token[:4] + "*" * 10 + token[-4:]
-
-
 def _wants_json():
     return request.accept_mimetypes.best == "application/json"
 
@@ -86,12 +82,12 @@ def _describe(row):
     else:
         until = f"Expires in {_within(row['expires_at'] - now)}"
     return {"id": row["id"], "state": state, "state_text": text, "until": until, "password": bool(row["password_hash"]),
-            "made": _ago(row["created_at"]), "shown": row["shown"]}
+            "made": _ago(row["created_at"]), "url": row["url"], "shown": row["shown"]}
 
 
-def list_html(domain_id, fresh=None):
+def list_html(domain_id):
     rows = get_db().execute("SELECT * FROM help_links WHERE domain_id = ? ORDER BY id DESC", (domain_id,)).fetchall()
-    return render_template("help-links-list.html", links=[_describe(row) for row in rows], fresh=fresh, domain_id=domain_id)
+    return render_template("help-links-list.html", links=[_describe(row) for row in rows], domain_id=domain_id)
 
 
 def count(domain_id):
@@ -135,14 +131,14 @@ def create(domain_id):
     now = time.time()
     lasts = EXPIRES[expires]
     db = get_db()
-    link_id = db.execute("INSERT INTO help_links (domain_id, token_hash, shown, password_hash, created_at, expires_at)"
-                         " VALUES (?, ?, ?, ?, ?, ?)",
-                         (domain_id, _fingerprint(token), _masked(url, token), password and mail_password.hash_password(password),
-                          now, now + lasts if lasts else None)).lastrowid
+    db.execute("INSERT INTO help_links (domain_id, token_hash, url, password_hash, created_at, expires_at)"
+               " VALUES (?, ?, ?, ?, ?, ?)",
+               (domain_id, _fingerprint(token), url, password and mail_password.hash_password(password),
+                now, now + lasts if lasts else None))
     db.commit()
     if _wants_json():
-        return {"url": url, "html": list_html(domain_id, fresh={"id": link_id, "url": url}), "count": count(domain_id)}
-    flash(f"Share this link: {url}", "success")   # without JavaScript: shown once, on the board
+        return {"url": url, "html": list_html(domain_id), "count": count(domain_id)}
+    flash(f"Share this link: {url}", "success")   # without JavaScript: on the board
     return redirect(url_for("domains.authenticate", domain_id=domain_id))
 
 

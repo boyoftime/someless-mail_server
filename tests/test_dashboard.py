@@ -16,4 +16,4 @@ def test_dashboard_says_coming_soon(client, login):
 
 
 def test_dashboard_still_warns_about_the_default_password(client, login):
-    assert "You're still using the default password" in main_area(client, login)
+    assert "You're still using the password Someless Mail started with" in main_area(client, login)

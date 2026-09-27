@@ -2,8 +2,8 @@
 // records (help_links.py). Everything happens in the dialog, without leaving the page, in two tabs
 // (the highlight glides between them; the arrow keys move too):
 // - New link: "Ask for a password" shows the password field; "Create link" makes the link, and
-//   the Links tab opens with it, and its copy button, this once.
-// - Links: each link, most of its secret starred out, and how far it got (not opened yet, opened,
+//   the Links tab opens with it on top.
+// - Links: each link with its copy button, and how far it got (not opened yet, opened,
 //   authenticated, expired): asked again each time the dialog opens. The trash button deletes one.
 // Close, Escape or a click outside closes it, fading away.
 (function () {
@@ -18,6 +18,12 @@
   var glider = dialog.querySelector(".dialog-tabs-glider");
   var counter = dialog.querySelector("[data-help-count]");
 
+  // a change of what the dialog holds: it glides to its new height (smooth-size.js)
+  function resize(change) {
+    if (window.somelessResize && dialog.open) window.somelessResize(dialog, change);
+    else change();
+  }
+
   function place(at_once) {
     var chosen = tabs.find(function (tab) { return tab.getAttribute("aria-selected") === "true"; });
     if (!chosen || !chosen.offsetWidth) return;
@@ -27,11 +33,13 @@
   }
 
   function choose(tab, focus) {
-    tabs.forEach(function (other) {
-      var on = other === tab;
-      other.setAttribute("aria-selected", String(on));
-      other.tabIndex = on ? 0 : -1;
-      document.getElementById(other.getAttribute("aria-controls")).hidden = !on;
+    resize(function () {
+      tabs.forEach(function (other) {
+        var on = other === tab;
+        other.setAttribute("aria-selected", String(on));
+        other.tabIndex = on ? 0 : -1;
+        document.getElementById(other.getAttribute("aria-controls")).hidden = !on;
+      });
     });
     if (focus) tab.focus();
     place();
@@ -75,7 +83,7 @@
   }
 
   function show(data) {
-    list.innerHTML = data.html;
+    resize(function () { list.innerHTML = data.html; });
     counter.textContent = data.count;
   }
 
@@ -104,7 +112,7 @@
   });
 
   passwordOn.addEventListener("change", function () {
-    passwordField.hidden = !passwordOn.checked;
+    resize(function () { passwordField.hidden = !passwordOn.checked; });
     if (passwordOn.checked) passwordField.querySelector("input").focus();
   });
 
@@ -116,7 +124,7 @@
       show(answer.data);
       passwordField.querySelector("input").value = "";
       choose(tabs[1]);   // the Links tab, with the new link on top
-      board("success", "Link made", "Copy it and send it: it's shown only this once.");
+      board("success", "Link made", "Copy it and send it to whoever looks after the DNS.");
       var copy = list.querySelector(".copy-box");
       if (copy) copy.scrollIntoView({ block: "nearest", behavior: reduceMotion ? "auto" : "smooth" });
     }).catch(function () {

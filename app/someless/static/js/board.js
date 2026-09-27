@@ -44,6 +44,11 @@
       if (wrap.classList.contains("is-down")) timer = setTimeout(hide, 1200);
     });
     wrap.addEventListener("click", hide);
+    // Pulled up: back to rest, without the class that plays the pull. Otherwise a board hanging in
+    // a dialog would play it again (flash by) the next time the dialog opens.
+    wrap.addEventListener("animationend", function (event) {
+      if (event.target === wrap && event.animationName === "board-lift") wrap.classList.remove("is-up");
+    });
   }
 
   function liveRegion(politeness) {
@@ -108,6 +113,16 @@
     });
     show({ type: first.dataset.board, title: first.dataset.boardTitle, message: first.textContent.trim() });
   }
+
+  // The dialog the board hangs in closes: the board goes back to the page, put away at once, so
+  // it doesn't drop or lift again when the dialog opens next time ("close" doesn't bubble: caught
+  // on its way down).
+  document.addEventListener("close", function (event) {
+    if (!wrap || !event.target.contains || !event.target.contains(wrap)) return;
+    clearTimeout(timer);
+    wrap.classList.remove("is-down", "is-up");
+    [wrap, politeNews, urgentNews].forEach(function (el) { document.body.appendChild(el); });
+  }, true);
 
   window.somelessBoard = { show: show, hide: hide, fromPage: fromPage };
   fromPage(document);

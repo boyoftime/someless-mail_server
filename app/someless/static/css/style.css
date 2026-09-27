@@ -1148,7 +1148,7 @@ button.switch { padding: 0; border: 0; cursor: pointer; }
   content: "Copied";
   position: absolute;
   bottom: calc(100% + 8px);
-  left: 50%;
+  right: -4px;   /* opens leftwards: never past the page's edge on a phone */
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
   background: #0f766e;
@@ -1158,14 +1158,14 @@ button.switch { padding: 0; border: 0; cursor: pointer; }
   white-space: nowrap;
   box-shadow: 0 0 14px rgba(45, 212, 191, 0.6);
   opacity: 0;
-  transform: translate(-50%, 4px);
+  transform: translate(0, 4px);
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.25s var(--menu-ease);
 }
 .copy-button.is-copied { color: #2dd4bf; border-color: rgba(45, 212, 191, 0.7); box-shadow: 0 0 18px -2px rgba(45, 212, 191, 0.75); }
 .copy-button.is-copied .copy-icon { opacity: 0; transform: scale(0.5) rotate(-20deg); }
 .copy-button.is-copied .copy-done { opacity: 1; animation: tick-draw 0.45s var(--menu-ease) 0.05s forwards; }
-.copy-button.is-copied::after { opacity: 1; transform: translate(-50%, 0); }
+.copy-button.is-copied::after { opacity: 1; transform: translate(0, 0); }
 @keyframes tick-draw { to { stroke-dashoffset: 0; } }
 html:not(.js) .copy-button { display: none; } /* it needs JavaScript */
 @media (prefers-reduced-motion: reduce) {
@@ -3519,15 +3519,13 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: start;
   gap: 0.4rem 0.8rem;
-  padding: 0.75rem 0.6rem 0.75rem 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: 14px;
+  padding: 0.35rem 0.1rem;
 }
+.help-divider { margin: 0.4rem 1.5rem; list-style: none; }
 .help-link-main { display: grid; gap: 0.4rem; min-width: 0; }
 .help-link-title { margin: 0; font-weight: 700; }
 .help-link-made { color: var(--muted); font-weight: 500; }
 .help-link-lock { width: 16px; height: 16px; margin-right: 0.3rem; vertical-align: -2px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.help-link-once { margin: 0; color: #f59e0b; font-size: 0.85rem; font-weight: 600; }
 .help-link-until { margin: 0; color: var(--muted); font-size: 0.85rem; }
 .help-link .copy-box { width: 100%; }
 .help-link .copy-box-text { overflow-wrap: anywhere; }
@@ -3558,6 +3556,9 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
 }
 .help-panel { display: grid; gap: 1.1rem; }
 .help-panel[hidden] { display: none; }
+.help-panel:not([hidden]) { animation: panel-in 0.3s ease both; }   /* the tab just opened fades in */
+@keyframes panel-in { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .help-panel:not([hidden]) { animation: none; } }
 /* the dialog's two tabs, the highlight gliding to the one open (help-links.js) */
 .dialog-tabs {
   position: relative;
@@ -3616,3 +3617,155 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
   .help-link-state { grid-column: 1; grid-row: 2; justify-self: start; }
   .help-link-delete { grid-column: 2; grid-row: 1; }
 }
+
+/* Settings > Account > Secure the panel and webmail: whether this page came over HTTPS, then the
+   steps, with tables of what to type where, each value ready to copy */
+.secure-now {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid;
+  border-radius: 12px;
+  font-weight: 600;
+}
+.secure-now svg { flex: none; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.secure-now.is-ok { border-color: rgba(34, 197, 94, 0.45); background: rgba(34, 197, 94, 0.08); color: var(--ok-text); }
+.secure-now.is-warning { border-color: rgba(245, 158, 11, 0.5); background: rgba(245, 158, 11, 0.09); color: #f59e0b; }
+.secure-part { display: grid; gap: 0.85rem; padding-top: 1.1rem; border-top: 1px solid var(--line); }
+.secure-now + .secure-part { border-top: 0; padding-top: 0.4rem; }
+.secure-title { margin: 0; font-size: 1.15rem; font-weight: 700; }
+.secure-text { margin: 0; color: var(--muted); line-height: 1.55; }
+.secure-text code, .secure-list code, .secure-text strong code {
+  padding: 0.05rem 0.35rem;
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--ink);
+  font-size: 0.88em;
+  overflow-wrap: anywhere;
+}
+.secure-step { display: flex; align-items: center; gap: 0.6rem; margin: 0.4rem 0 0; font-size: 1rem; font-weight: 700; }
+.secure-step-number {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1463f3, #0195fb);
+  box-shadow: 0 0 12px -3px rgba(1, 149, 251, 0.85);
+  color: #fff;
+  font-size: 0.85rem;
+}
+.secure-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; }
+.secure-table { width: 100%; min-width: 34rem; border-collapse: collapse; }
+.secure-table th, .secure-table td { padding: 0.65rem 0.9rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+.secure-table tr:last-child > * { border-bottom: 0; }
+.secure-table thead th { background: var(--input-bg); color: var(--muted); font-size: 0.8rem; font-weight: 700; }
+.secure-table tbody th { color: var(--muted); font-size: 0.9rem; font-weight: 600; white-space: nowrap; }
+.secure-table .copy-box { width: auto; }
+.secure-full { display: block; margin-top: 0.3rem; color: var(--muted); font-size: 0.8rem; }
+.secure-list { display: grid; gap: 0.55rem; margin: 0; padding-left: 1.2rem; line-height: 1.55; }
+.secure-list a, .secure-text a { color: var(--airmail-blue); font-weight: 600; }
+.secure-code { position: relative; min-width: 0; }   /* in a grid: the code scrolls in its box, the page doesn't widen */
+.secure-code pre {
+  margin: 0;
+  padding: 1rem 3.5rem 1rem 1.1rem;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--input-bg);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+.secure-code .copy-button { position: absolute; top: 0.6rem; right: 0.6rem; }
+.secure-table .copy-box-text { overflow-wrap: anywhere; }
+/* columns apart: a line between them, values in the middle, and each proxy host's column named
+   in a colour of its own (the web interface blue, the webmail teal) */
+.secure-table th + th, .secure-table th + td, .secure-table td + td { border-left: 1px solid var(--line); }
+.secure-table td, .secure-table thead th + th { text-align: center; }
+.secure-table td .copy-box { display: inline-flex; max-width: 100%; }
+.secure-for {
+  display: inline-block;
+  padding: 0.25rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.secure-for.is-panel { background: rgba(1, 149, 251, 0.16); color: #4db3ff; box-shadow: inset 0 0 0 1px rgba(1, 149, 251, 0.45); }
+.secure-for.is-webmail { background: rgba(20, 184, 166, 0.16); color: #2dd4bf; box-shadow: inset 0 0 0 1px rgba(20, 184, 166, 0.45); }
+/* on a phone: each row a block of its own, every value under its column's name */
+@media (max-width: 640px) {
+  .secure-table-wrap { overflow: visible; border: 0; border-radius: 0; }
+  .secure-table { min-width: 0; }
+  .secure-table thead { display: none; }
+  .secure-table, .secure-table tbody, .secure-table tr, .secure-table th, .secure-table td { display: block; }
+  .secure-table tr { margin-bottom: 0.6rem; padding: 0.35rem 0; border: 1px solid var(--line); border-radius: 14px; }
+  .secure-table th, .secure-table td, .secure-table th + td, .secure-table td + td { padding: 0.35rem 0.85rem; border: 0; text-align: left; }
+  .secure-table tbody th { color: var(--ink); font-size: 0.95rem; white-space: normal; }
+  .secure-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+  .secure-table .copy-box { width: 100%; }
+}
+
+/* The profile picture (settings-avatar.js): its preview in the username card, and the dialog to
+   place it: the picture behind a glowing circle, the rest dimmed */
+.avatar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.4rem; }
+.avatar-preview {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 88px;
+  height: 88px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1463f3, #0195fb);
+  box-shadow: 0 0 0 3px var(--card-bg, #0b1535), 0 0 0 5px rgba(1, 149, 251, 0.55), 0 0 26px -4px rgba(1, 149, 251, 0.8);
+  color: #fff;
+  font-size: 2.2rem;
+  font-weight: 800;
+}
+.avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-about { display: grid; flex: 1 1 18rem; gap: 0.4rem; min-width: 0; }
+.avatar-title { margin: 0; font-weight: 700; }
+.avatar-buttons { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.3rem; }
+.avatar-choose { display: inline-flex; align-items: center; gap: 0.5rem; }
+.avatar-choose svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.avatar-remove { margin: 0; }
+.avatar-remove-button { display: inline-flex; align-items: center; gap: 0.5rem; }
+.avatar-remove[hidden] { display: none; }
+.avatar-split { height: 1px; margin: 1.2rem 0; background: var(--line); }
+img.topbar-avatar.is-picture { display: block; padding: 0; object-fit: cover; box-shadow: 0 0 12px -3px rgba(1, 149, 251, 0.8); }
+
+.avatar-stage {
+  position: relative;
+  justify-self: center;
+  width: min(300px, 100%);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 20px;
+  background: repeating-conic-gradient(var(--input-bg) 0 25%, transparent 0 50%) 0 0 / 22px 22px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.avatar-stage.is-dragging { cursor: grabbing; }
+.avatar-stage:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.avatar-stage img { position: absolute; top: 0; left: 0; max-width: none; transform-origin: 0 0; pointer-events: none; }
+.avatar-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 999px rgba(4, 10, 30, 0.62), inset 0 0 0 2px rgba(159, 220, 255, 0.95), 0 0 24px 2px rgba(1, 149, 251, 0.75);
+  pointer-events: none;
+}
+.avatar-zoom { display: flex; align-items: center; gap: 0.7rem; }
+.avatar-zoom svg { flex: none; width: 20px; height: 20px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; }
+.avatar-zoom input { flex: 1; accent-color: #0195fb; }

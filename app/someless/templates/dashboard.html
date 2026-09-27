@@ -4,7 +4,7 @@
 <h1 class="page-title">Dashboard</h1>
 {% if g.admin.default_password %}
 <p class="alert alert-error" role="alert">
-  You're still using the default password. Anyone who knows it can log in to your mail server.
+  You're still using the password Someless Mail started with. Change it to one of your own.
   <a href="{{ url_for('settings.index') }}">Change your password</a>
 </p>
 {% endif %}

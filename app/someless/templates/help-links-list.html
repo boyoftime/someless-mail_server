@@ -1,21 +1,21 @@
-{# A domain's help links, in the Need help? dialog (help_links.py, help-links.js): how far each got,
-   until when it works, and a trash button. A link just made shows its address, this once. #}
+{# A domain's help links, in the Need help? dialog (help_links.py, help-links.js): each with its
+   copy button, how far it got, until when it works, and a trash button; a glowing line between. #}
 {% from "copy-box.html" import copy_box %}
 {% if links %}
 <ul class="help-link-list">
   {% for link in links %}
+  {% if not loop.first %}<li class="glow-divider help-divider" aria-hidden="true"></li>{% endif %}
   <li class="help-link is-{{ link.state }}">
     <div class="help-link-main">
       <p class="help-link-title">
         {%- if link.password %}<svg class="help-link-lock" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>{% endif -%}
         {{ "Link with a password" if link.password else "Link" }}<span class="help-link-made">, made {{ link.made }}</span>
       </p>
-      {% if fresh and fresh.id == link.id %}
-      {{ copy_box(fresh.url, "Copy the link") }}
-      <p class="help-link-once">Copy it now and send it: for safety, it's shown only this once.</p>
+      {% if link.url %}
+      {{ copy_box(link.url, "Copy the link") }}
       {% else %}
-      {# the rest of the time, most of its secret starred out: which link it is, not the link #}
-      <code class="help-link-url">{{ link.shown or "A link from before addresses were shown" }}</code>
+      {# made before links were kept: only most of it, starred out #}
+      <code class="help-link-url">{{ link.shown or "A link made before links were kept" }}</code>
       {% endif %}
       <p class="help-link-until">{{ link.until }}</p>
     </div>
@@ -28,5 +28,5 @@
   {% endfor %}
 </ul>
 {% else %}
-<p class="help-link-none">No links yet. Make one above, and send it to whoever looks after the domain's DNS.</p>
+<p class="help-link-none">No links yet. Make one in New link, and send it to whoever looks after the domain's DNS.</p>
 {% endif %}

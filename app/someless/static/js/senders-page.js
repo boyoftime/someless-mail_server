@@ -65,9 +65,14 @@
 
     var show = function (text, state) {
       if (lineText.textContent === text && line.classList.contains("is-" + state)) return; // no flash again
-      lineText.textContent = text;
-      line.className = "test-status" + (state ? " is-" + state : "");
-      line.hidden = !text;
+      var change = function () {
+        lineText.textContent = text;
+        line.className = "test-status" + (state ? " is-" + state : "");
+        line.hidden = !text;
+      };
+      // the dialog glides to its new height as the line comes, goes or grows (smooth-size.js)
+      if (window.somelessResize && testDialog.open) window.somelessResize(testDialog, change);
+      else change();
     };
     var stop = function () {
       clearTimeout(polling);

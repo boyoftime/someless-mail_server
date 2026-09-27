@@ -4,8 +4,7 @@ from pathlib import Path
 from flask import current_app, g
 from werkzeug.security import generate_password_hash
 
-DEFAULT_USERNAME = "admin"
-DEFAULT_PASSWORD = "admin"
+DEFAULT_USERNAME = "admin"   # the password is made at random on the first start (first_password.py)
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS admin (
@@ -131,7 +130,8 @@ CREATE TABLE IF NOT EXISTS help_links (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     domain_id INTEGER NOT NULL,
     token_hash TEXT NOT NULL UNIQUE,
-    shown TEXT,                -- the link with most of its secret starred out, for the list
+    shown TEXT,                -- the link with most of its secret starred out (links made before url was kept)
+    url TEXT,                  -- the link itself, so the dialog can show it and copy it again
     password_hash TEXT,
     created_at REAL NOT NULL,
     expires_at REAL,
@@ -195,7 +195,8 @@ CREATE TABLE IF NOT EXISTS deliveries (
 # Columns that came after their table first shipped: databases from before get them on start
 LATER_COLUMNS = [("domains", "provider", "TEXT"), ("domain_keys", "mail_host", "TEXT"), ("domain_keys", "found", "TEXT"),
                  ("smtp_keys", "login", "TEXT"), ("engine", "certificate_asked_at", "REAL"),
-                 ("domain_checks", "every_minutes", "INTEGER"), ("help_links", "shown", "TEXT")]
+                 ("domain_checks", "every_minutes", "INTEGER"), ("help_links", "shown", "TEXT"),
+                 ("help_links", "url", "TEXT")]
 
 
 def _add_later_columns(db):
@@ -239,8 +240,9 @@ def init_app(app):
         _add_later_columns(db)
         _fill_key_logins(db)
         if db.execute("SELECT 1 FROM admin").fetchone() is None:
+            from .first_password import first   # (it uses this module)
             db.execute(
                 "INSERT INTO admin (id, username, password_hash) VALUES (1, ?, ?)",
-                (DEFAULT_USERNAME, generate_password_hash(DEFAULT_PASSWORD)),
+                (DEFAULT_USERNAME, generate_password_hash(first(app.config["DATA_DIR"]))),
             )
             db.commit()

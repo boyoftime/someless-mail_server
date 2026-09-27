@@ -12,6 +12,14 @@
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
   {%- elif name == "shield" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2l7 2.8v5.3c0 4.4-2.9 8-7 9.5-4.1-1.5-7-5.1-7-9.5V6z"/><path d="M9 12l2.2 2.2L15.2 10"/></svg>
+  {%- elif name == "secure" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.3 2.5 3.5 5.3 3.5 8.5s-1.2 6-3.5 8.5c-2.3-2.5-3.5-5.3-3.5-8.5s1.2-6 3.5-8.5z"/></svg>
+  {%- elif name == "camera" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.4-2h5l1.4 2h1.6A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z"/><circle cx="12" cy="12.5" r="3.5"/></svg>
+  {%- elif name == "zoom-out" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5M8 11h6"/></svg>
+  {%- elif name == "zoom-in" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5M8 11h6M11 8v6"/></svg>
   {%- elif name == "phone" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.8" width="11" height="18.4" rx="2.6"/><path d="M10.8 17.6h2.4"/></svg>
   {%- endif -%}
@@ -66,8 +74,32 @@
 
 {# Full-width cards, one under another, with a glowing divider between them #}
 <div class="settings-stack">
-  {% call card("username", "Update username", "Change the name you use to log in.", "account", open=username_error) %}
+  {% call card("username", "Update username and profile picture", "Change the name you log in with, and the picture beside it.", "account", open=username_error or avatar_error) %}
     {% if username_error %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't update username">{{ username_error }}</p>{% endif %}
+    {% if avatar_error %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't save the picture">{{ avatar_error }}</p>{% endif %}
+    {# The profile picture: chosen here, placed in the dialog below (settings-avatar.js) #}
+    {% set picture = avatar_url() %}
+    <div class="avatar-row">
+      <span class="avatar-preview" data-avatar-preview data-letter="{{ g.admin.username[:1] | upper }}">
+        {%- if picture %}<img src="{{ picture }}" alt="">{% else %}{{ g.admin.username[:1] | upper }}{% endif -%}
+      </span>
+      <div class="avatar-about">
+        <p class="avatar-title">Profile picture</p>
+        <p class="field-hint">A JPEG, PNG, WebP or GIF picture, up to 5 MB. You choose the part that shows; it appears in the top right corner.</p>
+        <div class="avatar-buttons">
+          <button type="button" class="button button-quiet avatar-choose" data-avatar-choose>{{ icon("camera") }}<span>{{ "Change picture" if picture else "Upload picture" }}</span></button>
+          <input class="visually-hidden" type="file" tabindex="-1" aria-hidden="true" accept="image/jpeg,image/png,image/webp,image/gif" data-avatar-file>
+          <form method="post" action="{{ url_for('settings.delete_avatar') }}" class="avatar-remove" data-avatar-remove{% if not picture %} hidden{% endif %}>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="button button-quiet avatar-remove-button" data-busy-label="Removing…">
+              <span class="button-spinner" aria-hidden="true"></span>
+              <span class="button-label">Remove</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="avatar-split" aria-hidden="true"></div>
     <form method="post" action="{{ url_for('settings.change_username') }}" class="form card-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="card-fields">
@@ -211,6 +243,82 @@
     </form>
     {% endif %}
   {% endcall %}
+
+  <div class="glow-divider" aria-hidden="true"></div>
+
+  {# HTTPS for the web interface and the webmail: Nginx Proxy Manager's proxy hosts, filled in with
+     the mail server name's domain; or another way without it #}
+  {% set panel_name = "panel." ~ secure.domain %}
+  {% set webmail_name = "webmail." ~ secure.domain %}
+  {% call card("secure", "Secure the panel and webmail", "Open both on HTTPS, at names of their own, with Nginx Proxy Manager.", "secure", accent="settings-card-blue") %}
+    {% if secure.https %}
+    <p class="secure-now is-ok">{{ icon("shield") }}<span>This page came over HTTPS: your login travels encrypted.</span></p>
+    {% else %}
+    <p class="secure-now is-warning">{{ icon("secure") }}<span>This page came over plain http://: your username and password travel unencrypted, and anyone on the way could read them. Put the panel on HTTPS below.</span></p>
+    {% endif %}
+
+    <section class="secure-part" aria-labelledby="secure-npm-title">
+      <h3 class="secure-title" id="secure-npm-title">With Nginx Proxy Manager</h3>
+      <p class="secure-text">Someless Mail is on Nginx Proxy Manager's Docker network already (<code>nginx-proxy</code>, in its docker-compose.yml).</p>
+
+      <h4 class="secure-step"><span class="secure-step-number">1</span>At your domain provider, add two A records</h4>
+      <div class="secure-table-wrap">
+        <table class="secure-table">
+          <thead><tr><th scope="col">Type</th><th scope="col">Host</th><th scope="col">Value</th></tr></thead>
+          <tbody>
+            {% for host in ("panel", "webmail") %}
+            <tr>
+              <td data-label="Type"><span class="dns-box">A</span></td>
+              <td data-label="Host">{{ copy_box(host, "Copy the host") }}<span class="secure-full">{{ host }}.{{ secure.domain }}</span></td>
+              <td data-label="Value">{% if secure.address %}{{ copy_box(secure.address, "Copy the address") }}{% else %}Your server's public IP address{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <h4 class="secure-step"><span class="secure-step-number">2</span>In Nginx Proxy Manager, add two proxy hosts</h4>
+      <div class="secure-table-wrap">
+        <table class="secure-table is-hosts">
+          <thead><tr><th scope="col">Setting</th><th scope="col"><span class="secure-for is-panel">Web interface</span></th><th scope="col"><span class="secure-for is-webmail">Webmail</span></th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Domain names</th><td data-label="Web interface">{{ copy_box(panel_name, "Copy the domain name") }}</td><td data-label="Webmail">{{ copy_box(webmail_name, "Copy the domain name") }}</td></tr>
+            <tr><th scope="row">Scheme</th><td data-label="Web interface"><span class="dns-box">http</span></td><td data-label="Webmail"><span class="dns-box">http</span></td></tr>
+            <tr><th scope="row">Forward hostname / IP</th><td data-label="Web interface">{{ copy_box("someless-mail", "Copy the hostname") }}</td><td data-label="Webmail">{{ copy_box("someless-mail", "Copy the hostname") }}</td></tr>
+            <tr><th scope="row">Forward port</th><td data-label="Web interface">{{ copy_box("17080", "Copy the port") }}</td><td data-label="Webmail">{{ copy_box("17090", "Copy the port") }}</td></tr>
+            <tr><th scope="row">Block common exploits</th><td data-label="Web interface">On</td><td data-label="Webmail">On</td></tr>
+            <tr><th scope="row">SSL tab</th><td colspan="2" data-label="Both">Request a new SSL certificate, with <strong>Force SSL</strong> and <strong>HTTP/2 Support</strong> on</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4 class="secure-step"><span class="secure-step-number">3</span>Then</h4>
+      <ul class="secure-list">
+        <li>Open <strong>https://{{ panel_name }}</strong> and log in: from now on, use that address.</li>
+        <li>In <strong>Settings → Miscellaneous → Webmail address</strong>, type <strong>https://{{ webmail_name }}</strong>, so the Mailboxes page opens the webmail there.</li>
+        <li>Close the way in by IP: in <code>docker-compose.yml</code>, put a <code>#</code> at the start of the <code>"17080:17080"</code> and <code>"17090:17090"</code> lines, then run <code>docker compose up -d</code>.</li>
+        <li>The mail server name, {{ secure.mail_name }}, keeps its own proxy host, with SSL off: see <a href="{{ url_for('settings.mail_server') }}">Mail server name</a>.</li>
+      </ul>
+    </section>
+
+    <section class="secure-part" aria-labelledby="secure-other-title">
+      <h3 class="secure-title" id="secure-other-title">Without Nginx Proxy Manager</h3>
+      <ul class="secure-list">
+        <li><strong>Install it</strong>: it's one Docker container, and gets and renews the certificates for you. Follow its guide at <a href="https://nginxproxymanager.com/setup/" target="_blank" rel="noopener">nginxproxymanager.com</a>, put it on a Docker network named <code>nginx-proxy</code>, then do the steps above.</li>
+        <li><strong>Or use Caddy</strong>, installed on the server itself: it gets the certificates by itself too. Put this in its Caddyfile, and reload it:</li>
+      </ul>
+      {% set caddyfile = panel_name ~ " {\n    reverse_proxy 127.0.0.1:17080\n}\n" ~ webmail_name ~ " {\n    reverse_proxy 127.0.0.1:17090\n}\nhttp://" ~ secure.mail_name ~ " {\n    reverse_proxy 127.0.0.1:17081\n}" %}
+      <div class="secure-code">
+        <pre><code>{{ caddyfile }}</code></pre>
+        <button type="button" class="copy-button" data-copy="{{ caddyfile }}" aria-label="Copy the Caddyfile" data-tip="Copy">
+          <svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 5.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h.5"/></svg>
+          <svg class="copy-done" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+        </button>
+      </div>
+      <p class="secure-text">The mail server name stays on plain <code>http://</code> there on purpose: Someless Mail gets its certificate itself. Then, in <code>docker-compose.yml</code>, publish the three ports to the server itself only, so they open only through Caddy: <code>"127.0.0.1:17080:17080"</code>, <code>"127.0.0.1:17090:17090"</code> and <code>"127.0.0.1:17081:17081"</code>, and run <code>docker compose up -d</code>.</p>
+      <p class="secure-text"><strong>Neither?</strong> The panel keeps working at http://{{ secure.address or "your-server-ip" }}:17080, unencrypted. Use it only from networks you trust, and let only your own IP address reach it: <code>sudo ufw allow from YOUR-IP to any port 17080 proto tcp</code>.</p>
+    </section>
+  {% endcall %}
 </div>
 
 {{ rules_dialog("password-rules-dialog", url_for("settings.change_password_rules"), rules,
@@ -220,5 +328,37 @@
 <script src="{{ url_for('static', filename='js/password-toggle.js') }}"></script>
 <script src="{{ url_for('static', filename='js/password-rules.js') }}"></script>
 <script src="{{ url_for('static', filename='js/password-rules-dialog.js') }}"></script>
+
+{# Placing the profile picture: drag it, zoom it; the round part is what shows (settings-avatar.js) #}
+<dialog class="rules-dialog domain-dialog" id="avatar-dialog" aria-labelledby="avatar-title">
+  <form method="post" action="{{ url_for('settings.upload_avatar') }}" enctype="multipart/form-data" class="rules-form" data-avatar-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="x"><input type="hidden" name="y"><input type="hidden" name="size">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("camera") }}</span>
+      <div>
+        <h2 id="avatar-title" class="rules-title">Your profile picture</h2>
+        <p class="rules-hint">Drag it to place it in the circle, and zoom in or out.</p>
+      </div>
+    </div>
+    <div class="avatar-stage" data-avatar-stage>
+      <img alt="The picture you chose" draggable="false" data-avatar-image>
+      <span class="avatar-ring" aria-hidden="true"></span>
+    </div>
+    <div class="avatar-zoom">
+      {{ icon("zoom-out") }}
+      <input type="range" min="1" max="4" step="0.01" value="1" aria-label="Zoom" data-avatar-zoom>
+      {{ icon("zoom-in") }}
+    </div>
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet" data-dialog-close>Cancel</button>
+      <button class="button rules-save" type="submit" data-busy-label="Saving…">
+        <span class="button-spinner" aria-hidden="true"></span>
+        <span class="button-label">Save picture</span>
+      </button>
+    </div>
+  </form>
+</dialog>
+<script src="{{ url_for('static', filename='js/settings-avatar.js') }}"></script>
 <script src="{{ url_for('static', filename='js/two-factor.js') }}"></script>
 {% endblock %}

@@ -117,15 +117,21 @@ sudo ufw allow 17080/tcp && sudo ufw allow 17090/tcp
 
 ### Open it
 
-Go to `http://your-server-ip:17080` in your browser. You'll see a short welcome animation, then the login page. On the very first start, it says **Preparing your Someless Mail server** for up to a minute while it sets its mail engine up, then moves on by itself.
+Go to `http://your-server-ip:17080` in your browser. You'll see a short welcome animation, then the login page (your password is in [Step 2](#step-2-log-in-and-lock-it-down)). On the very first start, it says **Preparing your Someless Mail server** for up to a minute while it sets its mail engine up, then moves on by itself.
 
 ## Step 2: Log in and lock it down
 
-| Username | Password |
-|---|---|
-| `admin` | `admin` |
+The username is `admin`. The password is made at random on the very first start, just for your server, so nobody can guess it. It's printed in the container's logs, and this shows it again, on your server:
 
-Change both right after your first login in **Settings**. Until you change the password, the dashboard shows a warning: anyone who knows the default can log in.
+```
+docker exec -u someless someless-mail flask --app someless initial-password
+```
+
+Change it to one of your own right after your first login, in **Settings**: from then on, that command no longer shows it, and the dashboard stops reminding you. Forgot your password later? This makes a new one, shown the same way:
+
+```
+docker exec -u someless someless-mail flask --app someless reset-password
+```
 
 ### Two-factor authentication
 
@@ -383,7 +389,9 @@ your-folder/
     ├── someless/
     │   ├── someless.db    ← login, settings, domains, senders, mailboxes, SMTP keys (their fingerprints)
     │   ├── secret_key     ← signs your login, so it survives restarts
-    │   └── webmail_secret_key  ← the same, for the webmail
+    │   ├── webmail_secret_key  ← the same, for the webmail
+    │   ├── initial_password    ← your first password, until you change it (Step 2)
+    │   └── avatar.webp         ← your profile picture, if you set one
     └── stalwart/          ← the mail engine: its settings, the mail in your mailboxes, its queue, its certificate
 ```
 
@@ -391,7 +399,7 @@ So the database is at `data/someless/someless.db`.
 
 - **Updates keep it.** `docker compose pull && docker compose up -d` never touches it.
 - **Back it up regularly**, both folders together. See [Back up and restore](#back-up-and-restore) below.
-- **Don't delete it** unless you want to start over with `admin` / `admin`.
+- **Don't delete it** unless you want to start over (with a new first password, [Step 2](#step-2-log-in-and-lock-it-down)).
 - **No permissions to set up.** Someless Mail runs as its own user (ID 2001), not as root, and takes the folder over by itself when it starts.
 
 ### Back up and restore
@@ -464,6 +472,7 @@ The mail engine in the image is built from source by the **Build Stalwart (open 
 ## Credits
 
 - Mail engine: [Stalwart](https://github.com/stalwartlabs/stalwart) v0.16.23, built from source without its Enterprise features (AGPL-3.0). Its licence and a link to its source are in the image at `/usr/share/doc/stalwart/`.
+- Profile pictures: [Pillow](https://github.com/python-pillow/Pillow) 12.3.0 (MIT-CMU).
 - Font: [Google Sans](https://github.com/googlefonts/googlesans), SIL Open Font License 1.1 (`app/someless/static/fonts/OFL.txt`).
 - Animation player: [lottie-web](https://github.com/airbnb/lottie-web) 5.13.0 (MIT).
 - Login background: [PixiJS](https://github.com/pixijs/pixijs) 8.21.0 (MIT).

@@ -46,6 +46,8 @@ SIGNED_IN_PAGE_FILES = [
     "js/dropdown.js",
     "js/domains-page.js",
     "js/help-links.js",
+    "js/smooth-size.js",
+    "js/settings-avatar.js",
     "js/senders-page.js",
     "js/sender-form.js",
     "js/mailboxes-page.js",
@@ -111,6 +113,7 @@ def create_app(test_config=None):
         ENGINE_ENABLED=os.environ.get("SOMELESS_ENGINE") == "1",
         SESSION_COOKIE_SAMESITE="Lax",
         SEND_FILE_MAX_AGE_DEFAULT=STATIC_CACHE_SECONDS,
+        MAX_CONTENT_LENGTH=8 * 1024 * 1024,   # the biggest request: a 5 MB profile picture (avatar.py)
     )
     if test_config:
         app.config.update(test_config)
@@ -123,11 +126,14 @@ def create_app(test_config=None):
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     csrf.init_app(app)
 
-    from . import auth, db, domains, errors, help_links, mailboxes, pages, senders, settings, smtp, two_factor
+    from . import (auth, avatar, db, domains, errors, first_password, help_links, mailboxes, pages, senders, settings, smtp,
+                   two_factor)
     from .engine import cli as engine_cli
     from .engine import deliveries as engine_deliveries
     db.init_app(app)
     app.cli.add_command(two_factor.cli)
+    app.cli.add_command(first_password.show_command)
+    app.cli.add_command(first_password.reset_command)
     app.cli.add_command(engine_cli.cli)
     app.register_blueprint(auth.bp)
     app.register_blueprint(pages.bp)
@@ -152,6 +158,7 @@ def create_app(test_config=None):
             "theme": theme if theme in THEMES else DEFAULT_THEME,
             "float_icons": FLOAT_ICONS,
             "preload_files": PRELOAD_FILES,
+            "avatar_url": avatar.url,   # the profile picture, where there is one (shell.html)
         }
 
     return app
