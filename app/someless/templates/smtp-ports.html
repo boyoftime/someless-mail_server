@@ -1,0 +1,11 @@
+{% from "copy-box.html" import copy_box %}
+{# The two ports apps send on: 587 (STARTTLS) and 465 (SSL/TLS), the same login and key on both
+   (smtp.py). On the SMTP page and in its guide. #}
+{% macro smtp_ports(port, ssl_port) %}
+<div class="smtp-ports">
+  <span class="smtp-port">{{ copy_box(port | string, "Copy the port " ~ port) }}<span class="dns-full">With STARTTLS</span></span>
+  <span class="smtp-or" aria-hidden="true">or</span>
+  <span class="smtp-port">{{ copy_box(ssl_port | string, "Copy the port " ~ ssl_port) }}<span class="dns-full">With SSL/TLS</span></span>
+</div>
+<span class="dns-full smtp-ports-note">Both take the same login and key. Use {{ ssl_port }} if your host blocks {{ port }}.</span>
+{% endmacro %}

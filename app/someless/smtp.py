@@ -22,6 +22,7 @@ from .logins import make_login
 bp = Blueprint("smtp", __name__, url_prefix="/smtp")
 
 PORT = 587  # where mail apps send (SMTP submission, with STARTTLS)
+SSL_PORT = 465  # the same with SSL/TLS from the start, for hosts that block 587: the same login and key
 VARIANTS = {"standard": 64, "short": 15}  # a key's length
 KEY_CHARACTERS = string.ascii_letters + string.digits  # nothing that trips up copying or typing
 # How long a key lasts: value, label, and days or calendar months
@@ -99,7 +100,7 @@ def _page(status=200, typed=None, **context):
                 for value, label, days, months in EXPIRIES]
     found = checks.run_checks(domain_records.server_address(request.host))
     return render_template(
-        "smtp.html", keys=keys, query=query, server=_server_name(), port=PORT, expiries=expiries,
+        "smtp.html", keys=keys, query=query, server=_server_name(), port=PORT, ssl_port=SSL_PORT, expiries=expiries,
         checks=found, can_send=checks.can_send(found), can_receive=checks.can_receive(found),
         engine_error=engine.state()["sync_error"] if engine.enabled() else None,
         typed=typed or {"name": "", "variant": "standard", "expiry": DEFAULT_EXPIRY}, **context,
@@ -160,7 +161,7 @@ def docs():
     # the examples send from one of the admin's domains: an authenticated one if there is one
     domain = db.execute("SELECT name FROM domains ORDER BY authenticated DESC, name LIMIT 1").fetchone()
     sender = f"hello@{domain['name'] if domain else 'yourdomain.com'}"
-    return render_template("smtp-docs.html", server=_server_name(), port=PORT,
+    return render_template("smtp-docs.html", server=_server_name(), port=PORT, ssl_port=SSL_PORT,
                            examples=smtp_guide.examples(_server_name(), PORT, sender))
 
 

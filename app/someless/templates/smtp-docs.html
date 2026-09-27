@@ -1,5 +1,6 @@
 {% extends "shell.html" %}
 {% from "copy-box.html" import copy_box %}
+{% from "smtp-ports.html" import smtp_ports %}
 {% block title %}Send mail from your code | Someless Mail{% endblock %}
 
 {% block content %}
@@ -19,7 +20,7 @@
     <dt>SMTP server</dt>
     <dd>{{ copy_box(server, "Copy the SMTP server") }}</dd>
     <dt>Port</dt>
-    <dd>{{ copy_box(port | string, "Copy the port") }}<span class="dns-full">With STARTTLS</span></dd>
+    <dd>{{ smtp_ports(port, ssl_port) }}</dd>
     <dt>Login</dt>
     <dd><span class="dns-box is-placeholder">The login of your key (on SMTP &amp; API)</span><span class="dns-full">Keep it in the SOMELESS_SMTP_LOGIN environment variable where your code runs.</span></dd>
     <dt>Password</dt>
@@ -62,7 +63,7 @@
     <li><strong>Keep the key out of your code.</strong> Every example reads the login and the key from the SOMELESS_SMTP_LOGIN and SOMELESS_SMTP_KEY environment variables, so the key never ends up in a repository or a screenshot.</li>
     <li><strong>Send from a domain you've authenticated</strong> on the Domains page. Other mail servers check it, and may turn away mail from anywhere else.</li>
     <li><strong>Port {{ port }} starts plain and switches to encryption</strong> (STARTTLS) before the login goes out: that's why each example turns TLS on first.</li>
-    <li><strong>"535 Authentication failed"</strong> means the login or the key is wrong, or the key has expired. <strong>"Connection refused"</strong> or a timeout means the mail engine isn't in yet, or the network your code runs on blocks port {{ port }}.</li>
+    <li><strong>"535 Authentication failed"</strong> means the login or the key is wrong, or the key has expired. <strong>"Connection refused"</strong> or a timeout means the mail engine isn't in yet, or the network your code runs on blocks port {{ port }}: try port {{ ssl_port }}, with SSL/TLS from the start instead of STARTTLS (the same login and key).</li>
   </ul>
 </section>
 
@@ -72,7 +73,7 @@
   <dl class="dns-fields smtp-fields">
     <dt>Host</dt><dd><code class="guide-value">{{ server }}</code></dd>
     <dt>Port</dt><dd><code class="guide-value">{{ port }}</code></dd>
-    <dt>Encryption</dt><dd><code class="guide-value">STARTTLS</code><span class="dns-full">Some apps call it TLS</span></dd>
+    <dt>Encryption</dt><dd><code class="guide-value">STARTTLS</code><span class="dns-full">Some apps call it TLS. Or port {{ ssl_port }} with SSL/TLS (some apps call it SSL), if {{ port }} is blocked.</span></dd>
     <dt>Username</dt><dd><span class="dns-box is-placeholder">The login of your key</span></dd>
     <dt>Password</dt><dd><span class="dns-box is-placeholder">One of your SMTP keys</span></dd>
   </dl>

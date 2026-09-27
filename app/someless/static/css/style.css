@@ -2809,6 +2809,11 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
 }
 .smtp-title { margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; }
 .smtp-fields { grid-template-columns: 7.5rem minmax(0, 1fr); }
+/* The two ports side by side, each with its encryption under it */
+.smtp-ports { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.5rem 0.9rem; }
+.smtp-port { display: grid; justify-items: start; gap: 0.3rem; }
+.smtp-or { align-self: center; margin-top: -1.3rem; color: var(--muted); font-style: italic; }   /* level with the boxes */
+.smtp-ports-note { display: block; margin-top: 0.45rem; }
 .smtp-keys { display: grid; gap: 1rem; }
 .smtp-keys .domain-search { margin: 0; }
 .key-hint { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 0.9rem; color: var(--muted); }

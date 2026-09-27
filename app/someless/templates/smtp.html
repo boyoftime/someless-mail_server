@@ -1,5 +1,6 @@
 {% extends "shell.html" %}
 {% from "copy-box.html" import copy_box %}
+{% from "smtp-ports.html" import smtp_ports %}
 {% block title %}SMTP & API | Someless Mail{% endblock %}
 
 {% macro icon(name) %}
@@ -62,7 +63,7 @@
     <dt>SMTP server</dt>
     <dd>{{ copy_box(server, "Copy the SMTP server") }}</dd>
     <dt>Port</dt>
-    <dd>{{ copy_box(port | string, "Copy the port") }}<span class="dns-full">With STARTTLS</span></dd>
+    <dd>{{ smtp_ports(port, ssl_port) }}</dd>
     <dt>Login</dt>
     <dd><span class="dns-box is-placeholder">The login of the key you use</span><span class="dns-full">Each key has its own, shown with it below.</span></dd>
     <dt>Password</dt>

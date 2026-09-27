@@ -1,6 +1,7 @@
 // Tips: a word of help beside something (the ? next to a domain's status), in a small card in
 // the panel's own look instead of the browser's plain tooltip. Any element with data-tip shows
-// it on hover, and on focus, for the keyboard and for a tap on a phone. The card sits on the
+// it on hover (a tap on a phone too, where it stays while the element has focus), and on the
+// keyboard's focus: not when a dialog opened with the mouse focuses its first button. The card sits on the
 // page itself, above the element (below it when there's no room), so a table that clips its
 // rows can't cut it off. The pointer can move onto the card to read it; moving away, Escape,
 // scrolling or leaving the page puts it away, and so does a "someless:tips-away" event.
@@ -49,6 +50,27 @@
     tip.setAttribute("data-side", below ? "below" : "above");
     void tip.offsetWidth; // fade in from where it now is
     tip.classList.add("is-shown");
+    // in a dialog that's still moving (opening, turning over), where the card lands isn't where
+    // it'll stay: placed again once the dialog is still
+    var moving = host.getAnimations ? host.getAnimations().filter(function (animation) {
+      return animation.playState === "running";
+    }) : [];
+    if (moving.length) {
+      Promise.all(moving.map(function (animation) { return animation.finished; })).then(function () {
+        if (shownFor !== element) return;
+        shownFor = null;
+        show(element);
+      }, function () {});
+    }
+  }
+
+  // focus from the keyboard, not from a click or a script after one
+  function byKeyboard(element) {
+    try {
+      return element.matches(":focus-visible");
+    } catch (error) {
+      return true; // a browser without :focus-visible
+    }
   }
 
   function hide(soon) {
@@ -75,7 +97,7 @@
   });
   document.addEventListener("focusin", function (event) {
     var element = event.target.closest && event.target.closest("[data-tip]");
-    if (element) show(element);
+    if (element && byKeyboard(event.target)) show(element);
   });
   document.addEventListener("focusout", function (event) {
     if (event.target === shownFor) hide(false);

@@ -75,6 +75,20 @@ def test_the_smtp_settings_say_how_to_connect(client, login, app):
     assert "Ready to send" in page  # and whether it can, yet
 
 
+def test_the_smtp_settings_offer_both_ports(client, login):
+    login()
+
+    page = text(client.get("/smtp"))
+
+    card = page[page.index('id="smtp-settings-title"'):]
+    card = card[:card.index("</section>")]
+    assert 'data-copy="587"' in card and 'data-copy="465"' in card
+    assert "With STARTTLS" in card and "With SSL/TLS" in card
+    assert "same login and key" in plain(card)
+    guide = text(client.get("/smtp/docs"))
+    assert 'data-copy="465"' in guide and "465" in plain(guide[guide.index('id="guide-apps-title"'):])
+
+
 def test_an_authenticated_domain_names_the_smtp_server(client, login, app):
     login()
     with app.app_context():
