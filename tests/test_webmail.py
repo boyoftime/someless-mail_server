@@ -150,3 +150,46 @@ def test_a_sign_in_page_left_open_too_long_asks_again_nicely(app):
     assert response.status_code == 400
     page = text(response)
     assert "Sign in to your mailbox" in page and 'data-board="error"' in page and "Sign in again" in page
+
+
+def save_lock(client, tries="5", wait="5", unit="minutes"):
+    return client.post("/settings/miscellaneous/webmail-lock", data={"tries": tries, "wait": wait, "wait_unit": unit})
+
+
+def test_the_lock_is_set_in_settings(client, login):
+    login()
+
+    page = text(client.get("/settings/miscellaneous"))
+    assert "Webmail sign-in lock" in page
+    assert re.search(r'name="tries"[^>]*value="5"', page) and re.search(r'name="wait"[^>]*value="5"', page)
+
+    assert save_lock(client, tries="3", wait="2", unit="hours").headers["Location"] == "/settings/miscellaneous"
+    page = text(client.get("/settings/miscellaneous"))
+    assert "3 wrong passwords in a row" in page and "2 hours" in page
+
+
+@pytest.mark.parametrize("tries,wait,unit", [("0", "5", "minutes"), ("21", "5", "minutes"), ("x", "5", "minutes"),
+                                             ("5", "0", "minutes"), ("5", "25", "hours"), ("5", "5", "days")])
+def test_a_lock_that_cant_be_is_refused(client, login, tries, wait, unit):
+    login()
+
+    response = save_lock(client, tries, wait, unit)
+
+    assert response.status_code == 400 and 'data-board="error"' in text(response)
+
+
+def test_the_webmail_locks_as_set(client, login, mail, mailbox, monkeypatch):
+    import someless.webmail as webmail_module
+    login()
+    save_lock(client, tries="3", wait="10", unit="minutes")
+    now = [1_000_000.0]
+    monkeypatch.setattr(webmail_module.time, "time", lambda: now[0])
+    for _ in range(3):
+        sign_in(mail, password="wrong")
+
+    locked = sign_in(mail)
+    assert locked.status_code == 429 and "Wait 10 minutes" in text(locked)
+    now[0] += 9 * 60
+    assert sign_in(mail).status_code == 429
+    now[0] += 60 + 1
+    assert sign_in(mail).headers["Location"] == "/"

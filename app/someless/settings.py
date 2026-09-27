@@ -4,7 +4,7 @@ from collections import namedtuple
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from . import domain_checks, engine, two_factor
+from . import domain_checks, engine, two_factor, webmail_lock
 from .auth import login_required
 from .db import get_db
 from .domain_records import server_address
@@ -211,16 +211,21 @@ def check_mail_server():
     return redirect(url_for("settings.mail_server"))
 
 
-# Miscellaneous: the settings that fit nowhere else. Automatic domain checks, for now.
+# Miscellaneous: the settings that fit nowhere else. Automatic domain checks, and the webmail's
+# sign-in lock.
 
-def _misc_page(status=200, problem=None, typed=None):
+def _misc_page(status=200, problem=None, typed=None, lock_problem=None, lock_typed=None):
     row = domain_checks.settings()
     every = row["every_hours"]
+    tries, minutes = webmail_lock.settings()
     return render_template(
         "settings-misc.html", checks=row, presets=[(hours, domain_checks.describe(hours)) for hours in domain_checks.PRESETS],
         every=every, every_text=domain_checks.describe(every), custom=every not in domain_checks.PRESETS,
         custom_days=every % 24 == 0 and every >= 24, problem=problem, typed=typed or {},
         last_run=row["last_run"] and _moment(row["last_run"]), longest_days=domain_checks.LONGEST // 24,
+        lock={"tries": tries, "wait": minutes // 60 if minutes % 60 == 0 else minutes,
+              "unit": "hours" if minutes % 60 == 0 else "minutes", "text": webmail_lock.describe(minutes)},
+        lock_problem=lock_problem, lock_typed=lock_typed or {}, most_tries=webmail_lock.MOST_TRIES,
     ), status
 
 
@@ -262,4 +267,17 @@ def save_domain_checks():
     domain_checks.save(enabled, hours)
     flash(f"Automatic domain checks are on: every {domain_checks.describe(hours)}." if enabled
           else "Automatic domain checks are off.", "success")
+    return redirect(url_for("settings.misc"))
+
+
+@bp.post("/miscellaneous/webmail-lock")
+@login_required
+def save_webmail_lock():
+    tries, minutes, problem = webmail_lock.chosen(request.form)
+    if problem:
+        return _misc_page(400, lock_problem=problem, lock_typed={
+            "tries": request.form.get("tries", ""), "wait": request.form.get("wait", ""), "unit": request.form.get("wait_unit", "")})
+    webmail_lock.save(tries, minutes)
+    flash(f"Webmail sign-in lock saved: after {tries} wrong password{'s' if tries != 1 else ''} in a row, "
+          f"a wait of {webmail_lock.describe(minutes)}.", "success")
     return redirect(url_for("settings.misc"))

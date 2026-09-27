@@ -167,3 +167,27 @@ def test_a_greeting_is_the_first_line_a_server_says():
     assert real_greeting("127.0.0.1", port, False) == "220 mail.example.com ESMTP"
     listener.close()
     assert real_greeting("127.0.0.1", port, False) is None   # nothing there any more
+
+
+def test_ready_to_receive_too_once_every_incoming_port_reaches_the_engine(app, engine, monkeypatch):
+    ready_to_send(app, engine, monkeypatch)
+    monkeypatch.setattr(checks, "greeting", lambda host, port, tls: "220 same")
+    with app.app_context():
+        assert checks.can_receive(list(run(app).values()))
+
+    checks.forget()
+    monkeypatch.setattr(checks, "greeting", lambda host, port, tls: None if port == 995 else "220 same")
+    with app.app_context():
+        assert not checks.can_receive(list(run(app).values()))   # one short is enough
+    assert not checks.can_receive([])                              # not checked (engine down)
+
+
+def test_the_card_says_send_and_receive_when_both_are_ready(app, engine, client, login, monkeypatch):
+    ready_to_send(app, engine, monkeypatch)
+    monkeypatch.setattr(checks, "greeting", lambda host, port, tls: "220 same")
+    monkeypatch.setattr(checks, "port25_open", lambda: True)
+    login()
+
+    page = client.get("/smtp").get_data(as_text=True)
+
+    assert '<h2 class="smtp-title" id="ready-title">Ready to send and receive</h2>' in page

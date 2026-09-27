@@ -37,7 +37,7 @@
 {# Ready to send? What's done, and what to do next (engine/checks.py) #}
 <section class="ready-card{% if can_send %} is-ready{% endif %}" aria-labelledby="ready-title">
   <div class="ready-head">
-    <h2 class="smtp-title" id="ready-title">{{ "Ready to send" if can_send else "Ready to send? Not yet" }}</h2>
+    <h2 class="smtp-title" id="ready-title">{{ ("Ready to send and receive" if can_receive else "Ready to send") if can_send else "Ready to send? Not yet" }}</h2>
     <form method="post" action="{{ url_for('smtp.check_again') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button class="button button-quiet" type="submit" data-busy-label="Checking…"><span class="button-spinner" aria-hidden="true"></span><span class="button-label">Check again</span></button>

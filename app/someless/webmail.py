@@ -1,8 +1,8 @@
 """The webmail: a little site of its own on port 17090 (the supervisor runs it beside the panel;
 Nginx Proxy Manager can put webmail.example.com in front of it). A mailbox logs in with its
 address and password, checked here against the hash the panel keeps: never through the mail
-engine, which would ban 127.0.0.1 after a few wrong passwords. Five wrong passwords in a row
-lock an address for five minutes. The inbox itself is coming soon; until then the page says
+engine, which would ban 127.0.0.1 after a few wrong passwords. So many wrong passwords in a row
+lock an address for a while (Settings > Miscellaneous, webmail_lock.py). The inbox itself is coming soon; until then the page says
 how to read the mail in a mail app.
 
 Its session cookie has its own name and its own key: browsers share cookies between ports of
@@ -18,14 +18,12 @@ from flask_wtf import CSRFProtect
 from flask_wtf.csrf import CSRFError
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from . import DEFAULT_THEME, STATIC_CACHE_SECONDS, THEMES, VERSION, db, fingerprint_static_links, mail_password
+from . import DEFAULT_THEME, STATIC_CACHE_SECONDS, THEMES, VERSION, db, fingerprint_static_links, mail_password, webmail_lock
 from .db import get_db
 from .domain_records import HOST_CHOICES
 from .engine import names
 from .mailboxes import MAIL_APPS
 
-TRIES = 5              # wrong passwords in a row before an address is locked
-LOCKED_FOR = 5 * 60    # seconds
 WRONG = "The email or password is wrong."
 LEFT_OPEN = "This page was open for a long time. Sign in again."
 # checked when the address isn't a mailbox, so a wrong address takes as long as a wrong password
@@ -46,12 +44,14 @@ def _locked(email):
 
 
 def _wrong_try(email):
-    """One more wrong password in a row; the fifth locks the address (and starts the count again)."""
+    """One more wrong password in a row; the last one allowed locks the address (and starts the
+    count again)."""
+    tries, minutes = webmail_lock.settings()
     database = get_db()
     database.execute("INSERT INTO webmail_tries (email) VALUES (?) ON CONFLICT (email) DO NOTHING", (email,))
     database.execute("UPDATE webmail_tries SET failures = failures + 1 WHERE email = ?", (email,))
     database.execute("UPDATE webmail_tries SET failures = 0, locked_until = ? WHERE email = ? AND failures >= ?",
-                     (time.time() + LOCKED_FOR, email, TRIES))
+                     (time.time() + minutes * 60, email, tries))
     database.commit()
 
 
@@ -93,8 +93,9 @@ def login():
     email = request.form.get("email", "").strip().lower()[:254]
     password = request.form.get("password", "")
     if _locked(email):
+        wait = webmail_lock.describe(webmail_lock.settings()[1])
         return render_template("webmail-login.html", email=email, problem=(
-            f"Too many tries with a wrong password. Wait {LOCKED_FOR // 60} minutes, then try again.")), 429
+            f"Too many tries with a wrong password. Wait {wait}, then try again.")), 429
     row = get_db().execute("SELECT * FROM mailboxes WHERE email = ?", (email,)).fetchone()
     right = mail_password.password_ok(row["password_hash"] if row else _DUMMY_HASH, password)
     if not (row and right):

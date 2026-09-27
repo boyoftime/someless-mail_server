@@ -207,6 +207,12 @@ def can_send(found):
     return all(check.state == "ok" for check in found if check.key in NEEDED)
 
 
+def can_receive(found):
+    """Mail comes in and mail apps get to it: every incoming port reaches the mail engine."""
+    incoming = [check for check in found if check.key in {port[0] for port in INCOMING}]
+    return len(incoming) == len(INCOMING) and all(check.state == "ok" for check in incoming)
+
+
 def _cached(key, make, seconds=300):
     """Network checks (port 25, DNS) are slow: done once every few minutes, per process."""
     value, at = _cache.get(key, (None, 0))

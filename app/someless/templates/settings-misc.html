@@ -4,6 +4,10 @@
 {% macro icon(name) %}
   {%- if name == "radar" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12l5.5-5.5"/><circle cx="12" cy="12" r="0.8"/></svg>
+  {%- elif name == "lock" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/><path d="M12 14.5v2"/></svg>
+  {%- elif name == "key" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15.5" r="4"/><path d="M10.9 12.6l8.6-8.6"/><path d="M16.5 7l2.5 2.5"/><path d="M14.3 9.2l2 2"/></svg>
   {%- elif name == "clock" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
   {%- endif -%}
@@ -81,6 +85,66 @@
               {%- if checks.last_run %}Last automatic check: <time datetime="{{ last_run }}" data-local-moment>{{ last_run }}</time>.
               {%- else %}No automatic check has run yet.{% endif -%}
             </p>
+            <div class="card-actions">
+              <button class="button card-button" type="submit" data-busy-label="Saving…">
+                <span class="button-spinner" aria-hidden="true"></span>
+                <span class="button-label">Save</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# The webmail's sign-in lock (webmail_lock.py) #}
+  {% set shown = lock_typed if lock_problem else lock %}
+  <section class="settings-card settings-card-violet{% if lock_problem %} is-open{% endif %}" aria-labelledby="webmail-lock-title" data-card>
+    <h2 class="card-heading">
+      <button type="button" class="card-head" data-card-toggle aria-controls="webmail-lock-body" aria-expanded="{{ 'true' if lock_problem else 'false' }}">
+        <span class="card-badge">{{ icon("lock") }}</span>
+        <span class="card-titles">
+          <span id="webmail-lock-title" class="card-title">Webmail sign-in lock</span>
+          <span class="card-hint">After {{ lock.tries }} wrong password{{ "s" if lock.tries != 1 }} in a row, an address waits {{ lock.text }}.</span>
+        </span>
+        <span class="card-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg></span>
+      </button>
+    </h2>
+    <div class="card-body" id="webmail-lock-body">
+      <div class="card-body-clip">
+        <div class="card-body-content">
+          {% if lock_problem %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't save the lock">{{ lock_problem }}</p>{% endif %}
+          <p class="checks-about">
+            Someone guessing a mailbox's password on the webmail gets only so many tries: after that many wrong passwords in a row, the address can't sign in to the webmail for a while, even with the right password.
+            Mail apps aren't affected.
+          </p>
+          {# Save waits for a change (save-when-changed.js); after a problem, what's typed can be saved as it is #}
+          <form method="post" action="{{ url_for('settings.save_webmail_lock') }}" class="card-form lock-form"{% if not lock_problem %} data-save-when-changed{% endif %}>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="lock-fields">
+              <div class="field">
+                <label class="field-label" for="lock-tries">Wrong passwords in a row</label>
+                <div class="input-wrap">
+                  <span class="input-icon">{{ icon("key") }}</span>
+                  <input id="lock-tries" name="tries" inputmode="numeric" autocomplete="off" value="{{ shown.tries }}" aria-describedby="lock-tries-hint">
+                </div>
+                <p class="field-hint" id="lock-tries-hint">From 1 to {{ most_tries }}.</p>
+              </div>
+              <div class="field">
+                <label class="field-label" for="lock-wait">Then wait</label>
+                <div class="lock-wait">
+                  <div class="input-wrap">
+                    <span class="input-icon">{{ icon("clock") }}</span>
+                    <input id="lock-wait" name="wait" inputmode="numeric" autocomplete="off" value="{{ shown.wait }}" aria-describedby="lock-wait-hint">
+                  </div>
+                  <div class="unit-switch" role="radiogroup" aria-label="Minutes or hours">
+                    <label><input type="radio" name="wait_unit" value="minutes"{% if shown.unit != "hours" %} checked{% endif %}><span>Minutes</span></label>
+                    <label><input type="radio" name="wait_unit" value="hours"{% if shown.unit == "hours" %} checked{% endif %}><span>Hours</span></label>
+                  </div>
+                </div>
+                <p class="field-hint" id="lock-wait-hint">From 1 minute to 24 hours.</p>
+              </div>
+            </div>
             <div class="card-actions">
               <button class="button card-button" type="submit" data-busy-label="Saving…">
                 <span class="button-spinner" aria-hidden="true"></span>

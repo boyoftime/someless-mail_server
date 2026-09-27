@@ -117,7 +117,15 @@ CREATE TABLE IF NOT EXISTS mailboxes (
     password_version INTEGER NOT NULL DEFAULT 1,   -- up by one with each new password: the engine gets it then
     created_at REAL NOT NULL
 );
--- The webmail's wrong passwords in a row, per address typed (webmail.py): five lock it for a while
+-- The webmail's sign-in lock (Settings > Miscellaneous, webmail_lock.py): so many wrong passwords
+-- in a row, then a wait
+CREATE TABLE IF NOT EXISTS webmail_lock (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    tries INTEGER NOT NULL DEFAULT 5,
+    lock_minutes INTEGER NOT NULL DEFAULT 5
+);
+INSERT OR IGNORE INTO webmail_lock (id) VALUES (1);
+-- The webmail's wrong passwords in a row, per address typed (webmail.py), until the lock
 CREATE TABLE IF NOT EXISTS webmail_tries (
     email TEXT PRIMARY KEY,
     failures INTEGER NOT NULL DEFAULT 0,

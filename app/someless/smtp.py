@@ -100,7 +100,7 @@ def _page(status=200, typed=None, **context):
     found = checks.run_checks(domain_records.server_address(request.host))
     return render_template(
         "smtp.html", keys=keys, query=query, server=_server_name(), port=PORT, expiries=expiries,
-        checks=found, can_send=checks.can_send(found),
+        checks=found, can_send=checks.can_send(found), can_receive=checks.can_receive(found),
         engine_error=engine.state()["sync_error"] if engine.enabled() else None,
         typed=typed or {"name": "", "variant": "standard", "expiry": DEFAULT_EXPIRY}, **context,
     ), status

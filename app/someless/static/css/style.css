@@ -3445,3 +3445,11 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
   .config-or { display: none; }
   .config-title span { display: block; margin: 0.15rem 0 0; }
 }
+
+/* Settings > Miscellaneous > Webmail sign-in lock: how many tries, then how long a wait */
+.lock-fields { display: grid; grid-template-columns: minmax(0, 14rem) minmax(0, 1fr); gap: 1rem 1.5rem; align-items: start; }
+.lock-wait { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0.6rem; }
+.lock-wait .input-wrap { flex: 0 1 9rem; }
+@media (max-width: 640px) {
+  .lock-fields { grid-template-columns: minmax(0, 1fr); }
+}

@@ -339,7 +339,7 @@ To try it, send a message from your Gmail to the new mailbox, and open it in you
 
 ## Step 12: The webmail
 
-The people with a mailbox sign in at `http://your-server-ip:17090` with the mailbox's address and password. After 5 wrong passwords in a row, the address can't sign in for 5 minutes. The inbox itself is coming soon; until then, the page shows the mail app settings from [Step 11](#step-11-mailboxes-receive-mail).
+The people with a mailbox sign in at `http://your-server-ip:17090` with the mailbox's address and password. After 5 wrong passwords in a row, the address can't sign in for 5 minutes; choose other numbers in **Settings → Miscellaneous → Webmail sign-in lock**. The inbox itself is coming soon; until then, the page shows the mail app settings from [Step 11](#step-11-mailboxes-receive-mail).
 
 **On HTTPS, at `webmail.example.com`:** add an A record `webmail` pointing to your server's IP address, then a proxy host in Nginx Proxy Manager (Someless Mail on its network, as in [Step 3](#step-3-https-for-the-web-interface)):
 
