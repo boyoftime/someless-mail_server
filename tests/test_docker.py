@@ -92,3 +92,13 @@ def test_readme_explains_receiving_mail_apps_and_the_webmail():
         assert words in readme, words
     assert "coming next" not in readme
     assert "net.ipv4.ip_unprivileged_port_start=0" in readme   # the docker run way too
+
+
+def test_the_readme_has_one_compose_file_for_every_setup():
+    """One file to copy, with or without Nginx Proxy Manager: its comments say what to change."""
+    readme = README.read_text(encoding="utf-8")
+
+    assert readme.count("services:\n") == 1 and "docker run -d" not in readme
+    assert "docker network inspect nginx-proxy >/dev/null 2>&1 || docker network create nginx-proxy" in readme
+    compose = COMPOSE.read_text()
+    assert "nginx-proxy" in compose and '"17080:17080"' in compose and "put a # at the start" in compose

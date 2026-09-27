@@ -4,15 +4,30 @@ services:
     container_name: someless-mail
     restart: unless-stopped
     ports:
-      - "17080:17080"   # web interface (behind Nginx Proxy Manager you can drop this line: see Step 3)
-      - "17090:17090"   # webmail (behind Nginx Proxy Manager you can drop this line too: see Step 12)
+      # Mail: always open, since mail doesn't go through a web proxy
       - "25:25"         # other mail servers deliver your mail here
       - "587:17587"     # your apps send mail here (STARTTLS)
       - "465:17465"     # your apps send mail here (TLS from the start)
       - "993:17993"     # mail apps read your mail here (IMAP)
       - "995:17995"     # mail apps read your mail here (POP3)
-      # - "80:17081"    # only without a reverse proxy: Let's Encrypt's check of your mail server's name
+      # The web interface and the webmail by IP: http://your-server-ip:17080 and :17090.
+      # Once Nginx Proxy Manager serves them on HTTPS (Steps 3 and 12), put a # at the start of
+      # these two lines and run docker compose up -d again: then they open only through it.
+      - "17080:17080"   # web interface
+      - "17090:17090"   # webmail
+      # Only without Nginx Proxy Manager: remove the # below, for Let's Encrypt's check (Step 5)
+      # - "80:17081"
+    expose:             # what Nginx Proxy Manager reaches, over the nginx-proxy network
+      - "17080"         # web interface (Step 3)
+      - "17090"         # webmail (Step 12)
+      - "17081"         # Let's Encrypt's check of your mail server's name (Step 5)
     sysctls:
       - net.ipv4.ip_unprivileged_port_start=0   # the mail engine doesn't run as root, and takes port 25
     volumes:
       - ./data:/data    # all your data, in a "data" folder next to this file
+    networks:
+      - nginx-proxy
+
+networks:
+  nginx-proxy:          # Nginx Proxy Manager's network (Step 1 makes it if it isn't there yet)
+    external: true

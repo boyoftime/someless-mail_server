@@ -42,7 +42,7 @@ Keep the web interface and the mail server on **different names**. `mail.example
 
 ## Step 1: Install
 
-Pick one of the two ways below. Both keep all your data in a `data` folder right where you install Someless Mail, so it's easy to find and back up, and it survives updates and restarts (see [Your data](#your-data)).
+Someless Mail keeps all your data in a `data` folder right where you install it, so it's easy to find and back up, and it survives updates and restarts (see [Your data](#your-data)).
 
 First make sure the ports are free on your server. This should print nothing:
 
@@ -50,9 +50,7 @@ First make sure the ports are free on your server. This should print nothing:
 sudo ss -tulpn | grep -E ':(25|587|465|993|995|17080|17081|17090) '
 ```
 
-### Option 1: Docker Compose (recommended)
-
-Create a folder, and save this as `docker-compose.yml` inside it (the same file is in this repository):
+Create a folder, and save this as `docker-compose.yml` inside it (the same file is in this repository). It's the only one you need, with or without Nginx Proxy Manager; its comments say what to change later:
 
 ```yaml
 services:
@@ -61,21 +59,42 @@ services:
     container_name: someless-mail
     restart: unless-stopped
     ports:
-      - "17080:17080"   # web interface (behind Nginx Proxy Manager you can drop this line: see Step 3)
-      - "17090:17090"   # webmail (behind Nginx Proxy Manager you can drop this line too: see Step 12)
+      # Mail: always open, since mail doesn't go through a web proxy
       - "25:25"         # other mail servers deliver your mail here
       - "587:17587"     # your apps send mail here (STARTTLS)
       - "465:17465"     # your apps send mail here (TLS from the start)
       - "993:17993"     # mail apps read your mail here (IMAP)
       - "995:17995"     # mail apps read your mail here (POP3)
-      # - "80:17081"    # only without a reverse proxy: Let's Encrypt's check of your mail server's name
+      # The web interface and the webmail by IP: http://your-server-ip:17080 and :17090.
+      # Once Nginx Proxy Manager serves them on HTTPS (Steps 3 and 12), put a # at the start of
+      # these two lines and run docker compose up -d again: then they open only through it.
+      - "17080:17080"   # web interface
+      - "17090:17090"   # webmail
+      # Only without Nginx Proxy Manager: remove the # below, for Let's Encrypt's check (Step 5)
+      # - "80:17081"
+    expose:             # what Nginx Proxy Manager reaches, over the nginx-proxy network
+      - "17080"         # web interface (Step 3)
+      - "17090"         # webmail (Step 12)
+      - "17081"         # Let's Encrypt's check of your mail server's name (Step 5)
     sysctls:
       - net.ipv4.ip_unprivileged_port_start=0   # the mail engine doesn't run as root, and takes port 25
     volumes:
       - ./data:/data    # all your data, in a "data" folder next to this file
+    networks:
+      - nginx-proxy
+
+networks:
+  nginx-proxy:          # Nginx Proxy Manager's network (Step 1 makes it if it isn't there yet)
+    external: true
 ```
 
-Then start it from that folder:
+Someless Mail joins Nginx Proxy Manager's Docker network, `nginx-proxy`, so the proxy can reach it later ([Step 3](#step-3-https-for-the-web-interface)). This makes the network if it isn't there yet, and does nothing if it is:
+
+```
+docker network inspect nginx-proxy >/dev/null 2>&1 || docker network create nginx-proxy
+```
+
+Then start Someless Mail from the folder with `docker-compose.yml`:
 
 ```
 docker compose up -d
@@ -84,18 +103,6 @@ docker compose up -d
 The `data` folder appears next to `docker-compose.yml` on the first start.
 
 The `sysctls` line lets the mail engine take port 25 inside the container: it doesn't run as root, and ports below 1024 are normally for root. It's Docker's own default since version 20.10, written out so it holds everywhere.
-
-### Option 2: `docker run`
-
-Run this from the folder where you want your `data` folder:
-
-```
-docker run -d --name someless-mail --restart unless-stopped \
-  -p 17080:17080 -p 17090:17090 -p 25:25 -p 587:17587 -p 465:17465 -p 993:17993 -p 995:17995 \
-  --sysctl net.ipv4.ip_unprivileged_port_start=0 \
-  -v "$(pwd)/data:/data" \
-  ghcr.io/boyoftime/someless-mail:1.0.0
-```
 
 ### Open your firewall
 
@@ -141,39 +148,7 @@ Optional, but worth it: your login then travels encrypted, and you open Someless
    |---|---|---|
    | A | `panel` | your server's IP address |
 
-2. **Put Someless Mail on the proxy's Docker network.** With Nginx Proxy Manager on a network called `nginx-proxy`, your `docker-compose.yml` becomes:
-
-   ```yaml
-   services:
-     someless-mail:
-       image: ghcr.io/boyoftime/someless-mail:1.0.0
-       container_name: someless-mail
-       restart: unless-stopped
-       ports:
-         - "25:25"         # other mail servers deliver your mail here
-         - "587:17587"     # your apps send mail here (STARTTLS)
-         - "465:17465"     # your apps send mail here (TLS from the start)
-         - "993:17993"     # mail apps read your mail here (IMAP)
-         - "995:17995"     # mail apps read your mail here (POP3)
-       expose:
-         - "17080"         # web interface, for the proxy only
-         - "17090"         # webmail, for the proxy only (Step 12)
-         - "17081"         # Let's Encrypt's check of your mail server's name (Step 5)
-       sysctls:
-         - net.ipv4.ip_unprivileged_port_start=0
-       volumes:
-         - ./data:/data
-       networks:
-         - nginx-proxy
-
-   networks:
-     nginx-proxy:
-       external: true
-   ```
-
-   Then run `docker compose up -d` again. The mail ports stay published: a web proxy can't carry mail.
-
-3. **In Nginx Proxy Manager**, add a proxy host:
+2. **In Nginx Proxy Manager**, add a proxy host (Someless Mail is on its network already, from [Step 1](#step-1-install)):
 
    | Setting | Value |
    |---|---|
@@ -183,7 +158,9 @@ Optional, but worth it: your login then travels encrypted, and you open Someless
    | Forward port | `17080` |
    | SSL tab | Request a new SSL certificate, with **Force SSL** and **HTTP/2** on |
 
-4. Open `https://panel.example.com` and log in.
+3. Open `https://panel.example.com` and log in.
+
+4. **Close the way in by IP.** In `docker-compose.yml`, put a `#` at the start of the `"17080:17080"` line, then run `docker compose up -d`. The web interface now opens only at `https://panel.example.com`. If you opened port 17080 in your firewall, close it again: `sudo ufw delete allow 17080/tcp`.
 
 ## Step 4: Connect and authenticate your domain
 
@@ -223,7 +200,7 @@ Services that only send (Brevo, Mailchimp…) can stay: several services can sen
 
 Once your domain is authenticated, its mail name (`mail.example.com`) becomes your mail server's name, and Someless Mail asks [Let's Encrypt](https://letsencrypt.org/) for a free certificate for it, so your apps connect over a trusted, encrypted line. Let's Encrypt checks that the name is yours by visiting it over plain HTTP, on port 80. Pass that visit through to Someless Mail:
 
-**With Nginx Proxy Manager** (Someless Mail on its network, as in Step 3), add a second proxy host:
+**With Nginx Proxy Manager** (Someless Mail is on its network already), add a second proxy host:
 
 | Setting | Value |
 |---|---|
@@ -342,7 +319,7 @@ To try it, send a message from your Gmail to the new mailbox, and open it in you
 
 The people with a mailbox sign in at `http://your-server-ip:17090` with the mailbox's address and password. After 5 wrong passwords in a row, the address can't sign in for 5 minutes; choose other numbers in **Settings → Miscellaneous → Webmail sign-in lock**. The inbox itself is coming soon; until then, the page shows the mail app settings from [Step 11](#step-11-mailboxes-receive-mail).
 
-**On HTTPS, at `webmail.example.com`:** add an A record `webmail` pointing to your server's IP address, then a proxy host in Nginx Proxy Manager (Someless Mail on its network, as in [Step 3](#step-3-https-for-the-web-interface)):
+**On HTTPS, at `webmail.example.com`:** add an A record `webmail` pointing to your server's IP address, then a proxy host in Nginx Proxy Manager:
 
 | Setting | Value |
 |---|---|
@@ -351,6 +328,8 @@ The people with a mailbox sign in at `http://your-server-ip:17090` with the mail
 | Forward hostname | `someless-mail` |
 | Forward port | `17090` |
 | SSL tab | Request a new SSL certificate, with **Force SSL** and **HTTP/2** on |
+
+Then close the way in by IP: in `docker-compose.yml`, put a `#` at the start of the `"17090:17090"` line and run `docker compose up -d` (and `sudo ufw delete allow 17090/tcp` if you opened it).
 
 Signing in to the webmail and to the web interface are separate: a mailbox's password never opens the web interface.
 
