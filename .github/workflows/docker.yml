@@ -95,7 +95,7 @@ jobs:
         run: |
           # a data folder owned by root, like the one Docker makes next to docker-compose.yml
           sudo mkdir smoke-data
-          docker run -d --name smoke -p 17080:17080 -p 17587:17587 -v "$PWD/smoke-data:/data" someless-mail:test
+          docker run -d --name smoke -p 17080:17080 -p 17090:17090 -p 2525:25 -p 17587:17587 -p 17993:17993             --sysctl net.ipv4.ip_unprivileged_port_start=0 -v "$PWD/smoke-data:/data" someless-mail:test
           # the panel answers at once; on this first start it says it's preparing the server
           # while the mail engine sets itself up, then shows the welcome page
           for i in $(seq 1 60); do
@@ -104,6 +104,9 @@ jobs:
           done
           curl -fsS http://127.0.0.1:17080/healthz | grep -qx ok
           curl -fsS http://127.0.0.1:17080/ | grep -Eq "Preparing your Someless Mail server|Welcome to"
+          # the webmail answers on its own port, with its own sign-in
+          curl -fsS http://127.0.0.1:17090/healthz | grep -qx ok
+          curl -fsS http://127.0.0.1:17090/login | grep -q "Sign in to your mailbox"
           for i in $(seq 1 120); do
             docker exec -u someless smoke flask --app someless engine status > /dev/null 2>&1 && break
             sleep 1
@@ -120,10 +123,11 @@ jobs:
           sudo test -f smoke-data/stalwart/config.json
           docker exec smoke sh -c 'grep -l "^Name:[[:space:]]*stalwart$" /proc/[0-9]*/status | xargs grep -h "^Uid:"' | grep -Eq '^Uid:[[:space:]]+2001[[:space:]]'
           # a key logs in on the submission port (published, as on a server) and may send as
-          # a Sender, and as nothing else; no Let's Encrypt from here
+          # a Sender, and as nothing else; a mailbox receives mail on port 25 and its mail app
+          # reads it over IMAP; no Let's Encrypt from here
           docker exec -u someless -i smoke python - <<'EOF'
           import hashlib, time
-          from someless import create_app
+          from someless import create_app, mail_password
           from someless.db import get_db
           from someless.domain_records import new_keys
           from someless.engine import state, sync
@@ -138,6 +142,8 @@ jobs:
               db.execute("INSERT INTO senders (name, email, domain_id, created_at) VALUES ('Shop', 'shop@example.com', ?, 0)", (domain_id,))
               db.execute("INSERT INTO smtp_keys (name, key_hash, hint, variant, created_at, login) VALUES ('Smoke', ?, 'xxxx', 'standard', ?, 'smoke-0001')",
                          (hashlib.sha256(b"smoke-key-0123456789").hexdigest(), time.time()))
+              db.execute("INSERT INTO mailboxes (email, domain_id, quota_bytes, password_hash, created_at) VALUES ('ceo@example.com', ?, ?, ?, 0)",
+                         (domain_id, 50 * 1024 ** 2, mail_password.hash_password("Mailbox-Pass-123!")))
               db.commit()
               assert sync.run(), state()["sync_error"]
           EOF
@@ -150,6 +156,25 @@ jobs:
               smtp.rset()
               assert smtp.mail("someone-else@example.com")[0] == 501
           print("submission port: a key sends as its Senders only")
+
+          import imaplib, time
+          with smtplib.SMTP("127.0.0.1", 2525, timeout=20) as smtp:   # another mail server, no login
+              smtp.ehlo("mx.friend.test")
+              assert smtp.mail("friend@friend.test")[0] == 250
+              assert smtp.rcpt("ceo@example.com")[0] == 250
+              assert smtp.rcpt("nobody@example.com")[0] == 550
+              assert smtp.data(b"From: friend@friend.test\r\nTo: ceo@example.com\r\nSubject: Hello\r\n\r\nHi!\r\n")[0] == 250
+          found = 0
+          for _ in range(20):
+              imap = imaplib.IMAP4_SSL("127.0.0.1", 17993, ssl_context=ssl._create_unverified_context())
+              imap.login("ceo@example.com", "Mailbox-Pass-123!")
+              found = sum(int(imap.select(folder)[1][0]) for folder in ("INBOX", '"Junk Mail"'))
+              imap.logout()
+              if found:
+                  break
+              time.sleep(0.5)
+          assert found, "the mail didn't reach the mailbox"
+          print("port 25: a mailbox receives mail, and IMAP reads it")
           EOF
           if docker logs smoke 2>&1 | grep "\[ERROR\]"; then
             echo "Container logged errors"

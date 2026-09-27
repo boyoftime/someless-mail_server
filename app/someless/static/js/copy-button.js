@@ -15,15 +15,16 @@
     setTimeout(function () { news.textContent = text; }, 50);
   }
 
-  function copy(text) {
+  function copy(text, place) {
     if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
-    // http://: the older way, through a hidden text box
+    // http://: the older way, through a hidden text box (in the open dialog, if any: the page
+    // around one can't be selected)
     return new Promise(function (resolve, reject) {
       var box = document.createElement("textarea");
       box.value = text;
       box.setAttribute("readonly", "");
       box.style.cssText = "position: fixed; top: 0; left: 0; opacity: 0; pointer-events: none;";
-      document.body.appendChild(box);
+      place.appendChild(box);
       box.select();
       var copied = false;
       try {
@@ -40,7 +41,7 @@
   document.addEventListener("click", function (event) {
     var button = event.target.closest("[data-copy]");
     if (!button) return;
-    copy(button.dataset.copy).then(function () {
+    copy(button.dataset.copy, button.closest("dialog[open]") || document.body).then(function () {
       button.classList.remove("is-copied");
       void button.offsetWidth; // play the tick again on a second click
       button.classList.add("is-copied");

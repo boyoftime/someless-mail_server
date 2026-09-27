@@ -193,16 +193,16 @@ def receive_note(domain, keys):
     elsewhere = _join(_receivers([server for server in found["mx"] if server != mail_host]))
     if mail_host in found["mx"] and elsewhere:
         return (f"Mail for {domain} goes both to this server and to {elsewhere}, but a domain's mail "
-                "should go to one place. Until the mail engine is ready, delete this server's MX record.")
+                "should go to one place. Delete the other MX records, so all of it lands in your mailboxes here.")
     if mail_host in found["mx"]:
-        return (f"Mail for {domain} comes to this server now, but the mail engine isn't ready to receive "
-                "it yet. Until it is, point the MX record back to where the mail went before.")
+        return (f"Mail for {domain} comes to this server. Each address that receives it needs a mailbox "
+                "(or an alias of one) on the Mailboxes page: mail to any other address is refused.")
     if found["mx"]:
-        return (f"Add this one only when you move {domain}'s mail to Someless Mail: from then on, all new "
-                "mail for the domain comes here. The mail engine isn't ready yet, so keep the MX records "
-                "you have until then.")
-    return (f"{domain} has no MX record, so it doesn't receive mail anywhere yet. Add this one when "
-            "Someless Mail can receive mail: the mail engine isn't ready yet.")
+        return (f"Add this one when you move {domain}'s mail to Someless Mail: create its mailboxes on the "
+                "Mailboxes page first, then replace your current MX records with this one. From then on, all "
+                "new mail for the domain comes here.")
+    return (f"{domain} has no MX record, so it doesn't receive mail anywhere yet. Create its mailboxes on "
+            "the Mailboxes page, then add this record to receive their mail here.")
 
 
 def summary(domain, keys, address):
@@ -217,8 +217,8 @@ def summary(domain, keys, address):
     if found["mx"] and mail_host not in found["mx"]:
         receivers = _join(_receivers(found["mx"]))
         todo.append({"kind": "move", "now": (), "text": (
-            f"Mail for {domain} goes to {receivers} now. Keep those MX records until your mail moves "
-            "here: the mail engine isn't ready yet. Then delete them and add the MX record above, and "
+            f"Mail for {domain} goes to {receivers} now. Keep those MX records until its mailboxes are "
+            "ready here (the Mailboxes page). Then delete them and add the MX record above, and "
             f"don't keep both, or some mail would land at {receivers} and some here.")})
     uses = services(domain, keys)
     clean = cleanup(domain, keys, address)

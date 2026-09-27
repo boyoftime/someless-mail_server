@@ -776,3 +776,25 @@ def test_a_check_that_still_finds_something_missing_is_no_celebration(client, lo
     client.post(f"/domains/{domain_id}/check")
 
     assert "data-celebrate" not in text(client.get(f"/domains/{domain_id}"))
+
+
+def test_the_mx_card_says_receiving_works_and_where_mailboxes_are_made():
+    """Receiving works now: the notes point at the Mailboxes page, never at a mail engine that
+    isn't ready."""
+    import json as json_module
+    from someless import domain_records
+
+    def note(mx):
+        keys = {"found": json_module.dumps({"mx": mx}), "mail_host": None}
+        return domain_records.receive_note("example.com", keys)
+
+    notes = {case: note(mx) for case, mx in {
+        "none": [], "elsewhere": ["mx.zoho.com"], "here": ["mail.example.com"],
+        "both": ["mail.example.com", "mx.zoho.com"]}.items()}
+
+    for case, text_ in notes.items():
+        assert "isn't ready" not in text_, case
+    assert "doesn't receive mail anywhere yet" in notes["none"] and "Mailboxes" in notes["none"]
+    assert "replace your current MX records" in notes["elsewhere"] and "Mailboxes" in notes["elsewhere"]
+    assert "comes to this server" in notes["here"] and "Mailboxes" in notes["here"]
+    assert "one place" in notes["both"]

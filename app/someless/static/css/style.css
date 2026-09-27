@@ -3319,3 +3319,128 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
   cursor: not-allowed;
   transform: none;
 }
+
+/* Mailboxes (mailboxes.html): a card per inbox, in teal, with its storage as a bar that fills
+   from teal to blue, and its aliases as chips. The dialogs are the domains' blue ones. */
+.mailbox-list { display: grid; gap: 0.9rem; margin-top: 1.25rem; }
+.mailbox-row {
+  --tone: #14b8a6;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  transition: border-color 0.25s ease, box-shadow 0.3s ease;
+}
+.mailbox-row:hover { border-color: rgba(20, 184, 166, 0.5); box-shadow: var(--card-shadow), 0 0 26px -12px rgba(45, 212, 191, 0.85); }
+.mailbox-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; padding: 1rem 1.25rem; }
+.mailbox-badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0d9488, #14b8a6 55%, #0195fb);
+  box-shadow: 0 0 14px -3px rgba(45, 212, 191, 0.9);
+  color: #fff;
+}
+.mailbox-badge svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.mailbox-who { flex: 1 1 14rem; min-width: 0; margin: 0; font-size: 1.05rem; font-weight: 700; overflow-wrap: anywhere; }
+.mailbox-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-left: auto; }
+.mailbox-button { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.5rem 1rem; font-size: 0.92rem; }
+.mailbox-button svg { flex: none; width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.mailbox-count {
+  min-width: 1.4rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tone) 22%, transparent);
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+}
+.mailbox-delete { display: inline-flex; margin: 0; }
+.mailbox-facts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.9rem 2rem;
+  padding: 0.9rem 1.25rem 1.1rem;
+  border-top: 1px solid var(--line);
+}
+.mailbox-label { margin: 0 0 0.45rem; color: var(--muted); font-size: 0.8rem; font-weight: 600; }
+.storage-bar {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 80%, transparent);
+}
+.storage-bar span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: max(var(--used), 0%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, #14b8a6, #0195fb);
+  box-shadow: 0 0 10px rgba(45, 212, 191, 0.8);
+}
+.mailbox-storage-text { margin: 0.5rem 0 0; color: var(--muted); font-size: 0.88rem; }
+.mailbox-storage-text strong { color: var(--ink); }
+.mailbox-none { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.alias-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
+.alias-chips li {
+  padding: 0.2rem 0.65rem;
+  border: 1px solid rgba(20, 184, 166, 0.45);
+  border-radius: 999px;
+  background: color-mix(in srgb, #14b8a6 9%, transparent);
+  font-size: 0.85rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.smtp-note.is-warning { border-color: rgba(245, 158, 11, 0.5); background: rgba(245, 158, 11, 0.1); }
+.smtp-note.is-warning svg { stroke: #f59e0b; }
+
+/* in the dialogs: storage as a number and its unit; the aliases, each with its trash button */
+.storage-parts { display: grid; grid-template-columns: minmax(0, 1fr) 7rem; gap: 0.6rem; align-items: stretch; }
+.storage-parts .dropdown, .storage-parts .dropdown-button { height: 100%; }
+.domain-dialog .password-rules { margin: -0.5rem 0 0; }
+.alias-list { display: grid; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
+.alias-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0.4rem 0.35rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.alias-email { min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.alias-delete { display: inline-flex; margin: 0; }
+.alias-delete .icon-button { width: 34px; height: 34px; }
+.alias-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; gap: 0.5rem 0.6rem; }
+.alias-add .field-label { grid-column: 1 / -1; }
+.alias-add .rules-save { white-space: nowrap; }
+
+/* Configuration details: what a mail app asks for, a row per way to connect (server, port,
+   security), each value with its copy button */
+.config-group { display: grid; gap: 0.55rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.config-title { margin: 0; font-size: 1rem; font-weight: 700; }
+.config-title span { margin-left: 0.45rem; color: var(--muted); font-size: 0.85rem; font-weight: 500; }
+.config-row { display: grid; grid-template-columns: minmax(0, 1fr) 7.5rem 6rem; align-items: end; gap: 0.6rem; margin: 0; }
+.config-row.is-login { grid-template-columns: minmax(0, 1fr) 13.6rem; }
+.config-cell { display: grid; gap: 0.3rem; min-width: 0; }
+.config-cell dt { color: var(--muted); font-size: 0.8rem; font-weight: 600; }
+.config-cell dd { min-width: 0; margin: 0; }
+.config-cell .copy-box { width: 100%; }
+.config-cell .copy-box-text { overflow-wrap: anywhere; }
+.config-plain { display: flex; align-items: center; min-height: 2.6rem; font-weight: 600; }
+.config-or { display: flex; align-items: center; justify-content: flex-end; min-height: 2.6rem; color: var(--muted); font-style: italic; }
+@media (max-width: 640px) {
+  .mailbox-facts { grid-template-columns: minmax(0, 1fr); }
+  .mailbox-actions { width: 100%; margin-left: 0; }
+  .mailbox-button { flex: 1 1 auto; justify-content: center; }
+  .alias-add { grid-template-columns: minmax(0, 1fr); }
+  .config-row, .config-row.is-login { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .config-cell.is-wide, .config-cell.is-two { grid-column: 1 / -1; }
+  .config-or { display: none; }
+  .config-title span { display: block; margin: 0.15rem 0 0; }
+}

@@ -134,14 +134,25 @@ def test_the_panel_starts_before_the_engine_is_set_up(monkeypatch):
         def shutdown(self):
             pass
 
-    monkeypatch.setattr(supervisor.subprocess, "Popen", lambda command: started.append("panel") or Panel())
+    def popen(command):
+        started.append("webmail" if command == supervisor.WEBMAIL_GUNICORN else "panel")
+        return Panel()
+
+    monkeypatch.setattr(supervisor.subprocess, "Popen", popen)
     monkeypatch.setattr(supervisor, "bring_up", lambda app, stalwart: started.append("engine") or True)
     monkeypatch.setattr(supervisor, "ThreadingHTTPServer", Relay)
     monkeypatch.setattr("someless.create_app", lambda: object())
 
     supervisor.main()
 
-    assert started == ["panel", "engine"]
+    assert started == ["panel", "webmail", "engine"]
+
+
+def test_the_webmail_is_its_own_site_on_17090():
+    command = supervisor.WEBMAIL_GUNICORN
+    assert command[command.index("--bind") + 1] == "0.0.0.0:17090"
+    assert command[-1] == "someless.webmail:create_webmail_app()"
+    assert "--preload" in command and "gthread" in command
 
 
 def test_domains_are_checked_when_it_is_time(app, monkeypatch):

@@ -47,6 +47,7 @@ SIGNED_IN_PAGE_FILES = [
     "js/domains-page.js",
     "js/senders-page.js",
     "js/sender-form.js",
+    "js/mailboxes-page.js",
     "js/smtp-page.js",
     "js/settings-mail-server.js",
     "js/celebrate.js",
@@ -89,6 +90,18 @@ def _fingerprint(path, modified):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()[:10]
 
 
+def fingerprint_static_links(app):
+    """Static links with the file's fingerprint (the panel's, and the webmail's)."""
+    @app.url_defaults
+    def add_fingerprint(endpoint, values):
+        # url_for(..., v=None) opts out, for files CSS points at without a fingerprint
+        if endpoint != "static" or "filename" not in values or "v" in values:
+            return
+        path = Path(app.static_folder) / values["filename"]
+        if path.is_file():
+            values["v"] = _fingerprint(str(path), path.stat().st_mtime_ns)
+
+
 def create_app(test_config=None):
     app = Flask(__name__)
     app.config.from_mapping(
@@ -109,7 +122,7 @@ def create_app(test_config=None):
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     csrf.init_app(app)
 
-    from . import auth, db, domains, errors, pages, senders, settings, smtp, two_factor
+    from . import auth, db, domains, errors, mailboxes, pages, senders, settings, smtp, two_factor
     from .engine import cli as engine_cli
     from .engine import deliveries as engine_deliveries
     db.init_app(app)
@@ -119,6 +132,7 @@ def create_app(test_config=None):
     app.register_blueprint(pages.bp)
     app.register_blueprint(domains.bp)
     app.register_blueprint(senders.bp)
+    app.register_blueprint(mailboxes.bp)
     app.register_blueprint(smtp.bp)
     app.register_blueprint(settings.bp)
     app.register_blueprint(errors.bp)
@@ -126,14 +140,7 @@ def create_app(test_config=None):
     app.register_blueprint(engine_deliveries.bp)
     csrf.exempt(engine_deliveries.bp)
 
-    @app.url_defaults
-    def fingerprint_static_links(endpoint, values):
-        # url_for(..., v=None) opts out, for files CSS points at without a fingerprint
-        if endpoint != "static" or "filename" not in values or "v" in values:
-            return
-        path = Path(app.static_folder) / values["filename"]
-        if path.is_file():
-            values["v"] = _fingerprint(str(path), path.stat().st_mtime_ns)
+    fingerprint_static_links(app)
 
     @app.context_processor
     def inject_globals():

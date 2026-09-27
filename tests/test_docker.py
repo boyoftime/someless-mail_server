@@ -66,3 +66,29 @@ def test_the_image_is_built_again_once_the_mail_engine_is():
 
     assert 'workflows: ["Build Stalwart (open source)"]' in workflow
     assert "the mail engine isn't built yet" in workflow
+
+
+def test_mail_comes_in_and_mail_apps_and_the_webmail_are_published():
+    compose = COMPOSE.read_text()
+
+    for mapping in ('"25:25"', '"993:17993"', '"995:17995"', '"17090:17090"'):
+        assert mapping in compose, mapping
+    # the mail engine doesn't run as root, and receiving takes port 25 inside the container too
+    assert "net.ipv4.ip_unprivileged_port_start=0" in compose
+    expose = next(line for line in DOCKERFILE.read_text().splitlines() if line.startswith("EXPOSE"))
+    assert set(expose.split()[1:]) >= {"17080", "17090", "25", "17587", "17465", "17993", "17995", "17081"}
+
+
+def test_the_health_check_asks_the_panel_and_the_webmail():
+    healthcheck = DOCKERFILE.read_text().split("HEALTHCHECK", 1)[1].split("\n\n", 1)[0]
+
+    assert "17080/healthz" in healthcheck and "17090/healthz" in healthcheck
+
+
+def test_readme_explains_receiving_mail_apps_and_the_webmail():
+    readme = README.read_text(encoding="utf-8")
+
+    for words in ("Mailboxes", "993", "995", "17090", "webmail.example.com", "sudo ufw allow 25/tcp"):
+        assert words in readme, words
+    assert "coming next" not in readme
+    assert "net.ipv4.ip_unprivileged_port_start=0" in readme   # the docker run way too

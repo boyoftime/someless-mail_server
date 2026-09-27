@@ -26,8 +26,11 @@ COPY --chmod=755 docker/someless-run /usr/local/bin/someless-run
 
 # The app runs as its own user (2001), never as root. The entrypoint switches to it with
 # setpriv (util-linux, part of every Debian image; checked here so a build without it fails).
-# Stalwart runs as that user too, which is why it listens on high ports (17587, 17465):
-# Docker maps 587 and 465 on the server to them.
+# Stalwart runs as that user too, which is why it listens on high ports (17587, 17465, 17993,
+# 17995): Docker maps 587, 465, 993 and 995 on the server to them. Receiving is the exception:
+# other mail servers deliver to port 25 and nowhere else, and Stalwart treats port 25 as the one
+# mail comes in on, so it listens on 25 in here too. docker-compose.yml lets the container's
+# users take ports below 1024 (net.ipv4.ip_unprivileged_port_start=0, Docker's own default).
 RUN groupadd --system --gid 2001 someless \
  && useradd --system --uid 2001 --gid someless --shell /usr/sbin/nologin --no-create-home someless \
  && mkdir -p /data/someless /data/stalwart \
@@ -37,13 +40,16 @@ RUN groupadd --system --gid 2001 someless \
 
 WORKDIR /opt/someless/app
 VOLUME ["/data"]
-# 17080: the panel. 17587 and 17465: apps sending mail (STARTTLS, and TLS from the start).
+# 17080: the panel. 17090: the webmail. 25: mail from other mail servers.
+# 17587 and 17465: apps sending mail (STARTTLS, and TLS from the start).
+# 17993 and 17995: mail apps reading mail (IMAP and POP3, TLS from the start).
 # 17081: Let's Encrypt's check of the server name (nothing else answers there).
-EXPOSE 17080 17587 17465 17081
+EXPOSE 17080 17090 25 17587 17465 17993 17995 17081
 
-# The panel answers at once; the mail engine sets itself up alongside (a minute, the first time).
+# The panel and the webmail answer at once; the mail engine sets itself up alongside (a minute,
+# the first time).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
-  CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:17080/healthz', timeout=4)"]
+  CMD ["python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:17080/healthz', timeout=2); u.urlopen('http://127.0.0.1:17090/healthz', timeout=2)"]
 
 # The entrypoint starts as root only to hand the data folder to the someless user, then runs
 # this command as that user (docker/entrypoint.sh): Stalwart and the panel, side by side

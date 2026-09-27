@@ -5,36 +5,38 @@
   </picture>
 </p>
 
-Welcome to **Someless Mail Server**: your own mail server in a single Docker image. Install it on your server, open the web interface, connect your domain, and send email from your apps and websites through your own server, signed and trusted like mail from the big providers.
+Welcome to **Someless Mail Server**: your own mail server in a single Docker image. Install it on your server, open the web interface, connect your domain, send email from your apps and websites through your own server, signed and trusted like mail from the big providers, and receive it in your own mailboxes.
 
 **Version:** 1.0.0
 
-> **Status:** sending works. Connect and authenticate your domain, add the addresses your mail comes from, and your apps send through your own server. Inboxes, and receiving mail, come next.
+> **Status:** sending and receiving work. Connect and authenticate your domain, add the addresses your mail comes from, create mailboxes, and read them in any mail app. The webmail's sign-in works; its inbox comes next.
 
-This guide takes you from installing to your first email landing in a Gmail inbox. Follow the steps in order; each one takes a few minutes, apart from waiting for DNS changes to show up.
+This guide takes you from installing to your first email landing in a Gmail inbox, and your first reply landing in your own mailbox. Follow the steps in order; each one takes a few minutes, apart from waiting for DNS changes to show up.
 
 ## How it fits together
 
 - **The web interface** (port 17080) is where you set everything up: domains, senders, SMTP keys.
-- **The mail engine**, [Stalwart](https://github.com/stalwartlabs/stalwart), runs in the same container and sends the mail. You never set it up yourself: the web interface does it for you.
+- **The mail engine**, [Stalwart](https://github.com/stalwartlabs/stalwart), runs in the same container: it sends the mail, receives it into your mailboxes, and serves your mail apps. You never set it up yourself: the web interface does it for you.
+- **The webmail** (port 17090) is where the people with a mailbox sign in with its address and password.
 - **[Nginx Proxy Manager](https://nginxproxymanager.com/)** (optional, recommended) puts the web interface on HTTPS, and passes Let's Encrypt's check through to the mail engine so your mail server gets its own certificate.
 
 ## What you need
 
 - **A Linux server (VPS)** with [Docker](https://docs.docker.com/engine/install/) and a fixed public IP address.
 - **A domain you own**, like `example.com`, and access to its DNS settings at your domain provider (Namecheap, Cloudflare, GoDaddy…).
-- **Outgoing port 25 open at your provider.** Mail servers deliver to each other on port 25, and many VPS providers block it until you ask. See [Step 6](#step-6-reverse-dns-and-port-25).
+- **Port 25 open at your provider,** both ways. Mail servers deliver to each other on port 25: your server sends out on it, and receives your mail on it. Many VPS providers block outgoing port 25 until you ask. See [Step 6](#step-6-reverse-dns-and-port-25).
 - **Recommended:** Nginx Proxy Manager on the same server, for HTTPS.
 
 ## The names you'll use
 
-Three names come up in this guide. With the domain `example.com`:
+These names come up in this guide. With the domain `example.com`:
 
 | Name | Example | What it's for |
 |---|---|---|
-| Your mail domain | `example.com` | The part of your addresses after the @, like `no-reply@example.com` |
+| Your mail domain | `example.com` | The part of your addresses after the @, like `no-reply@example.com` or `ceo@example.com` |
 | Your mail server's name | `mail.example.com` | What your apps connect to, what your server's certificate is for, and what other mail servers see. Someless Mail gives you its record in [Step 4](#step-4-connect-and-authenticate-your-domain) |
 | The web interface's name (optional) | `panel.example.com` | Opening the web interface over HTTPS, in [Step 3](#step-3-https-for-the-web-interface) |
+| The webmail's name (optional) | `webmail.example.com` | Opening the webmail over HTTPS, in [Step 12](#step-12-the-webmail) |
 
 Keep the web interface and the mail server on **different names**. `mail.example.com` belongs to the mail server: its certificate depends on it (see [Step 5](#step-5-your-mail-servers-certificate)).
 
@@ -45,7 +47,7 @@ Pick one of the two ways below. Both keep all your data in a `data` folder right
 First make sure the ports are free on your server. This should print nothing:
 
 ```
-sudo ss -tulpn | grep -E ':(587|465|17080|17081) '
+sudo ss -tulpn | grep -E ':(25|587|465|993|995|17080|17081|17090) '
 ```
 
 ### Option 1: Docker Compose (recommended)
@@ -60,9 +62,15 @@ services:
     restart: unless-stopped
     ports:
       - "17080:17080"   # web interface (behind Nginx Proxy Manager you can drop this line: see Step 3)
+      - "17090:17090"   # webmail (behind Nginx Proxy Manager you can drop this line too: see Step 12)
+      - "25:25"         # other mail servers deliver your mail here
       - "587:17587"     # your apps send mail here (STARTTLS)
       - "465:17465"     # your apps send mail here (TLS from the start)
+      - "993:17993"     # mail apps read your mail here (IMAP)
+      - "995:17995"     # mail apps read your mail here (POP3)
       # - "80:17081"    # only without a reverse proxy: Let's Encrypt's check of your mail server's name
+    sysctls:
+      - net.ipv4.ip_unprivileged_port_start=0   # the mail engine doesn't run as root, and takes port 25
     volumes:
       - ./data:/data    # all your data, in a "data" folder next to this file
 ```
@@ -75,23 +83,28 @@ docker compose up -d
 
 The `data` folder appears next to `docker-compose.yml` on the first start.
 
+The `sysctls` line lets the mail engine take port 25 inside the container: it doesn't run as root, and ports below 1024 are normally for root. It's Docker's own default since version 20.10, written out so it holds everywhere.
+
 ### Option 2: `docker run`
 
 Run this from the folder where you want your `data` folder:
 
 ```
 docker run -d --name someless-mail --restart unless-stopped \
-  -p 17080:17080 -p 587:17587 -p 465:17465 \
+  -p 17080:17080 -p 17090:17090 -p 25:25 -p 587:17587 -p 465:17465 -p 993:17993 -p 995:17995 \
+  --sysctl net.ipv4.ip_unprivileged_port_start=0 \
   -v "$(pwd)/data:/data" \
   ghcr.io/boyoftime/someless-mail:1.0.0
 ```
 
 ### Open your firewall
 
-If your server has a firewall, allow inbound TCP `587` and `465` (your apps send mail there), and `17080` if you open the web interface by IP. With `ufw`:
+If your server has a firewall, allow inbound TCP `25` (your mail comes in there), `587` and `465` (your apps send mail there), `993` and `995` (mail apps read mail there), and `17080` and `17090` if you open the web interface and the webmail by IP. With `ufw`:
 
 ```
-sudo ufw allow 587/tcp && sudo ufw allow 465/tcp && sudo ufw allow 17080/tcp
+sudo ufw allow 25/tcp && sudo ufw allow 587/tcp && sudo ufw allow 465/tcp
+sudo ufw allow 993/tcp && sudo ufw allow 995/tcp
+sudo ufw allow 17080/tcp && sudo ufw allow 17090/tcp
 ```
 
 ### Open it
@@ -137,11 +150,17 @@ Optional, but worth it: your login then travels encrypted, and you open Someless
        container_name: someless-mail
        restart: unless-stopped
        ports:
+         - "25:25"         # other mail servers deliver your mail here
          - "587:17587"     # your apps send mail here (STARTTLS)
          - "465:17465"     # your apps send mail here (TLS from the start)
+         - "993:17993"     # mail apps read your mail here (IMAP)
+         - "995:17995"     # mail apps read your mail here (POP3)
        expose:
          - "17080"         # web interface, for the proxy only
+         - "17090"         # webmail, for the proxy only (Step 12)
          - "17081"         # Let's Encrypt's check of your mail server's name (Step 5)
+       sysctls:
+         - net.ipv4.ip_unprivileged_port_start=0
        volumes:
          - ./data:/data
        networks:
@@ -180,7 +199,7 @@ In **Domains**, click **Add domain** and type the part of your email address aft
 
 Add them all, then click **Authenticate this email domain**. Someless Mail looks the records up and marks each one found, missing or different; once all five are right, the domain shows as **Authenticated**, and the mail engine starts signing its mail. Someless Mail asks your domain's own name servers (at Namecheap, Cloudflare…), not a DNS cache, so a change shows up as soon as your provider publishes it: usually within minutes, sometimes longer. The page looks again when you open it (if its last look is over a minute old), and **Authenticate this email domain** checks right away.
 
-The page also shows the **MX** record, which sends all new mail for the domain to your server. **Don't add it yet**: receiving mail comes next, so keep your current MX records until then.
+The page also shows the **MX** record, which sends all new mail for the domain to your server. Add it once the domain's mailboxes are ready ([Step 11](#step-11-mailboxes-receive-mail)): from then on, all new mail for the domain comes here.
 
 ### A domain that already has mail
 
@@ -236,7 +255,7 @@ These two are set at your VPS provider, not in Someless Mail. Mail can go out wi
 
 ## Step 7: Add a sender
 
-A sender is the name and address your mail comes from, like `Google <no-reply@google.com>`. In **Senders**, click **Add sender**, type the name and the address, and the phone beside the form shows how it will look in an inbox. The address has to be at a domain you've authenticated in **Domains**; for any other domain, authenticate it first and come back. Deleting a domain deletes its senders.
+A sender is the name and address your mail comes from, like `Google <no-reply@google.com>`. In **Senders**, click **Add sender**, type the name and the address, and the phone beside the form shows how it will look in an inbox. The address has to be at a domain you've authenticated in **Domains**; for any other domain, authenticate it first and come back. Deleting a domain deletes its senders; a domain with mailboxes can't be deleted until its mailboxes are.
 
 Your apps can send only from the senders on this list: anything else is refused, so a leaked key can't be used to fake your other addresses.
 
@@ -291,6 +310,47 @@ The round button with the animation beside **Generate SMTP key** opens the guide
 
 **API keys**, for using Someless Mail from your own code, are coming too.
 
+## Step 11: Mailboxes: receive mail
+
+A mailbox is an inbox at one of your domains, like `ceo@example.com`. In **Mailboxes**, click **Create mailbox**:
+
+- **Email address:** type the part before the @ and pick the domain: one you've authenticated.
+- **Password and Confirm password:** it follows your password rules (**Settings → Password rules**). Someless Mail keeps only a fingerprint of it, like your own.
+- **Mailbox storage:** how much mail it can hold, in GB or MB. New mail is refused once it's full. The dialog shows how much room your server has.
+
+Each mailbox's card shows how much of its storage is used, and has buttons to change its password or storage, to delete it (with all its mail), and:
+
+- **Aliases:** other addresses whose mail lands in this mailbox, like `hello@example.com` or `sales@example.com`, at any of your authenticated domains. Add as many as you like.
+- **Configuration details:** what to type in a mail app (Outlook, Apple Mail, Thunderbird, the mail app on your phone), each with a copy button:
+
+  | Setting | Value |
+  |---|---|
+  | Username | the mailbox's address, like `ceo@example.com` |
+  | Password | the mailbox's password |
+  | Incoming (IMAP) | `mail.example.com`, port `993`, SSL/TLS |
+  | Incoming (POP3) | `mail.example.com`, port `995`, SSL/TLS |
+  | Outgoing (SMTP) | `mail.example.com`, port `465` with SSL/TLS, or `587` with STARTTLS |
+
+**Then point the domain's mail here:** add the **MX** record from the domain's **Authenticate** page ([Step 4](#step-4-connect-and-authenticate-your-domain)), and delete any other MX records. The Mailboxes page says so as long as a domain with mailboxes gets its mail elsewhere. Mail to an address at the domain that isn't a mailbox or an alias is refused.
+
+To try it, send a message from your Gmail to the new mailbox, and open it in your mail app. A message from an unknown sender can land in **Junk Mail** at first: mark it as not junk.
+
+## Step 12: The webmail
+
+The people with a mailbox sign in at `http://your-server-ip:17090` with the mailbox's address and password. After 5 wrong passwords in a row, the address can't sign in for 5 minutes. The inbox itself is coming soon; until then, the page shows the mail app settings from [Step 11](#step-11-mailboxes-receive-mail).
+
+**On HTTPS, at `webmail.example.com`:** add an A record `webmail` pointing to your server's IP address, then a proxy host in Nginx Proxy Manager (Someless Mail on its network, as in [Step 3](#step-3-https-for-the-web-interface)):
+
+| Setting | Value |
+|---|---|
+| Domain names | `webmail.example.com` |
+| Scheme | `http` |
+| Forward hostname | `someless-mail` |
+| Forward port | `17090` |
+| SSL tab | Request a new SSL certificate, with **Force SSL** and **HTTP/2** on |
+
+Signing in to the webmail and to the web interface are separate: a mailbox's password never opens the web interface.
+
 ## Troubleshooting
 
 - **The certificate doesn't arrive.** Check that `mail.example.com` points to your server ([Step 4](#step-4-connect-and-authenticate-your-domain)), that its proxy host forwards to port `17081` with SSL off ([Step 5](#step-5-your-mail-servers-certificate)), and that port 80 is open in your firewall; then click **Check again** on **SMTP & API** (it asks Let's Encrypt at most every 10 minutes). Opening `http://mail.example.com/.well-known/acme-challenge/test` should say *Someless Mail: nothing here but Let's Encrypt's checks.* If you see a page from Nginx Proxy Manager instead, the request isn't reaching Someless Mail.
@@ -298,6 +358,8 @@ The round button with the animation beside **Generate SMTP key** opens the guide
 - **"501 You are not allowed to send from this address":** the app sends from an address that isn't on your **Senders** list. Add it there, or change the app's "from" address.
 - **"Connection refused" or a timeout in an app:** ports `587`/`465` aren't open in your firewall, or the network your app runs on blocks them.
 - **A test email bounced:** the dialog and the sender's card show the receiving server's reason.
+- **Mail doesn't arrive in a mailbox.** Check that the domain's MX record points to `mail.example.com` (the Mailboxes page says when it doesn't), that port `25` is open in your firewall, and that the address is a mailbox or an alias of one. Look in the mailbox's **Junk Mail** folder too. From another server, `timeout 5 bash -c '</dev/tcp/mail.example.com/25' && echo open` should print *open*.
+- **A mail app can't connect:** ports `993`/`995` (reading) or `465`/`587` (sending) aren't open in your firewall, or the username isn't the whole address, like `ceo@example.com`.
 - **The mail engine's state**, from the server:
 
   ```
@@ -308,16 +370,18 @@ The round button with the animation beside **Generate SMTP key** opens the guide
 
 ## Ports
 
-Inside the container, Someless Mail uses its own port numbers so it never clashes with other services, and runs as its own user, never as root.
+Inside the container, Someless Mail uses its own port numbers so it never clashes with other services, and runs as its own user, never as root. Receiving is the one exception: other mail servers deliver to port 25 and nowhere else.
 
 | What it's for | Port inside the container | Port on your server |
 |---|---|---|
 | Web interface | 17080 | 17080, or none behind a proxy ([Step 3](#step-3-https-for-the-web-interface)) |
-| Your apps send mail (STARTTLS) | 17587 | 587 |
-| Your apps send mail (TLS from the start) | 17465 | 465 |
+| Webmail | 17090 | 17090, or none behind a proxy ([Step 12](#step-12-the-webmail)) |
+| Receiving mail from other servers | 25 | 25 |
+| Your apps and mail apps send mail (STARTTLS) | 17587 | 587 |
+| Your apps and mail apps send mail (TLS from the start) | 17465 | 465 |
+| Mail apps read mail (IMAP) | 17993 | 993 |
+| Mail apps read mail (POP3) | 17995 | 995 |
 | Let's Encrypt's check of your mail server's name | 17081 | none behind a proxy, or 80 ([Step 5](#step-5-your-mail-servers-certificate)) |
-| Receiving mail from other servers | — | 25 (coming next) |
-| Reading mail in mail apps | — | 993 (coming next) |
 
 Your server also *sends* to other mail servers' port 25; that's outgoing, so nothing to publish, but your provider must allow it ([Step 6](#step-6-reverse-dns-and-port-25)).
 
@@ -330,9 +394,10 @@ your-folder/
 ├── docker-compose.yml
 └── data/
     ├── someless/
-    │   ├── someless.db    ← login, settings, domains, senders, SMTP keys (their fingerprints)
-    │   └── secret_key     ← signs your login, so it survives restarts
-    └── stalwart/          ← the mail engine: its settings, its mail queue, its certificate
+    │   ├── someless.db    ← login, settings, domains, senders, mailboxes, SMTP keys (their fingerprints)
+    │   ├── secret_key     ← signs your login, so it survives restarts
+    │   └── webmail_secret_key  ← the same, for the webmail
+    └── stalwart/          ← the mail engine: its settings, the mail in your mailboxes, its queue, its certificate
 ```
 
 So the database is at `data/someless/someless.db`.
@@ -398,9 +463,10 @@ python -m venv .venv
 .venv/bin/pip install -r requirements-dev.txt      # Windows: .venv\Scripts\pip
 .venv/bin/python -m pytest
 SOMELESS_DATA_DIR=./devdata .venv/bin/python -m flask --app app/someless:create_app run --port 17080
+SOMELESS_DATA_DIR=./devdata .venv/bin/python -m flask --app "app/someless.webmail:create_webmail_app" run --port 17090
 ```
 
-The tests use a stand-in for the mail engine. To run them against the real one too, point `STALWART_BIN` at a Stalwart v0.16.23 binary (they use ports 17587, 17465 and 17880):
+The tests use a stand-in for the mail engine. To run them against the real one too, point `STALWART_BIN` at a Stalwart v0.16.23 binary (they use ports 25, 17587, 17465, 17993, 17995 and 17880):
 
 ```
 STALWART_BIN=/path/to/stalwart .venv/bin/python -m pytest tests/test_engine_live.py

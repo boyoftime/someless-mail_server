@@ -47,5 +47,6 @@ def engine(app):
     fake.objects["Domain"] = {"d0": {"name": "someless.internal"}}
     fake.objects["Account"] = {"a0": {"name": "admin", "domainId": "d0"}}
     fake.objects["SystemSettings"] = {"singleton": {"defaultHostname": "someless.internal"}}
+    fake.objects["MtaStageAuth"] = {"singleton": {}}
     app.config.update(ENGINE_ENABLED=True, ENGINE_CLIENT=lambda: fake)
     return fake

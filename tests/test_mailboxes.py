@@ -1,0 +1,282 @@
+"""The Mailboxes page (mailboxes.py): inboxes at the authenticated domains, each an account in
+the mail engine, with its password (kept only as a hash), storage and aliases."""
+import html
+import json
+import re
+
+from someless import mail_password, mailboxes
+from someless.db import get_db
+from test_engine_sync import authenticated_domain
+
+GB = 1024 ** 3
+MB = 1024 ** 2
+GOOD = "Mailbox-Pass-1!"
+
+
+def text(response):
+    return html.unescape(response.get_data(as_text=True))
+
+
+def plain(page):
+    return re.sub(r"<[^>]+>", "", page)
+
+
+def create(client, local="ceo", domain="pineloop.online", password=GOOD, confirm=None, storage="15", unit="GB"):
+    return client.post("/mailboxes", data={"local": local, "domain": domain, "password": password,
+                                           "confirm": password if confirm is None else confirm,
+                                           "storage": storage, "unit": unit})
+
+
+def rows(app, table="mailboxes"):
+    with app.app_context():
+        return get_db().execute(f"SELECT * FROM {table} ORDER BY id").fetchall()
+
+
+def test_mailboxes_need_login(client):
+    assert client.get("/mailboxes").headers["Location"] == "/login"
+
+
+def test_the_menu_has_mailboxes_after_senders(client, login):
+    login()
+
+    page = text(client.get("/mailboxes"))
+
+    menu = page[page.index('<dialog class="side-menu"'):page.index("</dialog>")]
+    labels = re.findall(r'<span class="side-menu-label">([^<]+)</span>', menu)
+    assert labels.index("Mailboxes") == labels.index("Senders") + 1
+    assert re.search(r'<a [^>]*href="/mailboxes"[^>]*aria-current="page"', menu)
+
+
+def test_without_an_authenticated_domain_it_says_what_to_do_first(app, client, login):
+    authenticated_domain(app, "notyet.org", authenticated=False)
+    login()
+
+    page = text(client.get("/mailboxes"))
+
+    assert "Authenticate a domain first" in plain(page) and 'href="/domains"' in page
+    assert 'name="local"' not in page
+
+
+def test_the_create_dialog_offers_only_authenticated_domains(app, client, login):
+    authenticated_domain(app, "pineloop.online")
+    authenticated_domain(app, "notyet.org", authenticated=False)
+    login()
+
+    page = text(client.get("/mailboxes"))
+
+    dialog = page[page.index('id="create-mailbox-dialog"'):]
+    select = re.search(r'<select[^>]*name="domain"[^>]*>(.*?)</select>', dialog, re.S).group(1)
+    assert re.findall(r'<option value="([^"]+)"', select) == ["pineloop.online"]
+    assert re.search(r'<select[^>]*name="unit"', dialog) and "GB" in dialog and "MB" in dialog
+    assert 'name="password"' in dialog and 'name="confirm"' in dialog
+
+
+def test_a_mailbox_is_created(app, client, login, engine):
+    domain_id = authenticated_domain(app)
+    login()
+
+    response = create(client)
+
+    assert response.headers["Location"] == "/mailboxes"
+    (row,) = rows(app)
+    assert (row["email"], row["domain_id"], row["quota_bytes"]) == ("ceo@pineloop.online", domain_id, 15 * GB)
+    assert mail_password.password_ok(row["password_hash"], GOOD) and GOOD not in row["password_hash"]
+    assert engine.named("Account", "ceo")   # and the engine has it
+    assert "ceo@pineloop.online" in plain(text(client.get("/mailboxes")))
+
+
+def test_the_password_follows_the_password_rules_and_is_typed_twice(app, client, login):
+    authenticated_domain(app)
+    login()
+
+    weak = create(client, password="short")
+    mismatch = create(client, confirm="Mailbox-Pass-2!")
+
+    assert weak.status_code == 400 and "at least 8 characters" in text(weak)
+    assert mismatch.status_code == 400 and "don't match" in text(mismatch)
+    assert 'id="create-mailbox-dialog"' in text(mismatch) and "data-open" in text(mismatch)   # opens again
+    assert rows(app) == []
+
+
+def test_storage_is_given_in_gb_or_mb(app, client, login):
+    authenticated_domain(app)
+    login()
+
+    create(client, local="small", storage="500", unit="MB")
+    create(client, local="half", storage="1.5", unit="GB")
+    for storage in ("0", "abc", "-3", ""):
+        assert create(client, local="bad", storage=storage).status_code == 400, storage
+
+    assert [row["quota_bytes"] for row in rows(app)] == [500 * MB, int(1.5 * GB)]
+
+
+def test_an_address_is_used_once(app, client, login):
+    authenticated_domain(app)
+    login()
+    create(client)
+    mailbox_id = rows(app)[0]["id"]
+    client.post(f"/mailboxes/{mailbox_id}/aliases", data={"local": "hello", "domain": "pineloop.online"})
+
+    again = create(client, local="CEO")
+    alias = create(client, local="hello")
+
+    assert again.status_code == 400 and "already" in text(again)
+    assert alias.status_code == 400 and "already" in text(alias)
+    assert len(rows(app)) == 1
+
+
+def test_a_sender_address_can_be_a_mailbox_too(app, client, login):
+    domain_id = authenticated_domain(app)
+    with app.app_context():
+        get_db().execute("INSERT INTO senders (name, email, domain_id, created_at) VALUES ('Support', 'support@pineloop.online', ?, 0)",
+                         (domain_id,))
+        get_db().commit()
+    login()
+
+    assert create(client, local="support").headers["Location"] == "/mailboxes"
+
+
+def test_sizes_read_as_people_say_them():
+    assert [mailboxes.size_text(size) for size in (500 * MB, 15 * GB, int(14.87 * GB), 1536 * MB, 0)] == [
+        "500 MB", "15 GB", "14.87 GB", "1.5 GB", "0 MB"]
+
+
+def test_edit_storage_starts_from_the_size_as_it_was_typed(app, client, login):
+    authenticated_domain(app)
+    login()
+    for local, storage, unit in (("a", "15", "GB"), ("b", "14.87", "GB"), ("c", "500", "MB"), ("d", "1536", "MB")):
+        create(client, local=local, storage=storage, unit=unit)
+
+    page = text(client.get("/mailboxes"))
+
+    found = re.findall(r'data-storage-for="(\w)@[^"]+" [^>]*data-size="([^"]+)" data-unit="(\w+)"', page)
+    assert found == [("a", "15", "GB"), ("b", "14.87", "GB"), ("c", "500", "MB"), ("d", "1.5", "GB")]
+
+
+def test_the_list_shows_each_mailboxs_storage_use(app, client, login, engine):
+    authenticated_domain(app)
+    login()
+    create(client)
+    account = next(obj for obj in engine.objects["Account"].values() if obj.get("name") == "ceo")
+    account["usedDiskQuota"] = int(0.15 * GB)   # what the engine says it holds
+
+    page = plain(text(client.get("/mailboxes")))
+
+    assert "1.0% used" in page and "14.85 GB available" in page
+
+
+def test_the_password_changes(app, client, login, engine):
+    authenticated_domain(app)
+    login()
+    create(client)
+    before = rows(app)[0]
+
+    response = client.post(f"/mailboxes/{before['id']}/password", data={"password": "Brand-New-456!", "confirm": "Brand-New-456!"})
+
+    after = rows(app)[0]
+    assert response.headers["Location"] == "/mailboxes"
+    assert mail_password.password_ok(after["password_hash"], "Brand-New-456!")
+    assert after["password_version"] == before["password_version"] + 1   # the engine gets it at the next sync
+    bad = client.post(f"/mailboxes/{before['id']}/password", data={"password": "Brand-New-456!", "confirm": "other"})
+    assert bad.status_code == 400
+
+
+def test_the_storage_changes(app, client, login):
+    authenticated_domain(app)
+    login()
+    create(client)
+    mailbox_id = rows(app)[0]["id"]
+
+    client.post(f"/mailboxes/{mailbox_id}/storage", data={"storage": "20", "unit": "GB"})
+
+    assert rows(app)[0]["quota_bytes"] == 20 * GB
+
+
+def test_aliases_come_and_go_as_many_as_wanted(app, client, login, engine):
+    authenticated_domain(app)
+    authenticated_domain(app, "cloudnix.net")
+    login()
+    create(client)
+    mailbox_id = rows(app)[0]["id"]
+
+    for local, domain in (("hello", "pineloop.online"), ("sales", "pineloop.online"), ("ceo", "cloudnix.net")):
+        client.post(f"/mailboxes/{mailbox_id}/aliases", data={"local": local, "domain": domain})
+
+    aliases = rows(app, "mailbox_aliases")
+    assert [alias["email"] for alias in aliases] == ["hello@pineloop.online", "sales@pineloop.online", "ceo@cloudnix.net"]
+    box = engine.named("Account", "ceo")
+    assert sorted(alias["name"] for alias in box["aliases"].values()) == ["ceo", "hello", "sales"]
+
+    client.post(f"/mailboxes/{mailbox_id}/aliases/{aliases[0]['id']}/delete")
+
+    assert [alias["email"] for alias in rows(app, "mailbox_aliases")] == ["sales@pineloop.online", "ceo@cloudnix.net"]
+
+
+def test_a_mailbox_is_deleted_with_its_aliases(app, client, login, engine):
+    authenticated_domain(app)
+    login()
+    create(client)
+    mailbox_id = rows(app)[0]["id"]
+    client.post(f"/mailboxes/{mailbox_id}/aliases", data={"local": "hello", "domain": "pineloop.online"})
+
+    response = client.post(f"/mailboxes/{mailbox_id}/delete")
+
+    assert response.headers["Location"] == "/mailboxes"
+    assert rows(app) == [] and rows(app, "mailbox_aliases") == []
+    assert engine.named("Account", "ceo") is None
+
+
+def test_each_mailbox_has_its_configuration_details(app, client, login):
+    authenticated_domain(app)
+    login()
+    create(client)
+
+    page = text(client.get("/mailboxes"))
+
+    details = page[page.index('id="config-dialog"'):]
+    details = details[:details.index("</dialog>")]
+    for value in ("mail.pineloop.online", "993", "465", "587", "995"):
+        assert f'data-copy="{value}"' in details, value
+    assert "IMAP" in details and "SMTP" in details and "POP3" in details
+    assert 'data-config-email="ceo@pineloop.online"' in page   # the username, filled in per mailbox
+
+
+def test_a_note_says_when_a_domains_mail_doesnt_come_here_yet(app, client, login):
+    domain_id = authenticated_domain(app)
+    login()
+    create(client)
+
+    with app.app_context():
+        get_db().execute("UPDATE domain_keys SET checks = ? WHERE domain_id = ?",
+                         (json.dumps({"mx": {"state": "elsewhere", "detail": ""}}), domain_id))
+        get_db().commit()
+    assert "pineloop.online's MX record" in plain(text(client.get("/mailboxes")))
+
+    with app.app_context():
+        get_db().execute("UPDATE domain_keys SET checks = ? WHERE domain_id = ?",
+                         (json.dumps({"mx": {"state": "found", "detail": ""}}), domain_id))
+        get_db().commit()
+    assert "MX record" not in plain(text(client.get("/mailboxes")))
+
+
+def test_a_domain_with_mailboxes_cant_be_deleted(app, client, login):
+    domain_id = authenticated_domain(app)
+    login()
+    create(client)
+
+    response = client.post(f"/domains/{domain_id}/delete")
+
+    assert response.headers["Location"] == "/domains"
+    with app.app_context():
+        assert get_db().execute("SELECT 1 FROM domains WHERE id = ?", (domain_id,)).fetchone()
+    assert "Delete its mailboxes first" in text(client.get("/domains"))
+
+
+def test_storage_typed_with_a_comma_means_what_people_mean(app, client, login):
+    authenticated_domain(app)
+    login()
+
+    create(client, local="thousand", storage="1,000", unit="MB")   # a thousands separator
+    create(client, local="half", storage="1,5", unit="GB")         # a decimal comma
+
+    assert [row["quota_bytes"] for row in rows(app)] == [1000 * MB, int(1.5 * GB)]

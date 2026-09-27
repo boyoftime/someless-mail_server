@@ -146,7 +146,12 @@ def check(domain_id):
 def delete(domain_id):
     db = get_db()
     domain = db.execute("SELECT name FROM domains WHERE id = ?", (domain_id,)).fetchone()
-    if domain:
+    if domain and db.execute("SELECT 1 FROM mailboxes WHERE domain_id = ? UNION SELECT 1 FROM mailbox_aliases"
+                             " WHERE domain_id = ?", (domain_id, domain_id)).fetchone():
+        # deleting it would stop its mail: the mailboxes (and the mail in them) go first, on purpose
+        flash(f"{domain['name']} has mailboxes or aliases. Delete its mailboxes first (and aliases at it, "
+              "on the Mailboxes page), then the domain.", "not-deleted")
+    elif domain:
         db.execute("DELETE FROM domains WHERE id = ?", (domain_id,))
         db.execute("DELETE FROM domain_keys WHERE domain_id = ?", (domain_id,))
         db.execute("DELETE FROM senders WHERE domain_id = ?", (domain_id,))  # its addresses go with it

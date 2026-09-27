@@ -5,8 +5,14 @@ services:
     restart: unless-stopped
     ports:
       - "17080:17080"   # web interface (behind Nginx Proxy Manager you can drop this line: see Step 3)
+      - "17090:17090"   # webmail (behind Nginx Proxy Manager you can drop this line too: see Step 12)
+      - "25:25"         # other mail servers deliver your mail here
       - "587:17587"     # your apps send mail here (STARTTLS)
       - "465:17465"     # your apps send mail here (TLS from the start)
+      - "993:17993"     # mail apps read your mail here (IMAP)
+      - "995:17995"     # mail apps read your mail here (POP3)
       # - "80:17081"    # only without a reverse proxy: Let's Encrypt's check of your mail server's name
+    sysctls:
+      - net.ipv4.ip_unprivileged_port_start=0   # the mail engine doesn't run as root, and takes port 25
     volumes:
       - ./data:/data    # all your data, in a "data" folder next to this file

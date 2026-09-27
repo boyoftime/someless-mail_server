@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import re
 import time
 
 from someless import engine as engine_module
@@ -32,6 +33,26 @@ def a_key(app, login="website-7f3a", expires_at=None, key=KEY):
         get_db().execute("INSERT INTO smtp_keys (name, key_hash, hint, variant, created_at, expires_at, login) VALUES ('Website', ?, 'xxxx', 'standard', 0, ?, ?)",
                          (hashlib.sha256(key.encode()).hexdigest(), expires_at, login))
         get_db().commit()
+
+
+def allowed(engine):
+    """The addresses any logged-in account may send as: the Senders, in the send-as rule."""
+    rule = engine.objects["MtaStageAuth"]["singleton"]["mustMatchSender"]
+    return sorted(re.findall(r"sender == '([^']+)'", " ".join(match["if"] for match in rule["match"].values())))
+
+
+def a_mailbox(app, email, domain_id, quota=1024 ** 3, password_hash="$pbkdf2-sha256$i=1,l=32$c2FsdA$aGFzaA",
+              version=1, aliases=()):
+    with app.app_context():
+        db = get_db()
+        mailbox_id = db.execute("INSERT INTO mailboxes (email, domain_id, quota_bytes, password_hash, password_version,"
+                                " created_at) VALUES (?, ?, ?, ?, ?, 0)",
+                                (email, domain_id, quota, password_hash, version)).lastrowid
+        for alias in aliases:
+            db.execute("INSERT INTO mailbox_aliases (mailbox_id, email, domain_id, created_at) VALUES (?, ?, ?, 0)",
+                       (mailbox_id, alias, domain_id))
+        db.commit()
+        return mailbox_id
 
 
 def sync_now(app):
@@ -77,7 +98,7 @@ def test_domain_losing_authentication_leaves_engine(app, engine):
 
     assert engine.named("Domain", "pineloop.online") is None
     assert not engine.objects.get("DkimSignature")
-    assert engine.named("Account", "someless-senders")["aliases"] == {}
+    assert allowed(engine) == []   # nobody may send as its addresses any more
 
 
 def test_each_key_is_an_account_that_may_send_as_the_senders(app, engine):
@@ -91,14 +112,9 @@ def test_each_key_is_an_account_that_may_send_as_the_senders(app, engine):
     account = engine.named("Account", "website-7f3a")
     assert account["credentials"] == {"0": {"@type": "Password", "secret": sync.sha256_secret(hashlib.sha256(KEY.encode()).hexdigest())}}
     assert account["domainId"] == "d0"   # someless.internal
-    # an address can be one account's only, so the Senders are the addresses of one group,
-    # and a key's account may send as them by being in it
-    group = engine.named("Account", "someless-senders")
-    assert group["@type"] == "Group" and group["domainId"] == "d0"
-    assert account["memberGroupIds"] == {group["id"]: True}
-    domain = engine.named("Domain", "pineloop.online")["id"]
-    assert sorted(alias["name"] for alias in group["aliases"].values()) == ["news", "no-reply"]
-    assert {alias["domainId"] for alias in group["aliases"].values()} == {domain}
+    # the Senders are in the send-as rule: any account that has logged in may send as them
+    assert allowed(engine) == ["news@pineloop.online", "no-reply@pineloop.online"]
+    assert not account.get("memberGroupIds")
 
 
 def test_expired_key_account_removed(app, engine):
@@ -121,9 +137,8 @@ def test_the_panel_has_its_own_account(app, engine):
 
     sync_now(app)
 
-    group = engine.named("Account", "someless-senders")
-    assert engine.named("Account", "someless-panel")["memberGroupIds"] == {group["id"]: True}
-    assert [alias["name"] for alias in group["aliases"].values()] == ["no-reply"]
+    assert engine.named("Account", "someless-panel")["domainId"] == "d0"
+    assert allowed(engine) == ["no-reply@pineloop.online"]
 
 
 def test_stalwarts_own_admin_and_domain_are_left_alone(app, engine):
@@ -160,7 +175,7 @@ def test_views_sync_after_changes(app, engine, client, login):
 
     client.post("/senders", data={"name": "PineLoop", "email": "hello@pineloop.online"})
 
-    assert engine.named("Account", "someless-senders")["aliases"]
+    assert allowed(engine) == ["hello@pineloop.online"]
 
 
 def test_the_server_name_gets_its_certificate(app, engine):
@@ -196,7 +211,7 @@ def test_a_certificate_problem_does_not_hold_up_the_rest(app, engine):
     assert sync_now(app) is False
 
     assert engine.named("Account", "website-7f3a")   # keys and Senders still go through
-    assert engine.named("Account", "someless-senders")["aliases"]
+    assert allowed(engine) == ["no-reply@pineloop.online"]
     assert ("action", "ReloadSettings", None) in engine.calls
     with app.app_context():
         assert "AcmeProvider" in engine_module.state()["sync_error"]
@@ -263,3 +278,188 @@ def test_an_unexpected_engine_reply_never_breaks_a_save(app, engine, client, log
     with app.app_context():
         assert get_db().execute("SELECT 1 FROM senders WHERE domain_id = ?", (domain_id,)).fetchone()
         assert "odd reply" in engine_module.state()["sync_error"]
+
+
+def test_the_send_as_rule_reads_as_the_engine_wants_it():
+    assert sync.send_as_rule(["a@x.com", "b@y.com"]) == {
+        "match": {"0": {"if": "sender == 'a@x.com' || sender == 'b@y.com'", "then": "false"}}, "else": "true"}
+    assert sync.send_as_rule([]) == {"match": {}, "else": "true"}   # every account sends as itself only
+    assert sync.send_as_rule(["o'brien@x.com", "b@y.com"]) == {   # a quote can't go in the rule: left out
+        "match": {"0": {"if": "sender == 'b@y.com'", "then": "false"}}, "else": "true"}
+
+
+def test_the_old_senders_group_goes(app, engine):
+    """Senders used to be a group's addresses, with every key's account in the group."""
+    engine.objects["Account"]["g1"] = {"@type": "Group", "name": "someless-senders", "domainId": "d0",
+                                       "aliases": {"0": {"name": "no-reply", "domainId": "d9"}}}
+    engine.objects["Account"]["k1"] = {"@type": "User", "name": "website-7f3a", "domainId": "d0", "memberGroupIds": {"g1": True}}
+    a_key(app)
+
+    sync_now(app)
+
+    assert engine.named("Account", "someless-senders") is None
+    assert engine.named("Account", "website-7f3a")["memberGroupIds"] == {}
+
+
+def test_a_mailbox_is_an_account_in_its_domain(app, engine):
+    domain_id = authenticated_domain(app)
+    a_mailbox(app, "ceo@pineloop.online", domain_id, quota=15 * 1024 ** 3, aliases=["hello@pineloop.online", "boss@pineloop.online"])
+
+    sync_now(app)
+
+    domain = engine.named("Domain", "pineloop.online")["id"]
+    box = engine.named("Account", "ceo")
+    assert (box["@type"], box["domainId"], box["quotas"]) == ("User", domain, {"maxDiskQuota": 15 * 1024 ** 3})
+    assert box["credentials"] == {"0": {"@type": "Password", "secret": "$pbkdf2-sha256$i=1,l=32$c2FsdA$aGFzaA"}}
+    assert sorted(alias["name"] for alias in box["aliases"].values()) == ["boss", "hello"]
+    assert {alias["domainId"] for alias in box["aliases"].values()} == {domain}
+
+
+def test_a_mailbox_change_reaches_the_engine_and_only_then(app, engine):
+    domain_id = authenticated_domain(app)
+    mailbox_id = a_mailbox(app, "ceo@pineloop.online", domain_id)
+    sync_now(app)
+    engine.calls.clear()
+    sync_now(app)
+    assert [call for call in engine.calls if call[0] != "get"] == []   # nothing changed: nothing sent
+
+    with app.app_context():
+        get_db().execute("UPDATE mailboxes SET quota_bytes = ?, password_hash = 'NEW', password_version = 2 WHERE id = ?",
+                         (2 * 1024 ** 3, mailbox_id))
+        get_db().commit()
+    sync_now(app)
+
+    box = engine.named("Account", "ceo")
+    assert box["quotas"] == {"maxDiskQuota": 2 * 1024 ** 3}
+    assert box["credentials"] == {"0": {"@type": "Password", "secret": "NEW"}}
+
+
+def test_a_deleted_mailbox_leaves_the_engine(app, engine):
+    domain_id = authenticated_domain(app)
+    mailbox_id = a_mailbox(app, "ceo@pineloop.online", domain_id)
+    sync_now(app)
+    with app.app_context():
+        get_db().execute("DELETE FROM mailboxes WHERE id = ?", (mailbox_id,))
+        get_db().commit()
+
+    sync_now(app)
+
+    assert engine.named("Account", "ceo") is None
+    assert engine.named("Account", "admin")   # Stalwart's own stays
+
+
+def test_a_domain_with_mailboxes_stays_when_it_loses_authentication(app, engine):
+    """Destroying it would lose their mail: it stays, and mail keeps arriving."""
+    domain_id = authenticated_domain(app)
+    a_mailbox(app, "ceo@pineloop.online", domain_id)
+    sync_now(app)
+    with app.app_context():
+        get_db().execute("UPDATE domains SET authenticated = 0 WHERE id = ?", (domain_id,))
+        get_db().commit()
+
+    sync_now(app)
+
+    assert engine.named("Domain", "pineloop.online") and engine.named("Account", "ceo")
+
+
+def mailbox_accounts(engine, local):
+    """The engine's accounts with this name outside someless.internal."""
+    return [dict(obj, id=id_) for id_, obj in engine.objects["Account"].items() if obj.get("name") == local and obj.get("domainId") != "d0"]
+
+
+def test_a_mailbox_named_admin_is_kept_in_line_like_any_other(app, engine):
+    """admin@yourdomain is a mailbox like the rest: found again by the next sync, not made twice,
+    and gone when it's deleted. The engine's own admin (in someless.internal) stays."""
+    domain_id = authenticated_domain(app)
+    mailbox_id = a_mailbox(app, "admin@pineloop.online", domain_id)
+    assert sync_now(app)
+    with app.app_context():
+        assert sync.reconcile(engine, sync.desired_state()) == []
+    assert len(mailbox_accounts(engine, "admin")) == 1
+
+    with app.app_context():
+        get_db().execute("DELETE FROM mailboxes WHERE id = ?", (mailbox_id,))
+        get_db().commit()
+    assert sync_now(app)
+
+    assert mailbox_accounts(engine, "admin") == []
+    assert engine.objects["Account"]["a0"]["name"] == "admin"
+
+
+def test_a_mailbox_made_again_at_the_same_address_gets_a_new_account(app, engine):
+    """Deleted and made again before a sync (the engine was down): the new one has its own
+    password, and none of the old one's mail."""
+    domain_id = authenticated_domain(app)
+    first = a_mailbox(app, "ceo@pineloop.online", domain_id, password_hash="$pbkdf2-sha256$i=1,l=32$b2xk$b2xk")
+    assert sync_now(app)
+    (old,) = mailbox_accounts(engine, "ceo")
+    with app.app_context():
+        get_db().execute("DELETE FROM mailboxes WHERE id = ?", (first,))
+        get_db().commit()
+    a_mailbox(app, "ceo@pineloop.online", domain_id, password_hash="$pbkdf2-sha256$i=1,l=32$bmV3$bmV3")
+
+    assert sync_now(app)
+
+    (new,) = mailbox_accounts(engine, "ceo")
+    assert new["id"] != old["id"]
+    assert new["credentials"]["0"]["secret"] == "$pbkdf2-sha256$i=1,l=32$bmV3$bmV3"
+
+
+def test_an_alias_moves_to_another_mailbox_in_one_sync(app, engine):
+    """The engine has an address on one account only: it leaves the old mailbox before it
+    joins the new one."""
+    domain_id = authenticated_domain(app)
+    a_mailbox(app, "zeta@pineloop.online", domain_id, aliases=["hi@pineloop.online"])
+    alpha = a_mailbox(app, "alpha@pineloop.online", domain_id)
+    assert sync_now(app)
+    with app.app_context():
+        get_db().execute("UPDATE mailbox_aliases SET mailbox_id = ? WHERE email = 'hi@pineloop.online'", (alpha,))
+        get_db().commit()
+
+    assert sync_now(app), sync_error(app)
+
+    names = {local: sorted(alias["name"] for alias in (mailbox_accounts(engine, local)[0].get("aliases") or {}).values())
+             for local in ("alpha", "zeta")}
+    assert names == {"alpha": ["hi"], "zeta": []}
+
+
+def test_a_deleted_mailboxs_address_can_be_an_alias_at_once(app, engine):
+    domain_id = authenticated_domain(app)
+    zeta = a_mailbox(app, "zeta@pineloop.online", domain_id)
+    alpha = a_mailbox(app, "alpha@pineloop.online", domain_id)
+    assert sync_now(app)
+    with app.app_context():
+        db = get_db()
+        db.execute("DELETE FROM mailboxes WHERE id = ?", (zeta,))
+        db.execute("INSERT INTO mailbox_aliases (mailbox_id, email, domain_id, created_at) VALUES (?, 'zeta@pineloop.online', ?, 0)",
+                   (alpha, domain_id))
+        db.commit()
+
+    assert sync_now(app), sync_error(app)
+
+    assert [alias["name"] for alias in mailbox_accounts(engine, "alpha")[0]["aliases"].values()] == ["zeta"]
+    assert mailbox_accounts(engine, "zeta") == []
+
+
+def test_a_mailbox_the_engine_refuses_doesnt_hold_up_the_rest(app, engine):
+    domain_id = authenticated_domain(app)
+    engine.refuse_names = {"bad"}
+    a_mailbox(app, "bad@pineloop.online", domain_id)
+    a_mailbox(app, "good@pineloop.online", domain_id)
+
+    assert not sync_now(app)   # the refusal is kept for the page
+
+    assert mailbox_accounts(engine, "good")
+    assert engine.objects.get("WebHook")   # and what comes after mailboxes still happens
+    assert "invalidProperties" in sync_error(app)
+
+
+def test_senders_are_matched_whatever_their_case():
+    rule = sync.send_as_rule(["Shop@Example.com"])
+
+    assert rule["match"]["0"]["if"] == "sender == 'shop@example.com'"
+
+
+def sync_error(app):
+    with app.app_context():
+        return engine_module.state()["sync_error"]

@@ -1,6 +1,7 @@
 """The container's main process (docker/someless-run): runs Stalwart and the panel side by side.
 - the panel (gunicorn) first, so there's a page at once: on the very first start it says
   "Preparing your Someless Mail server" until Stalwart is set up (pages.py, preparing.js)
+- the webmail beside it on 17090, a gunicorn of its own (webmail.py)
 - then Stalwart: its first-time setup (setup.py), or a normal start, then a sync; when it
   doesn't come up, the panel says so on SMTP & API
 - Stalwart started again whenever it stops, waiting longer each time it keeps stopping
@@ -8,7 +9,8 @@
   checks when they're switched on (Settings > Miscellaneous)
 - the Let's Encrypt relay on 17081: only /.well-known/acme-challenge/<token>, answered by
   Stalwart's own HTTP side on 127.0.0.1:17880, which is never published
-- SIGTERM stops both; if the panel stops, so does everything (Docker starts the container again)"""
+- SIGTERM stops them all; if the panel or the webmail stops, so does everything (Docker starts
+  the container again)"""
 import os
 import re
 import signal
@@ -37,6 +39,11 @@ FORGIVEN_AFTER = 300   # seconds up before a stop counts as the first again
 # --no-control-socket: we don't use gunicornc, and its socket would need a home folder.
 GUNICORN = ["gunicorn", "--bind", "0.0.0.0:17080", "--workers", "2", "--worker-class", "gthread", "--threads", "4",
             "--preload", "--no-control-socket", "--access-logfile", "-", "someless:create_app()"]
+# The webmail: the same, on its own port. main() has made the database by then, so the two never
+# race to make it.
+WEBMAIL_GUNICORN = ["gunicorn", "--bind", "0.0.0.0:17090", "--workers", "2", "--worker-class", "gthread",
+                    "--threads", "4", "--preload", "--no-control-socket", "--access-logfile", "-",
+                    "someless.webmail:create_webmail_app()"]
 
 
 def backoff(attempt):
@@ -123,12 +130,13 @@ def main():
     signal.signal(signal.SIGINT, lambda *_: stopping.set())
 
     panel = subprocess.Popen(GUNICORN)
+    webmail = subprocess.Popen(WEBMAIL_GUNICORN)
     up = bring_up(app, stalwart)
     restarts = 0 if up else 1
     retry_at = time.monotonic() + (0 if up else backoff(0))
     up_since = next_sync = next_look = time.monotonic()
     next_sync += SYNC_EVERY
-    while not stopping.is_set() and panel.poll() is None:
+    while not stopping.is_set() and panel.poll() is None and webmail.poll() is None:
         now = time.monotonic()
         if stalwart.running():
             if restarts and now - up_since > FORGIVEN_AFTER:
@@ -148,15 +156,17 @@ def main():
             next_look = now + 60
         stopping.wait(1)
 
-    # docker stop gives ten seconds: both are asked to stop at once
+    # docker stop gives ten seconds: all are asked to stop at once
     panel.terminate()
+    webmail.terminate()
     stalwart.stop(timeout=7)
-    try:
-        panel.wait(2)
-    except subprocess.TimeoutExpired:
-        panel.kill()
+    for site in (panel, webmail):
+        try:
+            site.wait(2)
+        except subprocess.TimeoutExpired:
+            site.kill()
     relay.shutdown()
-    return 0 if stopping.is_set() else (panel.returncode or 1)
+    return 0 if stopping.is_set() else (panel.poll() or webmail.poll() or 1)
 
 
 if __name__ == "__main__":

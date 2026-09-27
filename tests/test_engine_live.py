@@ -89,8 +89,8 @@ def test_a_domain_that_loses_authentication_leaves_the_engine(app, live):
         assert sync.run(), engine_module.state()["sync_error"]
         engine = engine_module.client()
         assert "example.com" not in {domain["name"] for domain in engine.get("Domain")}
-        group = next(obj for obj in engine.get("Account") if obj["name"] == "someless-senders")
-        assert not group.get("aliases")
+        rule = engine.get("MtaStageAuth", ["singleton"])[0]["mustMatchSender"]
+        assert "shop@example.com" not in str(rule)   # nobody may send as its Senders any more
         assert sync.reconcile(engine, sync.desired_state()) == []   # and a second sync changes nothing
 
 
@@ -134,3 +134,103 @@ def test_a_test_email_is_followed_to_its_end(app, live):
         assert found["detail"]
     finally:
         panel.shutdown()
+
+
+def test_a_mailbox_receives_mail_and_its_mail_app_reads_it(app, live):
+    """Mail from outside on port 25 lands in the mailbox (or its Junk Mail); IMAP reads it with
+    the mailbox's password, which the engine only ever got as a hash; a new password works at once."""
+    import imaplib
+    import time
+
+    from someless import mail_password
+    from someless.db import get_db
+    from someless.engine import sync
+    with app.app_context():
+        domain_id = _live_domain_and_key(app)
+        db = get_db()
+        mailbox_id = db.execute("INSERT INTO mailboxes (email, domain_id, quota_bytes, password_hash, created_at)"
+                                " VALUES ('ceo@example.com', ?, ?, ?, 0)",
+                                (domain_id, 50 * 1024 ** 2, mail_password.hash_password("Mailbox-Pass-123!"))).lastrowid
+        db.execute("INSERT INTO mailbox_aliases (mailbox_id, email, domain_id, created_at) VALUES (?, 'hello@example.com', ?, 0)",
+                   (mailbox_id, domain_id))
+        db.commit()
+        assert sync.run(), engine_module.state()["sync_error"]
+        assert sync.reconcile(engine_module.client(), sync.desired_state()) == []   # kept as sent
+
+    with smtplib.SMTP("127.0.0.1", 25, timeout=20) as smtp:   # another mail server, no login
+        smtp.ehlo("mx.friend.test")
+        assert smtp.mail("friend@friend.test")[0] == 250
+        assert smtp.rcpt("ceo@example.com")[0] == 250
+        assert smtp.rcpt("hello@example.com")[0] == 250
+        assert smtp.rcpt("nobody@example.com")[0] == 550
+        assert smtp.data(b"From: friend@friend.test\r\nTo: ceo@example.com\r\nSubject: Hello\r\n\r\nHi!\r\n")[0] == 250
+
+    context = ssl._create_unverified_context()
+    found = 0
+    for _ in range(20):
+        imap = imaplib.IMAP4_SSL("127.0.0.1", 17993, ssl_context=context)
+        imap.login("ceo@example.com", "Mailbox-Pass-123!")
+        found = sum(int(imap.select(folder)[1][0]) for folder in ("INBOX", '"Junk Mail"'))
+        imap.logout()
+        if found:
+            break
+        time.sleep(0.5)
+    assert found >= 1
+
+    with app.app_context():
+        db = get_db()
+        db.execute("UPDATE mailboxes SET password_hash = ?, password_version = 2 WHERE id = ?",
+                   (mail_password.hash_password("Brand-New-456!"), mailbox_id))
+        db.commit()
+        assert sync.run(), engine_module.state()["sync_error"]
+    imap = imaplib.IMAP4_SSL("127.0.0.1", 17993, ssl_context=context)
+    assert imap.login("ceo@example.com", "Brand-New-456!")[0] == "OK"
+    imap.logout()
+    try:
+        imaplib.IMAP4_SSL("127.0.0.1", 17993, ssl_context=context).login("ceo@example.com", "Mailbox-Pass-123!")
+        raise AssertionError("the old password still works")
+    except imaplib.IMAP4.error:
+        pass
+
+
+def test_a_mailbox_can_share_its_name_with_an_account_of_the_engine(app, live):
+    """admin@ and postmaster@ are mailboxes people want: the engine's own admin account (in
+    someless.internal) doesn't stand in their way."""
+    import imaplib
+
+    from someless import mail_password
+    from someless.db import get_db
+    from someless.engine import sync
+    with app.app_context():
+        domain_id = _live_domain_and_key(app)
+        db = get_db()
+        for local in ("admin", "postmaster"):
+            db.execute("INSERT INTO mailboxes (email, domain_id, quota_bytes, password_hash, created_at) VALUES (?, ?, ?, ?, 0)",
+                       (f"{local}@example.com", domain_id, 50 * 1024 ** 2, mail_password.hash_password("Mailbox-Pass-123!")))
+        db.commit()
+        assert sync.run(), engine_module.state()["sync_error"]
+
+    context = ssl._create_unverified_context()
+    for local in ("admin", "postmaster"):
+        imap = imaplib.IMAP4_SSL("127.0.0.1", 17993, ssl_context=context)
+        assert imap.login(f"{local}@example.com", "Mailbox-Pass-123!")[0] == "OK"
+        imap.logout()
+
+
+def test_a_sender_with_capitals_sends_whatever_the_case_it_is_typed_in(app, live):
+    """Senders keep the case they were typed in (Sales@example.com); the engine compares
+    addresses in lowercase."""
+    from someless.db import get_db
+    from someless.engine import sync
+    with app.app_context():
+        domain_id = _live_domain_and_key(app)
+        get_db().execute("INSERT INTO senders (name, email, domain_id, created_at) VALUES ('Sales', 'Sales@example.com', ?, 0)",
+                         (domain_id,))
+        get_db().commit()
+        assert sync.run(), engine_module.state()["sync_error"]
+    with smtplib.SMTP("127.0.0.1", 17587, timeout=20) as smtp:
+        smtp.starttls(context=ssl._create_unverified_context())
+        smtp.login("live-0001", "live-key-0123456789")
+        for address in ("Sales@example.com", "sales@example.com", "SALES@EXAMPLE.COM"):
+            assert smtp.mail(address)[0] == 250, address
+            smtp.rset()

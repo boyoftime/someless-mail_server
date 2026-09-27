@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% from "copy-box.html" import copy_box %}
+{% block title %}Inbox | Someless Webmail{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/webmail.css') }}">{% endblock %}
+{% block body_class %}webmail{% endblock %}
+
+{# One way to connect: the server, port and security on one row (as on the panel's Mailboxes page) #}
+{% macro config_row(kind, server, port, security) %}
+  <dl class="config-row">
+    <div class="config-cell is-wide">
+      {% if server %}
+      <dt>Server</dt>
+      <dd>{{ copy_box(server, "Copy the " ~ kind ~ " server") }}</dd>
+      {% else %}
+      <dt class="visually-hidden">Or</dt>
+      <dd class="config-or">or</dd>
+      {% endif %}
+    </div>
+    <div class="config-cell">
+      <dt>Port</dt>
+      <dd>{{ copy_box(port | string, "Copy the " ~ kind ~ " port " ~ port) }}</dd>
+    </div>
+    <div class="config-cell">
+      <dt>Security</dt>
+      <dd class="config-plain">{{ security }}</dd>
+    </div>
+  </dl>
+{% endmacro %}
+
+{% block body %}
+<header class="webmail-bar">
+  <p class="webmail-brand"><img src="{{ url_for('static', filename='img/logo.webp') }}" alt="" width="32" height="32"><span>Someless <strong>Webmail</strong></span></p>
+  <div class="webmail-who">
+    <span class="webmail-avatar" aria-hidden="true">{{ email[:1] | upper }}</span>
+    <span class="webmail-email">{{ email }}</span>
+    <form method="post" action="{{ url_for('logout') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="button button-quiet webmail-logout" type="submit">Log out</button>
+    </form>
+  </div>
+</header>
+
+<main class="webmail-soon">
+  <svg class="letter-tray" viewBox="0 0 160 92" aria-hidden="true">
+    <rect class="tray-back" x="30" y="10" width="100" height="62" rx="9"/>
+    <rect class="tray-mid" x="20" y="20" width="120" height="62" rx="9"/>
+    <rect class="envelope" x="10" y="30" width="140" height="60" rx="10"/>
+    <path class="envelope-fold" d="M12 86l56-30a18 18 0 0 1 24 0l56 30"/>
+    <path class="envelope-flap is-shut" d="M12 33l58 30a18 18 0 0 0 20 0l58-30z"/>
+  </svg>
+  <h1 class="webmail-title">Your inbox is coming soon</h1>
+  <p class="webmail-hint">Reading and writing mail right here is on its way. Until then, any mail app does it all: Outlook, Apple Mail, Thunderbird or the one on your phone. Add your mailbox to it with these settings.</p>
+
+  <section class="webmail-card webmail-settings" aria-labelledby="settings-title">
+    <h2 id="settings-title" class="webmail-card-title">Mail app settings</h2>
+    <dl class="config-row is-login">
+      <div class="config-cell is-wide">
+        <dt>Username</dt>
+        <dd>{{ copy_box(email, "Copy the username") }}</dd>
+      </div>
+      <div class="config-cell is-two">
+        <dt>Password</dt>
+        <dd class="config-plain">The one you signed in with</dd>
+      </div>
+    </dl>
+    <section class="config-group" aria-labelledby="config-imap">
+      <h3 class="config-title" id="config-imap">IMAP <span>Incoming mail, kept on the server: best for more than one device</span></h3>
+      {{ config_row("IMAP", server, ports.imap, "SSL/TLS") }}
+    </section>
+    <section class="config-group" aria-labelledby="config-smtp">
+      <h3 class="config-title" id="config-smtp">SMTP <span>Outgoing mail, with the same username and password</span></h3>
+      {{ config_row("SMTP", server, ports.smtp_ssl, "SSL/TLS") }}
+      {{ config_row("SMTP", none, ports.smtp_starttls, "STARTTLS") }}
+    </section>
+    <section class="config-group" aria-labelledby="config-pop3">
+      <h3 class="config-title" id="config-pop3">POP3 <span>Incoming mail, moved to one device</span></h3>
+      {{ config_row("POP3", server, ports.pop3, "SSL/TLS") }}
+    </section>
+  </section>
+</main>
+<script src="{{ url_for('static', filename='js/copy-button.js') }}"></script>
+{% endblock %}

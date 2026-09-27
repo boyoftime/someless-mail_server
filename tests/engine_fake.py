@@ -11,6 +11,7 @@ class FakeEngine:
         self.down = False
         self.bootstrap_reply = {}
         self.fail_on = set()  # kinds whose create Stalwart refuses (like an ACME account it can't register)
+        self.refuse_names = set()   # Account names whose create Stalwart refuses
         self._ids = itertools.count(1)
 
     def _check(self):
@@ -28,11 +29,26 @@ class FakeEngine:
         found = self.objects.get(kind, {})
         return [dict(obj, id=id_) for id_, obj in found.items() if ids is None or id_ in ids]
 
+    def _addresses(self, obj):
+        """An account's addresses, as (name, domainId): its own and its aliases'."""
+        own = {(obj.get("name"), obj.get("domainId"))}
+        return own | {(alias["name"], alias["domainId"]) for alias in (obj.get("aliases") or {}).values()}
+
+    def _address_taken(self, kind, obj, id_=None):
+        """Stalwart has an address on one account only."""
+        if kind != "Account":
+            return
+        mine = self._addresses(obj)
+        for other_id, other in self.objects.get("Account", {}).items():
+            if other_id != id_ and mine & self._addresses(other):
+                raise EngineError(f"x:{kind}/set: primaryKeyViolation (fake)")
+
     def create(self, kind, obj):
         self._check()
         self.calls.append(("create", kind, obj))
-        if kind in self.fail_on:
+        if kind in self.fail_on or (kind == "Account" and obj.get("name") in self.refuse_names):
             raise EngineError(f"x:{kind}/set create: invalidProperties (fake)")
+        self._address_taken(kind, obj)
         id_ = f"{kind[0].lower()}{next(self._ids)}"
         self.objects.setdefault(kind, {})[id_] = dict(obj)
         return {"id": id_}
@@ -42,6 +58,7 @@ class FakeEngine:
         self.calls.append(("update", kind, {id_: patch}))
         if id_ not in self.objects.get(kind, {}):
             raise EngineError(f"x:{kind}/set update: notFound")
+        self._address_taken(kind, {**self.objects[kind][id_], **patch}, id_)
         self.objects[kind][id_].update(patch)
 
     def destroy(self, kind, id_):

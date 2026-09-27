@@ -96,6 +96,31 @@ CREATE TABLE IF NOT EXISTS engine (
     certificate_asked_at REAL   -- the last time "Check again" asked Let's Encrypt for the server name's certificate
 );
 INSERT OR IGNORE INTO engine (id) VALUES (1);
+-- Mailboxes (the Mailboxes page, mailboxes.py): each one an account in the mail engine, at one of
+-- the domains. Its password is kept only as a hash, which the engine checks too (mail_password.py).
+CREATE TABLE IF NOT EXISTS mailboxes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    domain_id INTEGER NOT NULL,
+    quota_bytes INTEGER NOT NULL,
+    password_hash TEXT NOT NULL,
+    password_version INTEGER NOT NULL DEFAULT 1,   -- up by one with each new password: the engine gets it then
+    created_at REAL NOT NULL
+);
+-- The webmail's wrong passwords in a row, per address typed (webmail.py): five lock it for a while
+CREATE TABLE IF NOT EXISTS webmail_tries (
+    email TEXT PRIMARY KEY,
+    failures INTEGER NOT NULL DEFAULT 0,
+    locked_until REAL
+);
+-- More addresses for a mailbox: mail to them lands in it, and it can send as them
+CREATE TABLE IF NOT EXISTS mailbox_aliases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mailbox_id INTEGER NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    domain_id INTEGER NOT NULL,
+    created_at REAL NOT NULL
+);
 -- Automatic domain checks (Settings > Miscellaneous, domain_checks.py): off until switched on
 CREATE TABLE IF NOT EXISTS domain_checks (
     id INTEGER PRIMARY KEY CHECK (id = 1),

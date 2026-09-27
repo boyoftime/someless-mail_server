@@ -1,0 +1,393 @@
+{% extends "shell.html" %}
+{% from "copy-box.html" import copy_box %}
+{% block title %}Mailboxes | Someless Mail{% endblock %}
+
+{% macro icon(name) %}
+  {%- if name == "plus" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  {%- elif name == "inbox" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 13.5l2.6-7.3a2 2 0 0 1 1.9-1.2h8a2 2 0 0 1 1.9 1.2l2.6 7.3"/><path d="M3.5 13.5V18a1.5 1.5 0 0 0 1.5 1.5h14a1.5 1.5 0 0 0 1.5-1.5v-4.5h-5l-1.5 2.5h-4l-1.5-2.5z"/></svg>
+  {%- elif name == "mail" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><path d="M4 7l8 6 8-6"/></svg>
+  {%- elif name == "lock" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>
+  {%- elif name == "key" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15.5" r="4"/><path d="M10.9 12.6l8.6-8.6"/><path d="M16.5 7l2.5 2.5"/><path d="M14.3 9.2l2 2"/></svg>
+  {%- elif name == "disk" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6.5" rx="7.5" ry="3"/><path d="M4.5 6.5v11c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-11"/><path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/></svg>
+  {%- elif name == "at" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.6"/><path d="M15.6 8.4v4.8a2.4 2.4 0 0 0 4.8 0V12a8.4 8.4 0 1 0-3.3 6.7"/></svg>
+  {%- elif name == "gear" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.6-2-3.4-2.4 1a7.5 7.5 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.5A7.5 7.5 0 0 0 7 6.5l-2.4-1-2 3.4 2 1.6a7.6 7.6 0 0 0 0 3l-2 1.6 2 3.4 2.4-1a7.5 7.5 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.5 7.5 0 0 0 2.6-1.5l2.4 1 2-3.4z"/></svg>
+  {%- elif name == "trash" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.9 12.2a1.5 1.5 0 0 0 1.5 1.3h6.2a1.5 1.5 0 0 0 1.5-1.3L17.5 7M10 11v6M14 11v6"/></svg>
+  {%- elif name == "close" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>
+  {%- elif name == "info" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5"/><path d="M12 7.6v.1"/></svg>
+  {%- elif name == "globe" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.3 2.5 3.5 5.3 3.5 8.5s-1.2 6-3.5 8.5c-2.3-2.5-3.5-5.3-3.5-8.5s1.2-6 3.5-8.5z"/></svg>
+  {%- endif -%}
+{% endmacro %}
+
+{# A password field with a lock icon and the eye button to show what was typed #}
+{% macro password_field(id, name, label, placeholder, describedby=none) %}
+  <div class="field">
+    <label class="field-label" for="{{ id }}">{{ label }}</label>
+    <div class="input-wrap password-wrap">
+      <span class="input-icon">{{ icon("lock") }}</span>
+      <input id="{{ id }}" name="{{ name }}" type="password" autocomplete="new-password" required placeholder="{{ placeholder }}"{% if describedby %} aria-describedby="{{ describedby }}"{% endif %}>
+      <button type="button" class="password-toggle" data-password-toggle aria-controls="{{ id }}" aria-label="Show password" aria-pressed="false" hidden>
+        <svg class="icon-eye" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg class="icon-eye-off" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1"/><path d="M6.6 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a10.4 10.4 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+      </button>
+    </div>
+  </div>
+{% endmacro %}
+
+{# The saved password rules (Settings), ticked off as the password is typed (mailboxes-page.js) #}
+{% macro rules_list(id, input_id) %}
+  <div class="password-rules" id="{{ id }}" data-password-rules data-for="{{ input_id }}" data-min-length="{{ min_length }}">
+    <p class="password-rules-title">Password must contain:</p>
+    <ul>
+      {% for check in rules %}
+      <li data-rule="{{ check.key }}"><span class="rule-mark" aria-hidden="true"></span>{{ check.label }}<span class="visually-hidden rule-state"></span></li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endmacro %}
+
+{# The address in two parts: typed before the @, the domain picked (dropdown.js) #}
+{% macro address_parts(id, local, chosen, placeholder, hint_id=none) %}
+  <div class="email-parts">
+    <div class="input-wrap">
+      <span class="input-icon">{{ icon("mail") }}</span>
+      <input id="{{ id }}-local" name="local" required autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="{{ placeholder }}" value="{{ local }}"{% if hint_id %} aria-describedby="{{ hint_id }}"{% endif %}>
+    </div>
+    <label class="visually-hidden" for="{{ id }}-domain">Domain</label>
+    <select id="{{ id }}-domain" name="domain" data-dropdown>
+      {% for domain in domains %}
+      <option value="{{ domain }}"{% if domain == chosen %} selected{% endif %}>@{{ domain }}</option>
+      {% endfor %}
+    </select>
+  </div>
+{% endmacro %}
+
+{# How much storage: a number and GB or MB #}
+{% macro storage_parts(id, size, unit, hint_id=none) %}
+  <div class="storage-parts">
+    <div class="input-wrap">
+      <span class="input-icon">{{ icon("disk") }}</span>
+      <input id="{{ id }}" name="storage" required inputmode="decimal" autocomplete="off" placeholder="15" value="{{ size }}"{% if hint_id %} aria-describedby="{{ hint_id }}"{% endif %}>
+    </div>
+    <label class="visually-hidden" for="{{ id }}-unit">Unit</label>
+    <select id="{{ id }}-unit" name="unit" data-dropdown>
+      {% for choice in ("GB", "MB") %}
+      <option value="{{ choice }}"{% if choice == unit %} selected{% endif %}>{{ choice }}</option>
+      {% endfor %}
+    </select>
+  </div>
+{% endmacro %}
+
+{# One way to connect in the Configuration details: the server, port and security on one row.
+   Without a server, it's the other port for the same server (SMTP's 587). #}
+{% macro config_row(kind, server, port, security) %}
+  <dl class="config-row">
+    <div class="config-cell is-wide">
+      {% if server %}
+      <dt>Server</dt>
+      <dd>{{ copy_box(server, "Copy the " ~ kind ~ " server") }}</dd>
+      {% else %}
+      <dt class="visually-hidden">Or</dt>
+      <dd class="config-or">or</dd>
+      {% endif %}
+    </div>
+    <div class="config-cell">
+      <dt>Port</dt>
+      <dd>{{ copy_box(port | string, "Copy the " ~ kind ~ " port " ~ port) }}</dd>
+    </div>
+    <div class="config-cell">
+      <dt>Security</dt>
+      <dd class="config-plain">{{ security }}</dd>
+    </div>
+  </dl>
+{% endmacro %}
+
+{% block content %}
+{% set typed = typed or {} %}
+<header class="page-header page-header-row">
+  <div>
+    <h1 class="page-title">Mailboxes</h1>
+    <p class="page-subtitle">A mailbox is an inbox at one of your domains, like ceo@yourcompany.com. Mail sent to it lands here, and you read it in any mail app: Outlook, Apple Mail, Thunderbird or the one on your phone.</p>
+  </div>
+  {% if domains %}
+  <button type="button" class="button add-button" data-dialog-open="create-mailbox-dialog" aria-haspopup="dialog">{{ icon("plus") }}<span>Create mailbox</span></button>
+  {% endif %}
+</header>
+
+{% if sync_error %}
+<p class="smtp-note is-warning">{{ icon("info") }}<span>The mail engine didn't take the last change yet ({{ sync_error }}). It tries again with the next change, and every hour.</span></p>
+{% endif %}
+{% for note in notes %}
+<p class="smtp-note">{{ icon("info") }}<span>{{ note.text }} <a href="{{ url_for('domains.authenticate', domain_id=note.domain_id) }}">See its records</a>.</span></p>
+{% endfor %}
+
+{% if mailboxes %}
+<div class="mailbox-list">
+  {% for box in mailboxes %}
+  <article class="mailbox-row" data-mailbox-id="{{ box.id }}">
+    <div class="mailbox-head">
+      <span class="mailbox-badge" aria-hidden="true">{{ icon("inbox") }}</span>
+      <h2 class="mailbox-who">{{ box.email }}</h2>
+      <div class="mailbox-actions">
+        <button type="button" class="button button-quiet mailbox-button" data-config-email="{{ box.email }}" aria-haspopup="dialog">{{ icon("gear") }}<span>Configuration details</span></button>
+        <button type="button" class="button button-quiet mailbox-button" data-dialog-open="aliases-dialog-{{ box.id }}" aria-haspopup="dialog">{{ icon("at") }}<span>Aliases</span>{% if box.aliases %}<span class="mailbox-count">{{ box.aliases | length }}</span>{% endif %}</button>
+        <button type="button" class="icon-button" data-password-for="{{ box.email }}" data-url="{{ url_for('mailboxes.change_password', mailbox_id=box.id) }}" aria-haspopup="dialog" aria-label="Change {{ box.email }}'s password" title="Change password">{{ icon("key") }}</button>
+        <button type="button" class="icon-button" data-storage-for="{{ box.email }}" data-url="{{ url_for('mailboxes.change_storage', mailbox_id=box.id) }}" data-size="{{ box.size }}" data-unit="{{ box.unit }}" aria-haspopup="dialog" aria-label="Edit {{ box.email }}'s storage" title="Edit storage">{{ icon("disk") }}</button>
+        <form method="post" action="{{ url_for('mailboxes.delete', mailbox_id=box.id) }}" class="mailbox-delete">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="icon-button is-danger" data-mailbox-email="{{ box.email }}" aria-label="Delete {{ box.email }}" title="Delete">{{ icon("trash") }}</button>
+        </form>
+      </div>
+    </div>
+    <div class="mailbox-facts">
+      <div class="mailbox-storage">
+        <p class="mailbox-label">Storage</p>
+        {% if box.used %}
+        <div class="storage-bar" role="meter" aria-label="Storage used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ '%.1f' | format(box.used.percent) }}"
+             style="--used: {{ '%.2f' | format(box.used.percent) }}%"><span></span></div>
+        <p class="mailbox-storage-text"><strong>{{ "%.1f" | format(box.used.percent) }}% used</strong>, {{ box.used.available }} available of {{ box.quota }}</p>
+        {% else %}
+        <div class="storage-bar" aria-hidden="true" style="--used: 0%"><span></span></div>
+        <p class="mailbox-storage-text"><strong>{{ box.quota }}</strong>. How much is used shows once the mail engine answers.</p>
+        {% endif %}
+      </div>
+      <div class="mailbox-alias-list">
+        <p class="mailbox-label">Aliases</p>
+        {% if box.aliases %}
+        <ul class="alias-chips">
+          {% for alias in box.aliases %}<li>{{ alias.email }}</li>{% endfor %}
+        </ul>
+        {% else %}
+        <p class="mailbox-none">None yet. Mail to an alias lands in this mailbox too.</p>
+        {% endif %}
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% elif domains %}
+<section class="empty-state" aria-labelledby="no-mailboxes-title">
+  <span class="empty-state-badge" aria-hidden="true">{{ icon("inbox") }}</span>
+  <h2 id="no-mailboxes-title" class="empty-state-title">No mailboxes yet</h2>
+  <p class="empty-state-text">Use Create mailbox above to make the first inbox at one of your domains, like ceo@{{ domains[0] }}.</p>
+</section>
+{% else %}
+{# Only an authenticated domain can have mailboxes: none yet #}
+<section class="empty-state" aria-labelledby="no-domain-title">
+  <span class="empty-state-badge" aria-hidden="true">{{ icon("globe") }}</span>
+  <h2 id="no-domain-title" class="empty-state-title">Authenticate a domain first</h2>
+  <p class="empty-state-text">A mailbox is at one of your domains, once it's authenticated. Authenticate one on the Domains page, then come back here to create mailboxes.</p>
+  <a class="button add-button empty-state-action" href="{{ url_for('domains.index') }}">Go to Domains</a>
+</section>
+{% endif %}
+
+{% if domains %}
+{# Create a mailbox (mailboxes-page.js). It opens again by itself when the server sends it back
+   with a problem (data-open), keeping what was typed, all but the passwords. #}
+<dialog class="rules-dialog domain-dialog is-wide" id="create-mailbox-dialog" aria-labelledby="create-mailbox-title"{% if create_problem %} data-open{% endif %}>
+  <form method="post" action="{{ url_for('mailboxes.create') }}" class="rules-form" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("inbox") }}</span>
+      <div>
+        <h2 id="create-mailbox-title" class="rules-title">Create a mailbox</h2>
+        <p class="rules-hint">An inbox at one of your authenticated domains.</p>
+      </div>
+    </div>
+    {% if create_problem %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't create the mailbox">{{ create_problem }}</p>{% endif %}
+    <div class="field">
+      <label class="field-label" for="new-mailbox-local">Email address</label>
+      {{ address_parts("new-mailbox", typed.local or "", typed.domain, "ceo") }}
+    </div>
+    {{ password_field("mailbox-password", "password", "Mailbox password", "Enter a password", "mailbox-password-rules") }}
+    {{ password_field("mailbox-confirm", "confirm", "Confirm password", "Enter the password again") }}
+    {{ rules_list("mailbox-password-rules", "mailbox-password") }}
+    <div class="field">
+      <label class="field-label" for="new-mailbox-storage">Mailbox storage</label>
+      {% if free %}<p class="field-hint" id="new-mailbox-storage-hint">The server has {{ free }} free, for all its mailboxes.</p>{% endif %}
+      {{ storage_parts("new-mailbox-storage", typed.storage or "15", typed.unit or "GB", "new-mailbox-storage-hint" if free else none) }}
+    </div>
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet" data-dialog-close>Cancel</button>
+      <button class="button rules-save" type="submit" data-busy-label="Creating…">
+        <span class="button-spinner" aria-hidden="true"></span>
+        <span class="button-label">Create mailbox</span>
+      </button>
+    </div>
+  </form>
+</dialog>
+{% endif %}
+
+{% if mailboxes %}
+{# How a mail app connects: the same server for every mailbox; the username is the mailbox's
+   address, filled in when the dialog opens (mailboxes-page.js) #}
+<dialog class="rules-dialog domain-dialog is-wide" id="config-dialog" aria-labelledby="config-title">
+  <div class="rules-form">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("gear") }}</span>
+      <div>
+        <h2 id="config-title" class="rules-title">Configuration details</h2>
+        <p class="rules-hint">What to type in a mail app to use <span data-config-name></span>.</p>
+      </div>
+    </div>
+    <dl class="config-row is-login">
+      <div class="config-cell is-wide">
+        <dt>Username</dt>
+        <dd><span class="copy-box"><code class="copy-box-text" data-config-username></code><button type="button" class="copy-button" data-copy="" data-config-copy aria-label="Copy the username" title="Copy the username"><svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 5.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h.5"/></svg><svg class="copy-done" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></span></dd>
+      </div>
+      <div class="config-cell is-two">
+        <dt>Password</dt>
+        <dd class="config-plain">The mailbox's own</dd>
+      </div>
+    </dl>
+    <section class="config-group" aria-labelledby="config-imap">
+      <h3 class="config-title" id="config-imap">IMAP <span>Incoming mail, kept on the server: best for more than one device</span></h3>
+      {{ config_row("IMAP", server, ports.imap, "SSL/TLS") }}
+    </section>
+    <section class="config-group" aria-labelledby="config-smtp">
+      <h3 class="config-title" id="config-smtp">SMTP <span>Outgoing mail, with the same username and password</span></h3>
+      {{ config_row("SMTP", server, ports.smtp_ssl, "SSL/TLS") }}
+      {{ config_row("SMTP", none, ports.smtp_starttls, "STARTTLS") }}
+    </section>
+    <section class="config-group" aria-labelledby="config-pop3">
+      <h3 class="config-title" id="config-pop3">POP3 <span>Incoming mail, moved to one device</span></h3>
+      {{ config_row("POP3", server, ports.pop3, "SSL/TLS") }}
+    </section>
+    <div class="rules-actions">
+      <button type="button" class="button rules-save" data-dialog-close>Done</button>
+    </div>
+  </div>
+</dialog>
+
+{# Each mailbox's aliases: as many as wanted, at any authenticated domain. It stays open after
+   an alias is added or deleted (?aliases=<id>), and opens again with a problem. #}
+{% for box in mailboxes %}
+{% set here = opened == box.id %}
+<dialog class="rules-dialog domain-dialog is-wide" id="aliases-dialog-{{ box.id }}" aria-labelledby="aliases-title-{{ box.id }}"{% if here %} data-open{% endif %}>
+  <div class="rules-form">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("at") }}</span>
+      <div>
+        <h2 id="aliases-title-{{ box.id }}" class="rules-title">Aliases of {{ box.email }}</h2>
+        <p class="rules-hint">Mail sent to an alias lands in this mailbox. Add as many as you like.</p>
+      </div>
+    </div>
+    {% if here and alias_problem %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't add the alias">{{ alias_problem }}</p>{% endif %}
+    {% if box.aliases %}
+    <ul class="alias-list">
+      {% for alias in box.aliases %}
+      <li>
+        <span class="alias-email">{{ alias.email }}</span>
+        <form method="post" action="{{ url_for('mailboxes.delete_alias', mailbox_id=box.id, alias_id=alias.id) }}" class="alias-delete">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="icon-button is-danger" aria-label="Delete {{ alias.email }}" title="Delete">{{ icon("trash") }}</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="mailbox-none">No aliases yet.</p>
+    {% endif %}
+    {% if domains %}
+    <form method="post" action="{{ url_for('mailboxes.add_alias', mailbox_id=box.id) }}" class="alias-add field" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="field-label" for="alias-{{ box.id }}-local">New alias</label>
+      {{ address_parts("alias-" ~ box.id, (typed.local if here and alias_problem else ""), (typed.domain if here and alias_problem else box.domain), "hello") }}
+      <button class="button rules-save" type="submit" data-busy-label="Adding…">
+        <span class="button-spinner" aria-hidden="true"></span>
+        <span class="button-label">Add alias</span>
+      </button>
+    </form>
+    {% endif %}
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet" data-dialog-close>Close</button>
+    </div>
+  </div>
+</dialog>
+{% endfor %}
+
+{# Change a mailbox's password. Its address and form link are filled in when it opens
+   (mailboxes-page.js), or here when the server sends it back with a problem. #}
+<dialog class="rules-dialog domain-dialog" id="password-dialog" aria-labelledby="password-title"{% if password_problem %} data-open{% endif %}>
+  <form method="post" action="{{ url_for('mailboxes.change_password', mailbox_id=for_mailbox.id) if password_problem else '' }}" class="rules-form" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("key") }}</span>
+      <div>
+        <h2 id="password-title" class="rules-title">Change password</h2>
+        <p class="rules-hint">For <span data-dialog-email>{{ for_mailbox.email if password_problem }}</span>. Mail apps signed in with the old one ask for the new one.</p>
+      </div>
+    </div>
+    {% if password_problem %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't change the password">{{ password_problem }}</p>{% endif %}
+    {{ password_field("change-password", "password", "New password", "Enter a new password", "change-password-rules") }}
+    {{ password_field("change-confirm", "confirm", "Confirm password", "Enter it again") }}
+    {{ rules_list("change-password-rules", "change-password") }}
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet" data-dialog-close>Cancel</button>
+      <button class="button rules-save" type="submit" data-busy-label="Changing…">
+        <span class="button-spinner" aria-hidden="true"></span>
+        <span class="button-label">Change password</span>
+      </button>
+    </div>
+  </form>
+</dialog>
+
+{# Change a mailbox's storage, filled in like the password's #}
+<dialog class="rules-dialog domain-dialog" id="storage-dialog" aria-labelledby="storage-title"{% if storage_problem %} data-open{% endif %}>
+  <form method="post" action="{{ url_for('mailboxes.change_storage', mailbox_id=for_mailbox.id) if storage_problem else '' }}" class="rules-form" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("disk") }}</span>
+      <div>
+        <h2 id="storage-title" class="rules-title">Edit storage</h2>
+        <p class="rules-hint">For <span data-dialog-email>{{ for_mailbox.email if storage_problem }}</span>. New mail is refused once it's full.</p>
+      </div>
+    </div>
+    {% if storage_problem %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't change the storage">{{ storage_problem }}</p>{% endif %}
+    <div class="field">
+      <label class="field-label" for="edit-storage">Mailbox storage</label>
+      {% if free %}<p class="field-hint" id="edit-storage-hint">The server has {{ free }} free, for all its mailboxes.</p>{% endif %}
+      {{ storage_parts("edit-storage", typed.storage if storage_problem else "", typed.unit if storage_problem else "GB", "edit-storage-hint" if free else none) }}
+    </div>
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet" data-dialog-close>Cancel</button>
+      <button class="button rules-save" type="submit" data-busy-label="Saving…">
+        <span class="button-spinner" aria-hidden="true"></span>
+        <span class="button-label">Save storage</span>
+      </button>
+    </div>
+  </form>
+</dialog>
+
+{# Deleting asks first (mailboxes-page.js). Without JavaScript the trash button deletes. #}
+<dialog class="rules-dialog domain-dialog is-danger" id="delete-mailbox-dialog" aria-labelledby="delete-mailbox-title">
+  <div class="rules-form">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("trash") }}</span>
+      <div>
+        <h2 id="delete-mailbox-title" class="rules-title">Delete <span data-delete-name></span>?</h2>
+        <p class="rules-hint">All the mail in it is deleted too, and can't be brought back. Its aliases go with it.</p>
+      </div>
+    </div>
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet" data-dialog-close>Cancel</button>
+      <button type="button" class="button rules-save" data-delete-confirm>Delete mailbox</button>
+    </div>
+  </div>
+</dialog>
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/password-toggle.js') }}"></script>
+<script src="{{ url_for('static', filename='js/mailboxes-page.js') }}"></script>
+{% endblock %}
