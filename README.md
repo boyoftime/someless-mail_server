@@ -269,10 +269,12 @@ The top of **SMTP & API** says whether your server is ready to send, and what's 
 | Server name points here | `mail.example.com` has its A record pointing to this server ([Step 4](#step-4-connect-and-authenticate-your-domain)) |
 | Certificate | Let's Encrypt's certificate for `mail.example.com` is in ([Step 5](#step-5-your-mail-servers-certificate)) |
 | Outgoing port 25 | A warning if your provider blocks it ([Step 6](#step-6-reverse-dns-and-port-25)) |
+| Incoming port 25 | A warning until other mail servers can reach port 25 here, to deliver your mail ([Step 11](#step-11-mailboxes-receive-mail)) |
+| IMAP port 993, POP3 port 995 | Warnings until mail apps can reach them. Each warning says what to add to `docker-compose.yml` and to your firewall |
 | Reverse DNS | A warning until your IP answers with `mail.example.com` ([Step 6](#step-6-reverse-dns-and-port-25)) |
 | A sender | At least one sender on the list ([Step 7](#step-7-add-a-sender)) |
 
-Once everything but the warnings is ticked, the card glows green: **Ready to send**. After you fix something, click **Check again**.
+Once everything but the warnings is ticked, the card glows green: **Ready to send**. After you fix something, click **Check again**. The incoming ports are checked from your server itself, by your mail server's name, the way the world reaches them; a firewall at your VPS provider can still block them from outside.
 
 ## Step 9: Send a test email
 

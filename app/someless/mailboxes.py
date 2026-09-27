@@ -8,7 +8,7 @@ import re
 import shutil
 import time
 
-from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, url_for
 
 from . import mail_password
 from .auth import login_required
@@ -16,7 +16,7 @@ from .db import get_db
 from .domain_records import HOST_CHOICES
 from .engine import EngineError, EngineUnavailable, client, enabled, names, state
 from .engine import sync as engine_sync
-from .settings import password_checks, password_rules
+from .settings import FORCED_KINDS, MIN_LENGTHS, password_checks
 
 bp = Blueprint("mailboxes", __name__, url_prefix="/mailboxes")
 
@@ -64,6 +64,12 @@ def _storage(typed_size, unit):
     if size > LARGEST:
         return None, "That's more storage than any server has. Type a smaller number."
     return size, None
+
+
+def password_rules():
+    """The mailboxes' password rules (the Password rules dialog here): apart from the admin's own
+    (Settings), since they guard the mail apps' logins, open to the whole internet."""
+    return get_db().execute("SELECT * FROM mailbox_password_rules WHERE id = 1").fetchone()
 
 
 def _password_problem(password, confirm):
@@ -168,7 +174,7 @@ def _page(status=200, **context):
     return render_template(
         "mailboxes.html", mailboxes=boxes, domains=[domain["name"] for domain in domains],
         server=server, ports=MAIL_APPS, free=size_text(free) if free else None,
-        rules=password_checks(password_rules()), min_length=password_rules()["min_length"],
+        rules=password_checks(password_rules()), saved_rules=password_rules(), min_length=password_rules()["min_length"],
         notes=_receive_notes(sorted({box["domain"] for box in boxes})) if boxes else [],
         sync_error=state()["sync_error"] if enabled() else None,
         opened=request.args.get("aliases", type=int), **context,
@@ -210,6 +216,27 @@ def create():
     db.commit()
     engine_sync.after_change()
     flash(f"{email} was created.", "added")
+    return redirect(url_for("mailboxes.index"))
+
+
+@bp.post("/password-rules")
+@login_required
+def change_password_rules():
+    """Saved from the Password rules dialog; mailboxes-page.js asks for JSON, so the dialog it
+    was opened from stays open with what was typed in it."""
+    wants_json = request.accept_mimetypes.best == "application/json"
+    min_length = request.form.get("min_length", "")
+    if not min_length.isdigit() or int(min_length) not in MIN_LENGTHS:
+        problem = "Pick a minimum length from 1 to 12."
+        return ({"problem": problem}, 400) if wants_json else _page(400, rules_problem=problem)
+    db = get_db()
+    db.execute("UPDATE mailbox_password_rules SET min_length = ?, require_letters = ?, require_numbers = ?,"
+               " require_special = ? WHERE id = 1", (int(min_length), *(kind in request.form for kind in FORCED_KINDS)))
+    db.commit()
+    if wants_json:
+        return jsonify(min_length=int(min_length), message="Mailbox password rules saved.",
+                       rules=[{"key": check.key, "label": check.label} for check in password_checks(password_rules())])
+    flash("Mailbox password rules saved.", "success")
     return redirect(url_for("mailboxes.index"))
 
 

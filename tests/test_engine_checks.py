@@ -60,6 +60,7 @@ def test_a_sender_counts_only_at_an_authenticated_domain(app, engine, monkeypatc
 
 # the real lookups (conftest stands them in for every test; these tests check them)
 from someless.engine.checks import addresses_of as real_addresses_of, reverse_name as real_reverse_name  # noqa: E402
+from someless.engine.checks import greeting as real_greeting  # noqa: E402
 
 
 def fake_dns(monkeypatch, usual, at_source):
@@ -95,3 +96,74 @@ def test_the_server_names_a_record_is_asked_at_its_source(monkeypatch):
     }, at_source={("mail.pineloop.test", "A"): ["192.0.2.10"]})
 
     assert real_addresses_of("mail.pineloop.test") == ["192.0.2.10"]
+
+
+def ready_to_send(app, engine, monkeypatch):
+    from test_engine_sync import a_sender, authenticated_domain
+    a_sender(app, authenticated_domain(app), "no-reply@pineloop.online")
+    engine.objects["Certificate"] = {"c1": {"subjectAlternativeNames": {"mail.pineloop.online": True}, "notValidAfter": "2099-01-01T00:00:00Z"}}
+    monkeypatch.setattr(checks, "addresses_of", lambda name: ["194.163.167.106"])
+
+
+def test_incoming_ports_that_reach_the_mail_engine_are_ticked(app, engine, monkeypatch):
+    ready_to_send(app, engine, monkeypatch)
+    asked = []
+    monkeypatch.setattr(checks, "greeting", lambda host, port, tls: asked.append((host, port, tls)) or "220 same")
+
+    found = run(app)
+
+    assert [found[key].state for key in ("port25-in", "imap", "pop3")] == ["ok", "ok", "ok"]
+    # asked the way the world does, by the server name, and compared with the engine's own answer
+    assert ("mail.pineloop.online", 25, False) in asked and ("127.0.0.1", 25, False) in asked
+    assert ("mail.pineloop.online", 993, True) in asked and ("127.0.0.1", 17993, True) in asked
+    assert ("mail.pineloop.online", 995, True) in asked and ("127.0.0.1", 17995, True) in asked
+
+
+def test_a_port_that_doesnt_reach_it_says_how_to_open_it(app, engine, monkeypatch):
+    ready_to_send(app, engine, monkeypatch)
+    monkeypatch.setattr(checks, "greeting", lambda host, port, tls: "220 same" if host == "127.0.0.1" else None)
+
+    found = run(app)
+
+    for key, mapping, rule in (("port25-in", '"25:25"', "sudo ufw allow 25/tcp"), ("imap", '"993:17993"', "sudo ufw allow 993/tcp"),
+                               ("pop3", '"995:17995"', "sudo ufw allow 995/tcp")):
+        assert found[key].state == "warning", key
+        assert mapping in found[key].detail and rule in found[key].detail, key
+    with app.app_context():
+        assert checks.can_send(list(found.values()))   # sending doesn't wait for them
+
+
+def test_another_server_on_the_port_isnt_taken_for_this_one(app, engine, monkeypatch):
+    ready_to_send(app, engine, monkeypatch)
+    monkeypatch.setattr(checks, "greeting", lambda host, port, tls: (
+        "220 mail.pineloop.online Stalwart ESMTP at your service" if host == "127.0.0.1" else "220 old-server ESMTP Postfix"))
+
+    assert run(app)["port25-in"].state == "warning"
+
+
+def test_with_the_engine_down_the_ports_arent_checked(app, engine, monkeypatch):
+    ready_to_send(app, engine, monkeypatch)
+    engine.down = True
+
+    found = run(app)
+
+    assert not {"port25-in", "imap", "pop3"} & set(found)
+
+
+def test_a_greeting_is_the_first_line_a_server_says():
+    import socket
+    import threading
+    listener = socket.socket()
+    listener.bind(("127.0.0.1", 0))
+    listener.listen(1)
+    port = listener.getsockname()[1]
+
+    def serve():
+        conn, _ = listener.accept()
+        conn.sendall(b"220 mail.example.com ESMTP\r\n250 more\r\n")
+        conn.close()
+    threading.Thread(target=serve, daemon=True).start()
+
+    assert real_greeting("127.0.0.1", port, False) == "220 mail.example.com ESMTP"
+    listener.close()
+    assert real_greeting("127.0.0.1", port, False) is None   # nothing there any more

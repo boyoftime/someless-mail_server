@@ -16,6 +16,7 @@ def no_real_dns(monkeypatch):
     monkeypatch.setattr(checks, "reverse_name", lambda ip: None)
     monkeypatch.setattr(checks, "addresses_of", lambda name: [])
     monkeypatch.setattr(checks, "relay_reached", lambda name: False)
+    monkeypatch.setattr(checks, "greeting", lambda host, port, tls: None)   # nothing answers on the mail ports
 
 
 @pytest.fixture

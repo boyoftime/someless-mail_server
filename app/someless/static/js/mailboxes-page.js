@@ -5,7 +5,8 @@
 // - "Configuration details" shows how a mail app connects, with the mailbox's address filled in.
 // - The key and disk buttons open one shared dialog each, filled in for that mailbox.
 // - The trash button asks first, in a dialog; "Delete mailbox" there sends the mailbox's form.
-// - The password rules under a password get a tick the moment each is met.
+// - The password rules under a password get a tick the moment each is met. When they're changed
+//   (Password rules, password-rules-dialog.js), both lists follow at once.
 // Dialogs close with Cancel, Escape or a click outside, fading away.
 (function () {
   var main = document.getElementById("app-main") || document; // the page, not the side menu's dialog
@@ -50,11 +51,12 @@
     number: function (value) { return /[0-9]/.test(value); },
     special: function (value) { return /[^A-Za-z0-9]/.test(value); },
   };
-  document.querySelectorAll("[data-password-rules][data-for]").forEach(function (list) {
+  var lists = document.querySelectorAll("[data-password-rules][data-for]");
+  lists.forEach(function (list) {
     var input = document.getElementById(list.dataset.for);
     if (!input) return;
-    var minLength = Number(list.dataset.minLength) || 8;
     var check = function () {
+      var minLength = Number(list.dataset.minLength) || 8;
       list.querySelectorAll("[data-rule]").forEach(function (item) {
         var rule = item.dataset.rule;
         var met = rule === "length" ? Array.from(input.value).length >= minLength : tests[rule](input.value);
@@ -67,6 +69,26 @@
     check();
   });
 
+  // New rules saved: the lists show them, ticked against what's typed now
+  var rulesDialog = document.getElementById("mailbox-rules-dialog");
+  if (rulesDialog) {
+    rulesDialog.addEventListener("someless:password-rules", function (event) {
+      lists.forEach(function (list) {
+        list.dataset.minLength = event.detail.min_length;
+        var ul = list.querySelector("ul");
+        ul.replaceChildren.apply(ul, event.detail.rules.map(function (rule) {
+          var item = document.createElement("li");
+          item.dataset.rule = rule.key;
+          item.innerHTML = '<span class="rule-mark" aria-hidden="true"></span><span class="visually-hidden rule-state"></span>';
+          item.insertBefore(document.createTextNode(rule.label), item.lastChild);
+          return item;
+        }));
+        var input = document.getElementById(list.dataset.for);
+        if (input && input.somelessCheck) input.somelessCheck();
+      });
+    });
+  }
+
   function clearPasswords(dialog) {
     dialog.querySelectorAll("input[name=password], input[name=confirm]").forEach(function (input) {
       input.value = "";
@@ -75,7 +97,7 @@
   }
 
   // Dialogs opened by a button of their own: Create mailbox, and each mailbox's Aliases
-  main.querySelectorAll("dialog[id]").forEach(function (dialog) {
+  main.querySelectorAll("dialog[id]:not([data-rules-picker])").forEach(function (dialog) {
     if (!prepare(dialog)) return;
     document.querySelectorAll("[data-dialog-open='" + dialog.id + "']").forEach(function (button) {
       button.addEventListener("click", function () {

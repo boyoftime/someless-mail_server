@@ -840,6 +840,7 @@ html:not(.js) .rules-button { display: none; } /* the dialog needs JavaScript */
 @keyframes dialog-in { from { opacity: 0; transform: translateY(14px) scale(0.97); } }
 @keyframes dialog-out { to { opacity: 0; transform: translateY(8px) scale(0.98); } }
 .rules-dialog.is-wide { width: min(calc(100vw - 2rem), 36rem); } /* more to choose in it */
+.rules-dialog.is-wider { width: min(calc(100vw - 2rem), 42rem); } /* Create a mailbox: more to fill in */
 .rules-form { display: grid; gap: 1.35rem; padding: 1.5rem clamp(1.1rem, 4vw, 1.75rem); }
 .rules-head { display: flex; align-items: center; gap: 0.9rem; }
 .rules-title { margin: 0; font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; }

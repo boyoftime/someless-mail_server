@@ -1,9 +1,13 @@
 """Ready to send? The checklist at the top of SMTP & API: what's done, and what to do next.
 Engine, server name, certificate and a Sender are needed to send; port 25 and reverse DNS are
-warnings (mail may go out, but land in spam or bounce). Also what the server name itself
-needs, for Settings > Mail server name (name_checks)."""
+warnings (mail may go out, but land in spam or bounce), and so are the ports mail comes in on
+(25, and 993 and 995 for mail apps): asked from here, by the server name, the way the world asks,
+and whoever answers has to say what the mail engine itself says. Also what the server name
+itself needs, for Settings > Mail server name (name_checks)."""
 import socket
+import ssl
 import time
+from concurrent.futures import ThreadPoolExecutor
 import urllib.error
 import urllib.request
 from collections import namedtuple
@@ -20,6 +24,13 @@ from .supervisor import NOT_HERE
 
 Check = namedtuple("Check", "key title state detail")
 NEEDED = ("engine", "server-name", "certificate", "sender")
+# The ports mail comes in on: key, title, port on the server, port in the container, TLS from the
+# start, and the docker-compose.yml line that publishes it
+INCOMING = (
+    ("port25-in", "Incoming port 25", 25, 25, False, '"25:25"', "Other mail servers can't reach this server, so no mail comes in."),
+    ("imap", "IMAP port 993", 993, 17993, True, '"993:17993"', "Mail apps can't reach IMAP here."),
+    ("pop3", "POP3 port 995", 995, 17995, True, '"995:17995"', "Mail apps can't reach POP3 here."),
+)
 _cache = {}
 
 
@@ -29,6 +40,38 @@ def port25_open():
         return True
     except OSError:
         return False
+
+
+def greeting(host, port, tls):
+    """The first line a mail server says when it's reached (with TLS first, for 993 and 995), or
+    None when nothing answers."""
+    try:
+        with socket.create_connection((host, port), timeout=4) as raw:
+            with (ssl._create_unverified_context().wrap_socket(raw) if tls else raw) as conn:   # noqa: S323 (who answers, not trust)
+                conn.settimeout(4)
+                line = conn.recv(512).split(b"\r\n", 1)[0]
+    except (OSError, ValueError):
+        return None
+    return line.decode(errors="replace") or None
+
+
+def reaches_us(host, port, inside, tls):
+    """Whether the port on the server leads to the mail engine: what answers there says what the
+    engine says on its own port in the container, not another server's words."""
+    theirs = greeting(host, port, tls)
+    return theirs is not None and theirs == greeting("127.0.0.1", inside, tls)
+
+
+def _incoming(host):
+    """The checks of the ports mail comes in on, asked side by side (a closed one takes seconds)."""
+    with ThreadPoolExecutor(len(INCOMING)) as pool:
+        reached = list(pool.map(lambda port: reaches_us(host, port[2], port[3], port[4]), INCOMING))
+    found = []
+    for (key, title, port, _, _, mapping, why), ok in zip(INCOMING, reached):
+        found.append(Check(key, title, "ok", "") if ok else Check(key, title, "warning", (
+            f"{why} Add {mapping} under ports in docker-compose.yml and run docker compose up -d, "
+            f"then open it in your firewall: sudo ufw allow {port}/tcp.")))
+    return found
 
 
 def reverse_name(ip):
@@ -119,6 +162,7 @@ def run_checks(address):
     name = server_name()
     found = []
     certificates = None
+    engine_up = False
     if not enabled():
         found.append(Check("engine", "Mail engine running", "missing",
                            "The mail engine isn't running here: it runs in the Someless Mail container."))
@@ -126,6 +170,7 @@ def run_checks(address):
         try:
             certificates = client().get("Certificate")
             found.append(Check("engine", "Mail engine running", "ok", ""))
+            engine_up = True
         except (EngineUnavailable, EngineError):
             found.append(Check("engine", "Mail engine running", "missing",
                                "The mail engine isn't answering. It restarts by itself; if this lasts, restart the container."))
@@ -144,6 +189,8 @@ def run_checks(address):
     found.append(_cached("port25", lambda: Check("port25", "Outgoing port 25", "ok", "") if port25_open() else Check(
         "port25", "Outgoing port 25", "warning",
         "Your VPS provider blocks outgoing port 25. Ask them to open it; mail can't reach other servers until then.")))
+    if engine_up and (name or address):   # with the engine down, nothing would answer anyway
+        found.extend(_cached(f"incoming {name or address}", lambda: _incoming(name or address)))
     if name and address:
         ptr = _cached(f"ptr {address}", lambda: reverse_name(address))
         found.append(Check("reverse-dns", "Reverse DNS", "ok", "") if ptr == name else Check(

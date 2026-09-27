@@ -280,3 +280,56 @@ def test_storage_typed_with_a_comma_means_what_people_mean(app, client, login):
     create(client, local="half", storage="1,5", unit="GB")         # a decimal comma
 
     assert [row["quota_bytes"] for row in rows(app)] == [1000 * MB, int(1.5 * GB)]
+
+
+def save_mailbox_rules(client, min_length="8", letters=True, numbers=True, special=True, json=False):
+    data = {"min_length": min_length}
+    for name, forced in [("require_letters", letters), ("require_numbers", numbers), ("require_special", special)]:
+        if forced:
+            data[name] = "on"
+    return client.post("/mailboxes/password-rules", data=data, headers={"Accept": "application/json"} if json else {})
+
+
+def test_the_password_rules_can_be_changed_from_the_mailbox_dialogs(app, client, login):
+    authenticated_domain(app)
+    login()
+
+    page = text(client.get("/mailboxes"))
+
+    create_dialog = page[page.index('id="create-mailbox-dialog"'):page.index("</dialog>", page.index('id="create-mailbox-dialog"'))]
+    assert 'data-dialog-open="mailbox-rules-dialog"' in create_dialog
+    rules = page[page.index('id="mailbox-rules-dialog"'):]
+    rules = rules[:rules.index("</dialog>")]
+    assert 'action="/mailboxes/password-rules"' in rules and "data-save-in-place" in rules
+    assert re.search(r'<input type="range"[^>]*name="min_length"[^>]*value="8"', rules)
+    assert 'src="/static/js/password-rules-dialog.js?v=' in page
+
+
+def test_mailbox_password_rules_are_their_own(app, client, login):
+    """Mailbox passwords guard mail apps' logins from anywhere: their rules are set apart from
+    the admin's own."""
+    authenticated_domain(app)
+    login()
+
+    response = save_mailbox_rules(client, min_length="12", special=False)
+
+    assert response.headers["Location"] == "/mailboxes"
+    assert create(client, password="Abcdefgh123").status_code == 400    # 11 characters
+    assert create(client, password="Abcdefghi123").headers["Location"] == "/mailboxes"   # 12, no special needed
+    with app.app_context():
+        admin_rules = get_db().execute("SELECT * FROM password_rules WHERE id = 1").fetchone()
+    assert (admin_rules["min_length"], admin_rules["require_special"]) == (8, 1)
+    page = text(client.get("/mailboxes"))
+    assert "At least 12 characters" in page and 'data-rule="special"' not in page
+
+
+def test_saving_the_rules_in_place_answers_with_them(app, client, login):
+    authenticated_domain(app)
+    login()
+
+    answer = save_mailbox_rules(client, min_length="10", letters=False, json=True).get_json()
+
+    assert answer["min_length"] == 10
+    assert [rule["key"] for rule in answer["rules"]] == ["length", "number", "special"]
+    assert answer["rules"][0]["label"] == "At least 10 characters"
+    assert save_mailbox_rules(client, min_length="13", json=True).status_code == 400

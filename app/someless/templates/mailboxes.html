@@ -1,5 +1,6 @@
 {% extends "shell.html" %}
 {% from "copy-box.html" import copy_box %}
+{% from "password-rules-dialog.html" import rules_dialog %}
 {% block title %}Mailboxes | Someless Mail{% endblock %}
 
 {% macro icon(name) %}
@@ -25,6 +26,8 @@
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>
   {%- elif name == "info" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5"/><path d="M12 7.6v.1"/></svg>
+  {%- elif name == "sliders" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
   {%- elif name == "globe" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.3 2.5 3.5 5.3 3.5 8.5s-1.2 6-3.5 8.5c-2.3-2.5-3.5-5.3-3.5-8.5s1.2-6 3.5-8.5z"/></svg>
   {%- endif -%}
@@ -45,10 +48,16 @@
   </div>
 {% endmacro %}
 
-{# The saved password rules (Settings), ticked off as the password is typed (mailboxes-page.js) #}
+{# The mailboxes' password rules, ticked off as the password is typed (mailboxes-page.js); the
+   button changes them (the Password rules dialog, below) #}
 {% macro rules_list(id, input_id) %}
   <div class="password-rules" id="{{ id }}" data-password-rules data-for="{{ input_id }}" data-min-length="{{ min_length }}">
-    <p class="password-rules-title">Password must contain:</p>
+    <div class="password-rules-top">
+      <p class="password-rules-title">Password must contain:</p>
+      <button type="button" class="rules-button" data-dialog-open="mailbox-rules-dialog" aria-haspopup="dialog">
+        {{ icon("sliders") }}<span>Password rules</span>
+      </button>
+    </div>
     <ul>
       {% for check in rules %}
       <li data-rule="{{ check.key }}"><span class="rule-mark" aria-hidden="true"></span>{{ check.label }}<span class="visually-hidden rule-state"></span></li>
@@ -125,6 +134,7 @@
   {% endif %}
 </header>
 
+{% if rules_problem %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't save the rules">{{ rules_problem }}</p>{% endif %}
 {% if sync_error %}
 <p class="smtp-note is-warning">{{ icon("info") }}<span>The mail engine didn't take the last change yet ({{ sync_error }}). It tries again with the next change, and every hour.</span></p>
 {% endif %}
@@ -195,7 +205,7 @@
 {% if domains %}
 {# Create a mailbox (mailboxes-page.js). It opens again by itself when the server sends it back
    with a problem (data-open), keeping what was typed, all but the passwords. #}
-<dialog class="rules-dialog domain-dialog is-wide" id="create-mailbox-dialog" aria-labelledby="create-mailbox-title"{% if create_problem %} data-open{% endif %}>
+<dialog class="rules-dialog domain-dialog is-wider" id="create-mailbox-dialog" aria-labelledby="create-mailbox-title"{% if create_problem %} data-open{% endif %}>
   <form method="post" action="{{ url_for('mailboxes.create') }}" class="rules-form" novalidate>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="rules-head">
@@ -388,6 +398,13 @@
 </dialog>
 {% endif %}
 
+{% if domains or mailboxes %}
+{{ rules_dialog("mailbox-rules-dialog", url_for("mailboxes.change_password_rules"), saved_rules,
+                "Choose what a mailbox's password must contain. Your own login has its rules in Settings.",
+                title="Mailbox password rules", in_place=true) }}
+{% endif %}
+
 <script src="{{ url_for('static', filename='js/password-toggle.js') }}"></script>
+<script src="{{ url_for('static', filename='js/password-rules-dialog.js') }}"></script>
 <script src="{{ url_for('static', filename='js/mailboxes-page.js') }}"></script>
 {% endblock %}

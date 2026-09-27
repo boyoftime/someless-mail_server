@@ -23,6 +23,16 @@ CREATE TABLE IF NOT EXISTS password_rules (
     require_special INTEGER NOT NULL DEFAULT 1
 );
 INSERT OR IGNORE INTO password_rules (id) VALUES (1);
+-- The same, for the mailboxes' passwords (Mailboxes): they guard the mail apps' logins, apart
+-- from the admin's own
+CREATE TABLE IF NOT EXISTS mailbox_password_rules (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    min_length INTEGER NOT NULL DEFAULT 8,
+    require_letters INTEGER NOT NULL DEFAULT 1,
+    require_numbers INTEGER NOT NULL DEFAULT 1,
+    require_special INTEGER NOT NULL DEFAULT 1
+);
+INSERT OR IGNORE INTO mailbox_password_rules (id) VALUES (1);
 -- Two-factor authentication (Settings > Two-factor authentication, two_factor.py)
 CREATE TABLE IF NOT EXISTS two_factor (
     id INTEGER PRIMARY KEY CHECK (id = 1),
