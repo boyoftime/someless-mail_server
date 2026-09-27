@@ -67,7 +67,7 @@
         <a class="button button-quiet sender-edit" href="{{ url_for('senders.edit', sender_id=sender.id) }}">Edit</a>
         <form method="post" action="{{ url_for('senders.delete', sender_id=sender.id) }}" class="sender-delete">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="icon-button is-danger" data-sender-name="{{ sender.name }} <{{ sender.email }}>" aria-label="Delete {{ sender.name }}" title="Delete">{{ icon("trash") }}</button>
+          <button type="submit" class="icon-button is-danger" data-sender-name="{{ sender.name }} <{{ sender.email }}>" aria-label="Delete {{ sender.name }}" data-tip="Delete">{{ icon("trash") }}</button>
         </form>
       </div>
     </div>

@@ -193,3 +193,78 @@ def test_the_webmail_locks_as_set(client, login, mail, mailbox, monkeypatch):
     assert sign_in(mail).status_code == 429
     now[0] += 60 + 1
     assert sign_in(mail).headers["Location"] == "/"
+
+
+# Opening a mailbox's webmail from the Mailboxes page: signed in, no password asked
+
+def open_webmail(client, mailbox_id):
+    return client.post(f"/mailboxes/{mailbox_id}/webmail")
+
+
+def ticket_of(response):
+    location = response.headers["Location"]
+    return location, location.split("ticket=", 1)[1]
+
+
+def test_a_mailbox_card_opens_its_webmail_in_a_new_tab(app, client, login, mailbox):
+    login()
+
+    page = text(client.get("/mailboxes"))
+
+    form = re.search(rf'<form [^>]*action="/mailboxes/{mailbox}/webmail"[^>]*>', page).group(0)
+    assert 'target="_blank"' in form and "data-full-load" in form
+
+
+def test_the_panel_sends_the_admin_to_the_webmail_with_a_one_time_ticket(app, client, login, mailbox):
+    login()
+
+    location, ticket = ticket_of(open_webmail(client, mailbox))
+
+    assert location.startswith("http://localhost:17090/enter?ticket=")   # the webmail, beside the panel
+    with app.app_context():
+        stored = get_db().execute("SELECT * FROM webmail_tickets").fetchall()
+    assert len(stored) == 1 and ticket not in stored[0]["token_hash"]   # kept only as a fingerprint
+
+
+def test_the_ticket_signs_the_webmail_in_once(app, client, login, mail, mailbox):
+    login()
+    _, ticket = ticket_of(open_webmail(client, mailbox))
+
+    response = mail.get(f"/enter?ticket={ticket}")
+
+    assert response.headers["Location"] == "/"   # the ticket leaves the address bar at once
+    assert "Your inbox is coming soon" in text(mail.get("/")) and "ceo@pineloop.online" in text(mail.get("/"))
+    other = mail.application.test_client()
+    again = other.get(f"/enter?ticket={ticket}")
+    assert again.status_code == 400 and "Open the webmail from the Mailboxes page again" in text(again)
+
+
+def test_a_ticket_lasts_a_minute(app, client, login, mail, mailbox, monkeypatch):
+    import someless.webmail as webmail_module
+    login()
+    _, ticket = ticket_of(open_webmail(client, mailbox))
+    later = webmail_module.time.time() + 61
+    monkeypatch.setattr(webmail_module.time, "time", lambda: later)
+
+    assert mail.get(f"/enter?ticket={ticket}").status_code == 400
+    assert mail.get("/enter?ticket=made-up").status_code == 400
+
+
+def test_only_the_admin_gets_a_ticket(client, mailbox):
+    assert client.post(f"/mailboxes/{mailbox}/webmail").headers["Location"] == "/login"
+
+
+def test_the_webmail_address_is_set_in_settings(app, client, login, mailbox):
+    login()
+    page = text(client.get("/settings/miscellaneous"))
+    assert "Webmail address" in page and "http://localhost:17090" in page   # until one is set
+
+    response = client.post("/settings/miscellaneous/webmail-address", data={"address": " https://webmail.pineloop.online/ "})
+
+    assert response.headers["Location"] == "/settings/miscellaneous"
+    location, _ = ticket_of(open_webmail(client, mailbox))
+    assert location.startswith("https://webmail.pineloop.online/enter?ticket=")
+    for wrong in ("webmail", "ftp://x.com", "https://", "javascript:alert(1)"):
+        assert client.post("/settings/miscellaneous/webmail-address", data={"address": wrong}).status_code == 400, wrong
+    client.post("/settings/miscellaneous/webmail-address", data={"address": ""})   # empty: back to beside the panel
+    assert ticket_of(open_webmail(client, mailbox))[0].startswith("http://localhost:17090/")

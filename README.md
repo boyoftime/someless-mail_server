@@ -299,7 +299,7 @@ A mailbox is an inbox at one of your domains, like `ceo@example.com`. In **Mailb
 - **Password and Confirm password:** it follows your password rules (**Settings → Password rules**). Someless Mail keeps only a fingerprint of it, like your own.
 - **Mailbox storage:** how much mail it can hold, in GB or MB. New mail is refused once it's full. The dialog shows how much room your server has.
 
-Each mailbox's card shows how much of its storage is used, and has buttons to change its password or storage, to delete it (with all its mail), and:
+Each mailbox's card shows how much of its storage is used, and has buttons to open its webmail (in a new tab, already signed in: no password asked), to change its password or storage, to delete it (with all its mail), and:
 
 - **Aliases:** other addresses whose mail lands in this mailbox, like `hello@example.com` or `sales@example.com`, at any of your authenticated domains. Add as many as you like.
 - **Configuration details:** what to type in a mail app (Outlook, Apple Mail, Thunderbird, the mail app on your phone), each with a copy button:
@@ -330,7 +330,7 @@ The people with a mailbox sign in at `http://your-server-ip:17090` with the mail
 | Forward port | `17090` |
 | SSL tab | Request a new SSL certificate, with **Force SSL** and **HTTP/2** on |
 
-Then close the way in by IP: in `docker-compose.yml`, put a `#` at the start of the `"17090:17090"` line and run `docker compose up -d` (and `sudo ufw delete allow 17090/tcp` if you opened it).
+Then, in **Settings → Miscellaneous → Webmail address**, type `https://webmail.example.com`, so the Mailboxes page opens the webmail there. And close the way in by IP: in `docker-compose.yml`, put a `#` at the start of the `"17090:17090"` line and run `docker compose up -d` (and `sudo ufw delete allow 17090/tcp` if you opened it).
 
 Signing in to the webmail and to the web interface are separate: a mailbox's password never opens the web interface.
 

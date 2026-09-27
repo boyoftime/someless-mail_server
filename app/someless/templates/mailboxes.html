@@ -28,6 +28,8 @@
   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5"/><path d="M12 7.6v.1"/></svg>
   {%- elif name == "sliders" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
+  {%- elif name == "enter" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4.5h3.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H14"/><path d="M4.5 12h10"/><path d="M11 8.5l3.5 3.5-3.5 3.5"/></svg>
   {%- elif name == "globe" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.3 2.5 3.5 5.3 3.5 8.5s-1.2 6-3.5 8.5c-2.3-2.5-3.5-5.3-3.5-8.5s1.2-6 3.5-8.5z"/></svg>
   {%- endif -%}
@@ -152,11 +154,16 @@
       <div class="mailbox-actions">
         <button type="button" class="button button-quiet mailbox-button" data-config-email="{{ box.email }}" aria-haspopup="dialog">{{ icon("gear") }}<span>Configuration details</span></button>
         <button type="button" class="button button-quiet mailbox-button" data-dialog-open="aliases-dialog-{{ box.id }}" aria-haspopup="dialog">{{ icon("at") }}<span>Aliases</span>{% if box.aliases %}<span class="mailbox-count">{{ box.aliases | length }}</span>{% endif %}</button>
-        <button type="button" class="icon-button" data-password-for="{{ box.email }}" data-url="{{ url_for('mailboxes.change_password', mailbox_id=box.id) }}" aria-haspopup="dialog" aria-label="Change {{ box.email }}'s password" title="Change password">{{ icon("key") }}</button>
-        <button type="button" class="icon-button" data-storage-for="{{ box.email }}" data-url="{{ url_for('mailboxes.change_storage', mailbox_id=box.id) }}" data-size="{{ box.size }}" data-unit="{{ box.unit }}" aria-haspopup="dialog" aria-label="Edit {{ box.email }}'s storage" title="Edit storage">{{ icon("disk") }}</button>
+        {# its webmail, in a new tab, signed in already (a one-time ticket: webmail_site.py) #}
+        <form method="post" action="{{ url_for('mailboxes.open_webmail', mailbox_id=box.id) }}" target="_blank" class="mailbox-open" data-full-load>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="icon-button is-webmail" aria-label="Open {{ box.email }}'s webmail in a new tab" data-tip="Open webmail">{{ icon("enter") }}</button>
+        </form>
+        <button type="button" class="icon-button" data-password-for="{{ box.email }}" data-url="{{ url_for('mailboxes.change_password', mailbox_id=box.id) }}" aria-haspopup="dialog" aria-label="Change {{ box.email }}'s password" data-tip="Change password">{{ icon("key") }}</button>
+        <button type="button" class="icon-button" data-storage-for="{{ box.email }}" data-url="{{ url_for('mailboxes.change_storage', mailbox_id=box.id) }}" data-size="{{ box.size }}" data-unit="{{ box.unit }}" aria-haspopup="dialog" aria-label="Edit {{ box.email }}'s storage" data-tip="Edit storage">{{ icon("disk") }}</button>
         <form method="post" action="{{ url_for('mailboxes.delete', mailbox_id=box.id) }}" class="mailbox-delete">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="icon-button is-danger" data-mailbox-email="{{ box.email }}" aria-label="Delete {{ box.email }}" title="Delete">{{ icon("trash") }}</button>
+          <button type="submit" class="icon-button is-danger" data-mailbox-email="{{ box.email }}" aria-label="Delete {{ box.email }}" data-tip="Delete">{{ icon("trash") }}</button>
         </form>
       </div>
     </div>
@@ -301,7 +308,7 @@
         <span class="alias-email">{{ alias.email }}</span>
         <form method="post" action="{{ url_for('mailboxes.delete_alias', mailbox_id=box.id, alias_id=alias.id) }}" class="alias-delete">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="icon-button is-danger" aria-label="Delete {{ alias.email }}" title="Delete">{{ icon("trash") }}</button>
+          <button type="submit" class="icon-button is-danger" aria-label="Delete {{ alias.email }}" data-tip="Delete">{{ icon("trash") }}</button>
         </form>
       </li>
       {% endfor %}

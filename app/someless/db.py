@@ -125,6 +125,18 @@ CREATE TABLE IF NOT EXISTS webmail_lock (
     lock_minutes INTEGER NOT NULL DEFAULT 5
 );
 INSERT OR IGNORE INTO webmail_lock (id) VALUES (1);
+-- Where the webmail is (Settings > Miscellaneous, webmail_site.py): none, beside the panel on 17090
+CREATE TABLE IF NOT EXISTS webmail_site (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    address TEXT
+);
+INSERT OR IGNORE INTO webmail_site (id) VALUES (1);
+-- One-time tickets that open a mailbox's webmail from the Mailboxes page (webmail_site.py)
+CREATE TABLE IF NOT EXISTS webmail_tickets (
+    token_hash TEXT PRIMARY KEY,
+    mailbox_id INTEGER NOT NULL,
+    expires_at REAL NOT NULL
+);
 -- The webmail's wrong passwords in a row, per address typed (webmail.py), until the lock
 CREATE TABLE IF NOT EXISTS webmail_tries (
     email TEXT PRIMARY KEY,

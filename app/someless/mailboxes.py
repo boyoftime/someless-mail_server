@@ -10,7 +10,7 @@ import time
 
 from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, url_for
 
-from . import mail_password
+from . import mail_password, webmail_site
 from .auth import login_required
 from .db import get_db
 from .domain_records import HOST_CHOICES
@@ -238,6 +238,15 @@ def change_password_rules():
                        rules=[{"key": check.key, "label": check.label} for check in password_checks(password_rules())])
     flash("Mailbox password rules saved.", "success")
     return redirect(url_for("mailboxes.index"))
+
+
+@bp.post("/<int:mailbox_id>/webmail")
+@login_required
+def open_webmail(mailbox_id):
+    """The mailbox's webmail, in a new tab, already signed in: a one-time ticket, used within a
+    minute (webmail_site.py)."""
+    _mailbox(mailbox_id)
+    return redirect(f"{webmail_site.address(request.host)}/enter?ticket={webmail_site.new_ticket(mailbox_id)}")
 
 
 @bp.post("/<int:mailbox_id>/password")

@@ -8,6 +8,8 @@
   <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/><path d="M12 14.5v2"/></svg>
   {%- elif name == "key" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15.5" r="4"/><path d="M10.9 12.6l8.6-8.6"/><path d="M16.5 7l2.5 2.5"/><path d="M14.3 9.2l2 2"/></svg>
+  {%- elif name == "link" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg>
   {%- elif name == "clock" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
   {%- endif -%}
@@ -85,6 +87,49 @@
               {%- if checks.last_run %}Last automatic check: <time datetime="{{ last_run }}" data-local-moment>{{ last_run }}</time>.
               {%- else %}No automatic check has run yet.{% endif -%}
             </p>
+            <div class="card-actions">
+              <button class="button card-button" type="submit" data-busy-label="Saving…">
+                <span class="button-spinner" aria-hidden="true"></span>
+                <span class="button-label">Save</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {# Where the webmail is (webmail_site.py): the Mailboxes page opens it there #}
+  <section class="settings-card settings-card-blue{% if address_problem %} is-open{% endif %}" aria-labelledby="webmail-address-title" data-card>
+    <h2 class="card-heading">
+      <button type="button" class="card-head" data-card-toggle aria-controls="webmail-address-body" aria-expanded="{{ 'true' if address_problem else 'false' }}">
+        <span class="card-badge">{{ icon("link") }}</span>
+        <span class="card-titles">
+          <span id="webmail-address-title" class="card-title">Webmail address</span>
+          <span class="card-hint">{{ webmail_saved or webmail_beside }}</span>
+        </span>
+        <span class="card-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg></span>
+      </button>
+    </h2>
+    <div class="card-body" id="webmail-address-body">
+      <div class="card-body-clip">
+        <div class="card-body-content">
+          {% if address_problem %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't save the address">{{ address_problem }}</p>{% endif %}
+          <p class="checks-about">
+            Where the webmail opens when you click a mailbox's webmail button on the Mailboxes page.
+            Leave it empty while it opens beside the panel, at <strong>{{ webmail_beside }}</strong>.
+            Once Nginx Proxy Manager gives it a name of its own (Step 12), type that here, like https://webmail.example.com.
+          </p>
+          <form method="post" action="{{ url_for('settings.save_webmail_address') }}" class="card-form"{% if not address_problem %} data-save-when-changed{% endif %}>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="field">
+              <label class="field-label" for="webmail-address">Webmail address</label>
+              <div class="input-wrap">
+                <span class="input-icon">{{ icon("link") }}</span>
+                <input id="webmail-address" name="address" type="url" inputmode="url" autocomplete="off" autocapitalize="none" spellcheck="false"
+                       placeholder="{{ webmail_beside }}" value="{{ address_typed if address_problem else (webmail_saved or '') }}">
+              </div>
+            </div>
             <div class="card-actions">
               <button class="button card-button" type="submit" data-busy-label="Saving…">
                 <span class="button-spinner" aria-hidden="true"></span>

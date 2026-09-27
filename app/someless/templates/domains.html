@@ -65,7 +65,7 @@
         <td class="domain-delete-cell">
           <form method="post" action="{{ url_for('domains.delete', domain_id=domain.id) }}" class="domain-delete">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="icon-button is-danger" data-domain-name="{{ domain.name }}" aria-label="Delete {{ domain.name }}" title="Delete">{{ icon("trash") }}</button>
+            <button type="submit" class="icon-button is-danger" data-domain-name="{{ domain.name }}" aria-label="Delete {{ domain.name }}" data-tip="Delete">{{ icon("trash") }}</button>
           </form>
         </td>
       </tr>

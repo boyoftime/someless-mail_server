@@ -111,7 +111,7 @@
           <td class="domain-delete-cell">
             <form method="post" action="{{ url_for('smtp.delete', key_id=key.id) }}" class="domain-delete">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit" class="icon-button is-danger" data-key-name="{{ key.name }}" aria-label="Delete {{ key.name }}" title="Delete">{{ icon("trash") }}</button>
+              <button type="submit" class="icon-button is-danger" data-key-name="{{ key.name }}" aria-label="Delete {{ key.name }}" data-tip="Delete">{{ icon("trash") }}</button>
             </form>
           </td>
         </tr>

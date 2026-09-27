@@ -4,7 +4,7 @@ from collections import namedtuple
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from . import domain_checks, engine, two_factor, webmail_lock
+from . import domain_checks, engine, two_factor, webmail_lock, webmail_site
 from .auth import login_required
 from .db import get_db
 from .domain_records import server_address
@@ -214,7 +214,8 @@ def check_mail_server():
 # Miscellaneous: the settings that fit nowhere else. Automatic domain checks, and the webmail's
 # sign-in lock.
 
-def _misc_page(status=200, problem=None, typed=None, lock_problem=None, lock_typed=None):
+def _misc_page(status=200, problem=None, typed=None, lock_problem=None, lock_typed=None, address_problem=None,
+               address_typed=None):
     row = domain_checks.settings()
     every = row["every_hours"]
     tries, minutes = webmail_lock.settings()
@@ -226,6 +227,8 @@ def _misc_page(status=200, problem=None, typed=None, lock_problem=None, lock_typ
         lock={"tries": tries, "wait": minutes // 60 if minutes % 60 == 0 else minutes,
               "unit": "hours" if minutes % 60 == 0 else "minutes", "text": webmail_lock.describe(minutes)},
         lock_problem=lock_problem, lock_typed=lock_typed or {}, most_tries=webmail_lock.MOST_TRIES,
+        webmail_saved=webmail_site.saved(), webmail_beside=webmail_site.beside(request.host),
+        address_problem=address_problem, address_typed=address_typed,
     ), status
 
 
@@ -280,4 +283,17 @@ def save_webmail_lock():
     webmail_lock.save(tries, minutes)
     flash(f"Webmail sign-in lock saved: after {tries} wrong password{'s' if tries != 1 else ''} in a row, "
           f"a wait of {webmail_lock.describe(minutes)}.", "success")
+    return redirect(url_for("settings.misc"))
+
+
+@bp.post("/miscellaneous/webmail-address")
+@login_required
+def save_webmail_address():
+    typed = request.form.get("address", "")
+    value, problem = webmail_site.tidy(typed)
+    if problem:
+        return _misc_page(400, address_problem=problem, address_typed=typed)
+    webmail_site.save(value)
+    flash(f"The webmail opens at {value}." if value else
+          f"The webmail opens beside the panel: {webmail_site.beside(request.host)}.", "success")
     return redirect(url_for("settings.misc"))

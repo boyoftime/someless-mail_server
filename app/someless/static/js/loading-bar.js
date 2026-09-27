@@ -40,7 +40,9 @@
   });
 
   document.addEventListener("submit", function (event) {
-    if (!event.defaultPrevented) startLoading(event.target);
+    var form = event.target;
+    if (form.target && form.target !== "_self") return; // opens in another tab: this page stays
+    if (!event.defaultPrevented) startLoading(form);
   });
 
   // Coming back with the Back button can show the page from cache, still "loading".

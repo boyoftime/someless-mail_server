@@ -14,10 +14,22 @@
   var shownFor = null;
   var hideTimer = null;
 
+  // the open dialog it's in (showModal), or the page: anything outside an open dialog sits under it
+  function home(element) {
+    var dialog = element.closest("dialog[open]");
+    try {
+      return dialog && dialog.matches(":modal") ? dialog : document.body;
+    } catch (error) {
+      return document.body; // a browser without :modal
+    }
+  }
+
   function show(element) {
     clearTimeout(hideTimer);
     if (shownFor === element) return;
     shownFor = element;
+    var host = home(element);
+    if (tip.parentNode !== host) host.appendChild(tip);
     tip.textContent = element.getAttribute("data-tip");
     tip.classList.remove("is-shown");
     tip.style.left = "0px";
@@ -28,8 +40,10 @@
     var below = box.top - GAP - height < EDGE;
     var middle = box.left + box.width / 2;
     var left = Math.max(EDGE, Math.min(middle - width / 2, window.innerWidth - width - EDGE));
-    tip.style.left = left + "px";
-    tip.style.top = (below ? box.bottom + GAP : box.top - GAP - height) + "px";
+    // where 0, 0 lands (the window, unless something around it moves it, like an opening dialog)
+    var origin = tip.getBoundingClientRect();
+    tip.style.left = left - origin.left + "px";
+    tip.style.top = (below ? box.bottom + GAP : box.top - GAP - height) - origin.top + "px";
     tip.style.setProperty("--arrow-x", Math.max(16, Math.min(middle - left, width - 16)) + "px");
     tip.setAttribute("data-side", below ? "below" : "above");
     void tip.offsetWidth; // fade in from where it now is

@@ -756,7 +756,7 @@ def test_a_found_record_says_so_with_a_tick(client, login, app, dns):
 
 
 def test_a_domain_that_becomes_authenticated_is_celebrated(client, login, app, dns):
-    """Confetti, gifts and stars over the screen (celebrate.js), once: the moment it's authenticated."""
+    """Confetti, gifts and stars over the screen (celebrate.js), right after the check."""
     login()
     domain_id = add_domain(client)
     all_right(dns, app, domain_id)
@@ -767,7 +767,7 @@ def test_a_domain_that_becomes_authenticated_is_celebrated(client, login, app, d
     assert "data-celebrate" not in text(client.get(f"/domains/{domain_id}"))   # not again on the next visit
 
 
-def test_checking_an_authenticated_domain_again_is_no_celebration(client, login, app, dns):
+def test_every_check_that_finds_it_all_right_is_celebrated(client, login, app, dns):
     login()
     domain_id = add_domain(client)
     all_right(dns, app, domain_id)
@@ -777,7 +777,7 @@ def test_checking_an_authenticated_domain_again_is_no_celebration(client, login,
     client.post(f"/domains/{domain_id}/check")
 
     page = text(client.get(f"/domains/{domain_id}"))
-    assert "is authenticated." in page and "data-celebrate" not in page
+    assert "is authenticated." in page and "data-celebrate" in page
 
 
 def test_a_check_that_still_finds_something_missing_is_no_celebration(client, login, app, dns):

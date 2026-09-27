@@ -18,7 +18,8 @@ from flask_wtf import CSRFProtect
 from flask_wtf.csrf import CSRFError
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from . import DEFAULT_THEME, STATIC_CACHE_SECONDS, THEMES, VERSION, db, fingerprint_static_links, mail_password, webmail_lock
+from . import (DEFAULT_THEME, STATIC_CACHE_SECONDS, THEMES, VERSION, db, fingerprint_static_links, mail_password,
+               webmail_lock, webmail_site)
 from .db import get_db
 from .domain_records import HOST_CHOICES
 from .engine import names
@@ -109,6 +110,21 @@ def login():
     return redirect(url_for("inbox"))
 
 
+def enter():
+    """Opened from the panel's Mailboxes page: its one-time ticket signs the mailbox in, and the
+    address bar loses the ticket at once."""
+    mailbox_id = webmail_site.take_ticket(request.args.get("ticket", ""))
+    row = mailbox_id and get_db().execute("SELECT * FROM mailboxes WHERE id = ?", (mailbox_id,)).fetchone()
+    if not row:
+        return render_template("webmail-login.html", email="", problem=(
+            "This link to the webmail was used already, or is too old. Open the webmail from the Mailboxes page "
+            "again, or sign in with the mailbox's password.")), 400
+    session.clear()
+    session["mailbox_id"] = row["id"]
+    session["password_version"] = row["password_version"]
+    return redirect(url_for("inbox"))
+
+
 def logout():
     session.clear()
     return redirect(url_for("login"))
@@ -155,6 +171,7 @@ def create_webmail_app(test_config=None):
     app.before_request(_load_mailbox)
     app.add_url_rule("/login", "login", login, methods=["GET", "POST"])
     app.add_url_rule("/logout", "logout", logout, methods=["POST"])
+    app.add_url_rule("/enter", "enter", enter)
     app.add_url_rule("/", "inbox", inbox)
     app.add_url_rule("/healthz", "healthz", healthz)
     app.register_error_handler(CSRFError, page_left_open)

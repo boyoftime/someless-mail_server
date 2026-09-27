@@ -573,6 +573,12 @@ body.is-ready .preparing-main { opacity: 0; transform: translateY(-6px); }
   --switch-on: linear-gradient(90deg, #0f766e, #2dd4bf);
   --switch-glow: rgba(45, 212, 191, 0.55);
 }
+.settings-card-blue {
+  --accent: #0195fb;
+  --accent-edge: rgba(1, 149, 251, 0.34);
+  --accent-ring: rgba(1, 149, 251, 0.22);
+  --badge: linear-gradient(135deg, #1463f3, #0195fb);
+}
 .card-heading { margin: 0; }
 /* the header is the button that opens and closes the card */
 .card-head {
@@ -833,7 +839,7 @@ html:not(.js) .rules-button { display: none; } /* the dialog needs JavaScript */
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35), 0 0 48px -12px rgba(139, 92, 246, 0.8);
 }
 .rules-dialog::backdrop { background: var(--loader-veil); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
-.rules-dialog[open] { animation: dialog-in 0.32s var(--menu-ease) both; }
+.rules-dialog[open] { animation: dialog-in 0.32s var(--menu-ease) backwards; } /* not held after: a held transform would trap the tips (tooltip.js) */
 .rules-dialog[open]::backdrop { animation: fade-in 0.25s ease both; }
 .rules-dialog.is-closing { animation: dialog-out 0.18s ease both; }
 .rules-dialog.is-closing::backdrop { animation: fade-out 0.18s ease both; }
@@ -3361,6 +3367,9 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
   text-align: center;
 }
 .mailbox-delete { display: inline-flex; margin: 0; }
+.mailbox-open { display: inline-flex; margin: 0; }
+.icon-button.is-webmail { color: #2dd4bf; }
+.icon-button.is-webmail:hover { border-color: rgba(45, 212, 191, 0.6); box-shadow: 0 0 16px -4px rgba(45, 212, 191, 0.8); }
 .mailbox-facts {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
