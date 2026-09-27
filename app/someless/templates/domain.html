@@ -102,7 +102,7 @@
     <h2 class="dns-group-title" id="authenticate-title">Records that authenticate the domain</h2>
     {% if checked_ago %}<p class="dns-checked">Last checked {{ checked_ago }}</p>{% endif %}
   </div>
-  <p class="dns-group-hint">Safe to add now: they don't change where your mail goes.</p>
+  <p class="dns-group-hint">Safe to add now: they don't change where your mail goes. The MX record below is needed too.</p>
   {% for record in records %}{{ dns_record(record, checks.get(record.key), loop.index) }}{% endfor %}
 </section>
 

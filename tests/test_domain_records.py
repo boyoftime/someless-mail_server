@@ -58,6 +58,7 @@ def all_right(dns, app, domain_id, name="example.com", ip="194.163.167.106"):
     dns[(f"mail.{name}", "A")] = [ip]
     dns[(f"someless._domainkey.{name}", "TXT")] = [f"v=DKIM1; k=rsa; p={row['dkim_public']}"]
     dns[(f"_dmarc.{name}", "TXT")] = ["v=DMARC1; p=none"]
+    dns[(name, "MX")] = [f"mail.{name}"]
 
 
 def test_list_links_each_domain_to_its_authenticate_page(client, login):
@@ -139,7 +140,7 @@ def test_a_domain_with_all_records_right_is_authenticated(client, login, app, dn
 
     assert response.headers["Location"] == f"/domains/{domain_id}"
     page = text(client.get(f"/domains/{domain_id}"))
-    for key in ["code", "a", "spf", "dkim", "dmarc"]:
+    for key in ["code", "a", "spf", "dkim", "dmarc", "mx"]:
         assert 'class="dns-status is-found"' in record(page, key), key
     assert "example.com is authenticated." in page
     listing = text(client.get("/domains"))
@@ -199,18 +200,28 @@ def test_a_dkim_record_with_another_key_is_flagged(client, login, app, dns):
     assert 'class="dns-status is-different"' in record(text(client.get(f"/domains/{domain_id}")), "dkim")
 
 
-def test_mx_is_checked_but_not_needed_to_authenticate(client, login, app, dns):
+def test_the_mx_record_is_needed_to_authenticate(client, login, app, dns):
+    """A domain is authenticated with all six records: its mail comes here too."""
     login()
     domain_id = add_domain(client)
     all_right(dns, app, domain_id)
-    dns[("example.com", "MX")] = ["mx1.privateemail.com"]
+    dns[("example.com", "MX")] = ["mx1.privateemail.com"]   # its mail still goes elsewhere
 
     client.post(f"/domains/{domain_id}/check")
 
     page = text(client.get(f"/domains/{domain_id}"))
-    assert "example.com is authenticated." in page
-    assert 'class="dns-status is-elsewhere"' in record(page, "mx")  # "Not moved yet": right until the mail moves
+    assert "example.com is authenticated." not in page and "Still to add or fix: MX" in page
+    assert 'class="dns-status is-elsewhere"' in record(page, "mx")
     assert "mx1.privateemail.com" in summary(page)
+    assert "Not authenticated" in text(client.get("/domains"))
+
+    del dns[("example.com", "MX")]   # none at all
+    client.post(f"/domains/{domain_id}/check")
+    assert "Still to add or fix: MX" in text(client.get(f"/domains/{domain_id}"))
+
+    dns[("example.com", "MX")] = ["mail.example.com"]
+    client.post(f"/domains/{domain_id}/check")
+    assert "example.com is authenticated." in text(client.get(f"/domains/{domain_id}"))
 
 
 def test_dns_that_does_not_answer_counts_as_not_found(client, login, app, monkeypatch):

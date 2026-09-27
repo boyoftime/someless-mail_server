@@ -1,18 +1,18 @@
 """The DNS records a mail domain needs, and checking them.
 
-Authenticating a domain takes five records at the domain provider, all safe to add straight
+Authenticating a domain takes six records at the domain provider. Five are safe to add straight
 away:
 - the Someless code (TXT): shows the domain is the admin's
 - A: points mail.<domain> at this server
 - SPF (TXT): lets this server send the domain's mail
 - DKIM (TXT): the public half of the key that signs the domain's mail
 - DMARC (TXT): tells other mail servers what to do with mail that fails those checks
-Receiving the domain's mail here takes one more, MX, which moves all new mail for the domain
-to this server. That one waits until the domain's mail is to move.
+and the sixth, MX, moves all new mail for the domain to this server: a domain is authenticated
+once its mail comes here too.
 
 A domain often has mail set up already (Zoho Mail, Google Workspace, Brevo...). Each look at
 its DNS notes what is there, and the records fit around it: an SPF record is extended, never
-doubled; a DMARC record is kept; the MX records stay until the mail moves; and if mail.<domain>
+doubled; a DMARC record is kept; the old MX records are to be replaced; and if mail.<domain>
 is taken, this server takes the next free name.
 """
 import base64
@@ -33,7 +33,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from .db import get_db
 
 DKIM_SELECTOR = "someless"
-AUTHENTICATING = ("code", "a", "spf", "dkim", "dmarc")  # all found: authenticated
+AUTHENTICATING = ("code", "a", "spf", "dkim", "dmarc", "mx")  # all found: authenticated
 HOST_CHOICES = ("mail", "mx", "smtp", "mail2")  # this server's name in the domain: the first free one
 SPF_LOOKUP_LIMIT = 10  # DNS lookups one SPF check may take; past it the record fails everywhere
 LOOK_AGAIN_AFTER = 60  # seconds: an older look at a domain's DNS is done again when its page opens
@@ -193,16 +193,17 @@ def receive_note(domain, keys):
     elsewhere = _join(_receivers([server for server in found["mx"] if server != mail_host]))
     if mail_host in found["mx"] and elsewhere:
         return (f"Mail for {domain} goes both to this server and to {elsewhere}, but a domain's mail "
-                "should go to one place. Delete the other MX records, so all of it lands in your mailboxes here.")
+                "should go to one place. Delete the other MX records: the domain is authenticated once this "
+                "is its only one, and all its mail lands in your mailboxes here.")
     if mail_host in found["mx"]:
         return (f"Mail for {domain} comes to this server. Each address that receives it needs a mailbox "
                 "(or an alias of one) on the Mailboxes page: mail to any other address is refused.")
     if found["mx"]:
-        return (f"Add this one when you move {domain}'s mail to Someless Mail: create its mailboxes on the "
-                "Mailboxes page first, then replace your current MX records with this one. From then on, all "
-                "new mail for the domain comes here.")
-    return (f"{domain} has no MX record, so it doesn't receive mail anywhere yet. Create its mailboxes on "
-            "the Mailboxes page, then add this record to receive their mail here.")
+        return (f"Mail for {domain} goes to another service now. To authenticate the domain, replace your "
+                "current MX records with this one: from then on, all new mail for it comes here. Then create "
+                "its mailboxes on the Mailboxes page straight away: mail to an address without one is refused.")
+    return (f"{domain} has no MX record, so it doesn't receive mail anywhere yet. Add this one too: the domain "
+            "is authenticated once it's found. Then create its mailboxes on the Mailboxes page, for its mail to land in.")
 
 
 def summary(domain, keys, address):
@@ -217,9 +218,9 @@ def summary(domain, keys, address):
     if found["mx"] and mail_host not in found["mx"]:
         receivers = _join(_receivers(found["mx"]))
         todo.append({"kind": "move", "now": (), "text": (
-            f"Mail for {domain} goes to {receivers} now. Keep those MX records until its mailboxes are "
-            "ready here (the Mailboxes page). Then delete them and add the MX record above, and "
-            f"don't keep both, or some mail would land at {receivers} and some here.")})
+            f"Mail for {domain} goes to {receivers} now. Replace those MX records with the MX record above: "
+            "the domain is authenticated once its mail comes here. Delete them, and don't keep both, or some mail would land "
+            f"at {receivers} and some here.")})
     uses = services(domain, keys)
     clean = cleanup(domain, keys, address)
     in_the_way = [item for item in todo if item["kind"] != "keep"]

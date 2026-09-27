@@ -196,10 +196,11 @@ In **Domains**, click **Add domain** and type the part of your email address aft
 | SPF (TXT) | Lets your server send the domain's mail |
 | DKIM (TXT) | Signs your mail so nobody can fake it. The private key never leaves your server (it's in `data/`) |
 | DMARC (TXT) | Tells other mail servers what to do with mail that fails these checks |
+| MX | Sends the domain's incoming mail to your server, into its mailboxes ([Step 11](#step-11-mailboxes-receive-mail)) |
 
-Add them all, then click **Authenticate this email domain**. Someless Mail looks the records up and marks each one found, missing or different; once all five are right, the domain shows as **Authenticated**, and the mail engine starts signing its mail. Someless Mail asks your domain's own name servers (at Namecheap, Cloudflare…), not a DNS cache, so a change shows up as soon as your provider publishes it: usually within minutes, sometimes longer. The page looks again when you open it (if its last look is over a minute old), and **Authenticate this email domain** checks right away.
+Add them all, then click **Authenticate this email domain**. Someless Mail looks the records up and marks each one found, missing or different; once all six are right, the domain shows as **Authenticated**, and the mail engine starts signing its mail. Someless Mail asks your domain's own name servers (at Namecheap, Cloudflare…), not a DNS cache, so a change shows up as soon as your provider publishes it: usually within minutes, sometimes longer. The page looks again when you open it (if its last look is over a minute old), and **Authenticate this email domain** checks right away.
 
-The page also shows the **MX** record, which sends all new mail for the domain to your server. Add it once the domain's mailboxes are ready ([Step 11](#step-11-mailboxes-receive-mail)): from then on, all new mail for the domain comes here.
+The **MX** record is needed too: a domain is authenticated once its mail comes to your server. From then on, all new mail for the domain comes here, so create its mailboxes right after ([Step 11](#step-11-mailboxes-receive-mail)): mail to an address without one is refused.
 
 ### A domain that already has mail
 
@@ -207,7 +208,7 @@ If nothing else uses the domain, a green bar at the top says it's ready to set u
 
 - **SPF:** a domain can have only one SPF record, so the SPF card gives your own record with your server added (like `v=spf1 include:zohomail.com a:mail.example.com ~all`) and says to replace your current one with it; don't add a second one. If the record is near SPF's limit of 10 DNS lookups, your server goes in by its IP address instead.
 - **DMARC:** a domain can have only one, so yours stays: the card shows it, marked "Already there".
-- **MX:** keep your current MX records until you move the domain's mail here. Then replace them; don't keep both, or some mail would go to the old service and some here.
+- **MX:** replace your current MX records with this one: the domain is authenticated only once its mail comes here. Don't keep both, or some mail would go to the old service and some here. Moving from a service with mail in it? Copy that mail out first (its export, or your mail app), since new mail arrives here from then on.
 - **`mail.example.com` in use** (by webmail or an old mail server): your server takes a free name instead, like `mx.example.com`, and every record follows it. Use that name wherever this guide says `mail.example.com`.
 
 The summary's **What to remove** lists the records you won't need, and when to delete each:
@@ -333,7 +334,7 @@ Each mailbox's card shows how much of its storage is used, and has buttons to ch
   | Incoming (POP3) | `mail.example.com`, port `995`, SSL/TLS |
   | Outgoing (SMTP) | `mail.example.com`, port `465` with SSL/TLS, or `587` with STARTTLS |
 
-**Then point the domain's mail here:** add the **MX** record from the domain's **Authenticate** page ([Step 4](#step-4-connect-and-authenticate-your-domain)), and delete any other MX records. The Mailboxes page says so as long as a domain with mailboxes gets its mail elsewhere. Mail to an address at the domain that isn't a mailbox or an alias is refused.
+The domain's **MX** record, added when you authenticated it ([Step 4](#step-4-connect-and-authenticate-your-domain)), already sends its mail here. If it ever points elsewhere, the Mailboxes page says so, and the domain is no longer authenticated. Mail to an address at the domain that isn't a mailbox or an alias is refused.
 
 To try it, send a message from your Gmail to the new mailbox, and open it in your mail app. A message from an unknown sender can land in **Junk Mail** at first: mark it as not junk.
 

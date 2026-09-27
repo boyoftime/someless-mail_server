@@ -19,7 +19,8 @@ _LABEL = r"(?!-)[a-z0-9-]{1,63}(?<!-)"
 DOMAIN_PATTERN = re.compile(rf"(?=.{{1,253}}$)(?:{_LABEL}\.)+(?:[a-z]{{2,63}}|xn--[a-z0-9-]{{1,59}})")
 NOT_A_DOMAIN = "Type a domain like example.com: the part of an email address after the @."
 # How the check names what is still to add or fix
-SHORT_NAMES = {"code": "Someless code", "a": "mail server address", "spf": "SPF", "dkim": "DKIM", "dmarc": "DMARC"}
+SHORT_NAMES = {"code": "Someless code", "a": "mail server address", "spf": "SPF", "dkim": "DKIM", "dmarc": "DMARC",
+               "mx": "MX"}
 
 
 def tidy(typed):
