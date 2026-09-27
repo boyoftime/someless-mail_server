@@ -3308,8 +3308,10 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
   .every-custom { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* A Save that waits for a change (save-when-changed.js): grey and locked until then */
-.button.is-locked, .button.is-locked:hover {
+/* A Save that waits for a change (save-when-changed.js): grey and locked until then, hovered
+   or not (as specific as the cards' own button colours, which it has to win over) */
+.button.is-locked, .button.is-locked:hover,
+.settings-card .card-form .card-button.is-locked, .settings-card .card-form .card-button.is-locked:hover {
   background: var(--input-bg);
   color: var(--muted);
   box-shadow: inset 0 0 0 1px var(--line);
