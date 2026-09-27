@@ -1,0 +1,93 @@
+/* The page a Need help? link opens (help.html): white and calm, for whoever sets up a domain's
+   DNS, on a phone as much as a desk. The panel's record cards (style.css, in the light), a bar
+   with the logo at the top, and the check button held at the bottom, as in an app. */
+body.help-page {
+  --help-line: #e3e8f2;
+  --help-shadow: 0 12px 32px -20px rgba(15, 26, 61, 0.35);
+  min-height: 100dvh;
+  background: #f5f7fb;
+  color: var(--ink);
+}
+/* (body.help-page: this file comes before style.css, whose rules would win otherwise) */
+body.help-page .dns-record { background: #fff; border-color: var(--help-line); box-shadow: var(--help-shadow); }
+
+.help-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem clamp(1rem, 4vw, 2rem);
+  border-bottom: 1px solid var(--help-line);
+  background: rgba(255, 255, 255, 0.88);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.help-bar img { border-radius: 10px; }
+
+.help-main { display: grid; gap: 1.25rem; max-width: 46rem; margin: 0 auto; padding: 1.75rem 1rem 3rem; }
+.help-main.has-action { padding-bottom: 8rem; }   /* room for the button held at the bottom */
+.help-title { margin: 0; font-size: clamp(1.6rem, 5.5vw, 2.25rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; text-wrap: balance; }
+.help-lead { margin: 0; color: var(--muted); font-size: 1.02rem; line-height: 1.55; text-wrap: pretty; }
+.help-intro { display: grid; gap: 0.6rem; }
+
+.help-card {
+  padding: 1.1rem 1.25rem 1.2rem;
+  border: 1px solid var(--help-line);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: var(--help-shadow);
+}
+.help-card-title { margin: 0; font-size: 1.1rem; font-weight: 700; }
+.help-steps { display: grid; gap: 0.5rem; margin: 0.75rem 0 0; padding-left: 1.3rem; line-height: 1.5; }
+.help-steps li::marker { color: #0195fb; font-weight: 700; }
+.help-note { margin: 0.85rem 0 0; color: var(--muted); font-size: 0.9rem; }
+.help-note code { padding: 0.05rem 0.35rem; border-radius: 6px; background: #eef2f9; font-weight: 700; }
+
+.help-records { display: grid; gap: 0.9rem; }
+.help-records-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 1rem; }
+.help-checked { margin: 0; color: var(--muted); font-size: 0.85rem; }
+
+/* the check, always at hand */
+.help-action {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+  padding: 0.8rem 1rem calc(0.8rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--help-line);
+  background: rgba(255, 255, 255, 0.92);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.help-action form { display: flex; align-items: center; justify-content: space-between; gap: 1rem; max-width: 44rem; margin: 0 auto; }
+.help-action-text { margin: 0; color: var(--muted); font-weight: 600; }
+body.help-page .help-button-main {
+  padding: 0.85rem 1.8rem;
+  background: linear-gradient(135deg, #1463f3, #0195fb);
+  box-shadow: 0 12px 26px -12px rgba(1, 149, 251, 0.8);
+  color: #fff;
+}
+body.help-page .help-button-main:hover { filter: brightness(1.08); }
+
+/* expired or deleted, closed with success, or asking for the password */
+.help-state { display: grid; justify-items: center; gap: 0.8rem; padding: clamp(2rem, 8vw, 4rem) 0.5rem; text-align: center; }
+.help-state .help-lead { max-width: 30rem; }
+.help-state-badge { display: grid; place-items: center; width: 68px; height: 68px; border-radius: 50%; }
+.help-state-badge svg { width: 32px; height: 32px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.help-state-badge.is-ok { background: #dcfce7; color: #16a34a; box-shadow: 0 0 0 8px rgba(34, 197, 94, 0.12); }
+.help-state-badge.is-lock { background: #e0ecff; color: #1463f3; box-shadow: 0 0 0 8px rgba(20, 99, 243, 0.1); }
+.help-state-badge.is-gone { background: #eef1f6; color: #64708f; }
+.help-unlock { display: grid; gap: 0.8rem; width: min(22rem, 100%); margin-top: 0.5rem; text-align: left; }
+.help-unlock .field input { background: #fff; }
+
+@media (max-width: 520px) {
+  .help-action-text { display: none; }
+  .help-action form { justify-content: stretch; }
+  body.help-page .help-button-main { flex: 1; }
+}

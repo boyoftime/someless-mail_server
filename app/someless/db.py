@@ -125,6 +125,22 @@ CREATE TABLE IF NOT EXISTS webmail_lock (
     lock_minutes INTEGER NOT NULL DEFAULT 5
 );
 INSERT OR IGNORE INTO webmail_lock (id) VALUES (1);
+-- Need help? Links that share a domain's records with a developer or IT (help_links.py): the
+-- link's secret and its password kept only as fingerprints; how far it got, for the dialog
+CREATE TABLE IF NOT EXISTS help_links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    domain_id INTEGER NOT NULL,
+    token_hash TEXT NOT NULL UNIQUE,
+    password_hash TEXT,
+    created_at REAL NOT NULL,
+    expires_at REAL,
+    opened_at REAL,
+    opens INTEGER NOT NULL DEFAULT 0,
+    checked_at REAL,
+    authenticated_at REAL,
+    failures INTEGER NOT NULL DEFAULT 0,
+    locked_until REAL
+);
 -- Where the webmail is (Settings > Miscellaneous, webmail_site.py): none, beside the panel on 17090
 CREATE TABLE IF NOT EXISTS webmail_site (
     id INTEGER PRIMARY KEY CHECK (id = 1),

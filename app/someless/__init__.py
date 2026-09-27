@@ -45,6 +45,7 @@ SIGNED_IN_PAGE_FILES = [
     "js/local-time.js",
     "js/dropdown.js",
     "js/domains-page.js",
+    "js/help-links.js",
     "js/senders-page.js",
     "js/sender-form.js",
     "js/mailboxes-page.js",
@@ -122,7 +123,7 @@ def create_app(test_config=None):
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     csrf.init_app(app)
 
-    from . import auth, db, domains, errors, mailboxes, pages, senders, settings, smtp, two_factor
+    from . import auth, db, domains, errors, help_links, mailboxes, pages, senders, settings, smtp, two_factor
     from .engine import cli as engine_cli
     from .engine import deliveries as engine_deliveries
     db.init_app(app)
@@ -131,6 +132,7 @@ def create_app(test_config=None):
     app.register_blueprint(auth.bp)
     app.register_blueprint(pages.bp)
     app.register_blueprint(domains.bp)
+    app.register_blueprint(help_links.bp)
     app.register_blueprint(senders.bp)
     app.register_blueprint(mailboxes.bp)
     app.register_blueprint(smtp.bp)

@@ -804,8 +804,25 @@ def test_the_mx_card_says_receiving_works_and_where_mailboxes_are_made():
         "both": ["mail.example.com", "mx.zoho.com"]}.items()}
 
     for case, text_ in notes.items():
-        assert "isn't ready" not in text_, case
+        assert "isn't ready" not in (text_ or ""), case
     assert "doesn't receive mail anywhere yet" in notes["none"] and "Mailboxes" in notes["none"]
     assert "replace your current MX records" in notes["elsewhere"] and "Mailboxes" in notes["elsewhere"]
-    assert "comes to this server" in notes["here"] and "Mailboxes" in notes["here"]
+    assert notes["here"] is None   # nothing to do: no warning (the MX card's tip says how it works)
+    tip = domain_records.receive_tip("example.com", {"found": json_module.dumps({"mx": ["mail.example.com"]}), "mail_host": None})
+    assert "comes to this server" in tip and "Mailboxes" in tip and "ceo@example.com" in tip
+    assert domain_records.receive_tip("example.com", {"found": json_module.dumps({"mx": []}), "mail_host": None}) is None
     assert "one place" in notes["both"]
+
+
+def test_with_its_mail_coming_here_the_mx_card_explains_it_in_a_tip(client, login, app, dns):
+    login()
+    domain_id = add_domain(client)
+    all_right(dns, app, domain_id)
+
+    client.post(f"/domains/{domain_id}/check")
+
+    page = text(client.get(f"/domains/{domain_id}"))
+    receive = page[page.index('class="dns-group dns-group-receive"'):]
+    receive = receive[:receive.index("</section>")]
+    assert 'class="dns-warning"' not in receive   # nothing looks like a problem
+    assert re.search(r'class="help-dot"[^>]*data-tip="Mail for example.com comes to this server[^"]*ceo@example.com', record(page, "mx"))

@@ -187,7 +187,9 @@ def _dmarc(domain, found):
 
 
 def receive_note(domain, keys):
-    """When to add the MX record, as things are now (what other services have is in summary())."""
+    """What's still to do about the MX record, as things are now (what other services have is in
+    summary()). None once the domain's mail comes here, and only here: receive_tip() says how
+    that works, on the MX card."""
     found = found_in(keys)
     mail_host = _mail_host(domain, keys)
     elsewhere = _join(_receivers([server for server in found["mx"] if server != mail_host]))
@@ -196,14 +198,25 @@ def receive_note(domain, keys):
                 "should go to one place. Delete the other MX records: the domain is authenticated once this "
                 "is its only one, and all its mail lands in your mailboxes here.")
     if mail_host in found["mx"]:
-        return (f"Mail for {domain} comes to this server. Each address that receives it needs a mailbox "
-                "(or an alias of one) on the Mailboxes page: mail to any other address is refused.")
+        return None
     if found["mx"]:
         return (f"Mail for {domain} goes to another service now. To authenticate the domain, replace your "
                 "current MX records with this one: from then on, all new mail for it comes here. Then create "
                 "its mailboxes on the Mailboxes page straight away: mail to an address without one is refused.")
     return (f"{domain} has no MX record, so it doesn't receive mail anywhere yet. Add this one too: the domain "
             "is authenticated once it's found. Then create its mailboxes on the Mailboxes page, for its mail to land in.")
+
+
+def receive_tip(domain, keys):
+    """How receiving works, once the domain's mail comes here: a tip on the MX card."""
+    if found_in(keys)["mx"] != [_mail_host(domain, keys)]:
+        return None
+    return (f"Mail for {domain} comes to this server. Each address that receives mail needs a mailbox, "
+            "or an alias of one, on the Mailboxes page.\n\n"
+            "For example:\n"
+            f"• ceo@{domain}, a mailbox: gets its mail\n"
+            f"• hello@{domain}, its alias: lands in ceo's mailbox too\n"
+            f"• nobody@{domain}, neither: refused")
 
 
 def summary(domain, keys, address):

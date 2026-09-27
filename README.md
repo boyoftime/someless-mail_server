@@ -180,6 +180,10 @@ Add them all, then click **Authenticate this email domain**. Someless Mail looks
 
 The **MX** record is needed too: a domain is authenticated once its mail comes to your server. From then on, all new mail for the domain comes here, so create its mailboxes right after ([Step 11](#step-11-mailboxes-receive-mail)): mail to an address without one is refused.
 
+### Someone else looks after the DNS?
+
+Click **Need help?** at the bottom of the domain's **Authenticate** page, and make a link to send to your developer or IT. It opens a page of its own, on your web interface's address, with no login: the records, how to add them at your DNS provider, and an **Authenticate** button. You choose when the link expires (1 hour to 30 days, or never) and whether it asks for a password. The dialog shows whether each link was opened, and you can delete one at any time. Once its check finds all six records right, the domain is authenticated and the link closes.
+
 ### A domain that already has mail
 
 If nothing else uses the domain, a green bar at the top says it's ready to set up. If it already uses a mail service (Zoho Mail, Google Workspace, Microsoft 365, Namecheap Private Email, Brevo…), the records are fitted around it, and a summary at the end of the page names the service and says what to do with its records:

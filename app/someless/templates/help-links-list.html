@@ -1,0 +1,29 @@
+{# A domain's help links, in the Need help? dialog (help_links.py, help-links.js): how far each got,
+   until when it works, and a trash button. A link just made shows its address, this once. #}
+{% from "copy-box.html" import copy_box %}
+{% if links %}
+<ul class="help-link-list">
+  {% for link in links %}
+  <li class="help-link is-{{ link.state }}">
+    <div class="help-link-main">
+      <p class="help-link-title">
+        {%- if link.password %}<svg class="help-link-lock" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>{% endif -%}
+        {{ "Link with a password" if link.password else "Link" }}<span class="help-link-made">, made {{ link.made }}</span>
+      </p>
+      {% if fresh and fresh.id == link.id %}
+      {{ copy_box(fresh.url, "Copy the link") }}
+      <p class="help-link-once">Copy it now and send it: for safety, it's shown only this once.</p>
+      {% endif %}
+      <p class="help-link-until">{{ link.until }}</p>
+    </div>
+    <span class="help-link-state is-{{ link.state }}">{{ link.state_text }}</span>
+    <form method="post" action="{{ url_for('help_links.delete', domain_id=domain_id, link_id=link.id) }}" class="help-link-delete" data-help-delete>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="icon-button is-danger" aria-label="Delete this link" data-tip="Delete"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.9 12.2a1.5 1.5 0 0 0 1.5 1.3h6.2a1.5 1.5 0 0 0 1.5-1.3L17.5 7M10 11v6M14 11v6"/></svg></button>
+    </form>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="help-link-none">No links yet. Make one above, and send it to whoever looks after the domain's DNS.</p>
+{% endif %}

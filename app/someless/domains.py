@@ -115,9 +115,33 @@ def authenticate(domain_id):
         "domain.html", domain=domain, provider=provider, records=authenticating, receiving=receiving,
         celebrate=session.pop("celebrate", None) == domain_id,   # a check just found it all right (below)
         receive_note=domain_records.receive_note(domain["name"], keys),
+        receive_tip=domain_records.receive_tip(domain["name"], keys),
+        help_links=None if domain["authenticated"] else _help_links(domain_id),
         summary=domain_records.summary(domain["name"], keys, address),
         checks=json.loads(keys["checks"]) if keys["checks"] else {}, checked_ago=_ago(keys["checked_at"]),
     )
+
+
+def _help_links(domain_id):
+    """The Need help? dialog's list, as it is now (help_links.py imports this module)."""
+    from . import help_links
+    return help_links.list_html(domain_id)
+
+
+def check_now(domain, host):
+    """Look the domain's records up in DNS now and keep what's found (the Authenticate page, and
+    the pages its help links open): None when it's authenticated, else what's still to add or fix."""
+    address = domain_records.server_address(host)
+    domain_checks.remember_address(address)
+    found_host, found, results = domain_records.look(domain["name"], domain_records.keys_for(domain["id"]), address)
+    domain_records.save(domain["id"], found_host, found, results)
+    engine_sync.after_change()
+    _note_provider(domain["id"], domain["name"])  # it may have moved its DNS since
+    if domain_records.authenticated(results):
+        return None
+    still = [SHORT_NAMES[key] for key in domain_records.AUTHENTICATING if results[key]["state"] != "found"]
+    return (f"Still to add or fix: {', '.join(still)}. New records can take a while to show up, "
+            "so check again later.")
 
 
 @bp.post("/<int:domain_id>/check")
@@ -125,19 +149,12 @@ def authenticate(domain_id):
 def check(domain_id):
     """Look the records up in DNS ("Authenticate this email domain")."""
     domain = _domain(domain_id)
-    address = domain_records.server_address(request.host)
-    domain_checks.remember_address(address)
-    host, found, results = domain_records.look(domain["name"], domain_records.keys_for(domain_id), address)
-    domain_records.save(domain_id, host, found, results)
-    engine_sync.after_change()
-    _note_provider(domain_id, domain["name"])  # it may have moved its DNS since
-    if domain_records.authenticated(results):
+    still = check_now(domain, request.host)
+    if still is None:
         flash(f"{domain['name']} is authenticated.", "authenticated")
         session["celebrate"] = domain_id   # every check that finds it all right: the page celebrates
     else:
-        still = [SHORT_NAMES[key] for key in domain_records.AUTHENTICATING if results[key]["state"] != "found"]
-        flash(f"Still to add or fix: {', '.join(still)}. New records can take a while to show up, "
-              "so check again later.", "not-authenticated")
+        flash(still, "not-authenticated")
     return redirect(url_for("domains.authenticate", domain_id=domain_id))
 
 
@@ -155,6 +172,7 @@ def delete(domain_id):
         db.execute("DELETE FROM domains WHERE id = ?", (domain_id,))
         db.execute("DELETE FROM domain_keys WHERE domain_id = ?", (domain_id,))
         db.execute("DELETE FROM senders WHERE domain_id = ?", (domain_id,))  # its addresses go with it
+        db.execute("DELETE FROM help_links WHERE domain_id = ?", (domain_id,))  # and its help links
         db.commit()
         engine_sync.after_change()
         flash(f"{domain['name']} was deleted.", "deleted")

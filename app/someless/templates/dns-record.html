@@ -1,0 +1,50 @@
+{# A DNS record's card, for the Authenticate page and the pages its help links open
+   (help_links.py) #}
+{% from "copy-box.html" import copy_box %}
+
+{% macro icon(name) %}
+  {%- if name == "edit" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 19.5h4l10-10a2.8 2.8 0 0 0-4-4l-10 10v4z"/><path d="M13 7l4 4"/></svg>
+  {%- elif name == "keep" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.2 12.3l2.6 2.6 5-5.2"/></svg>
+  {%- elif name == "move" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
+  {%- endif -%}
+{% endmacro %}
+
+{# One record to add: its type, host and value (each ready to copy), a line on what to do
+   when the domain has that record already and, after a check, what DNS holds for it #}
+{% macro dns_record(record, result, step, tip=none) %}
+<article class="dns-record{% if result %} is-{{ result.state }}{% endif %}" aria-labelledby="record-{{ record.key }}">
+  <div class="dns-record-head">
+    <span class="dns-step" aria-hidden="true">{{ step }}</span>
+    <div class="dns-record-titles">
+      <h3 class="dns-record-title" id="record-{{ record.key }}"><span class="visually-hidden">Step {{ step }}: </span>{{ record.title }}
+        {%- if tip %} <span class="help-dot" tabindex="0" role="img" aria-label="{{ tip }}" data-tip="{{ tip }}">?</span>{% endif %}</h3>
+      <p class="dns-record-hint">{{ record.hint }}</p>
+      {% if record.advice and record.advice.short %}<p class="dns-action is-{{ record.advice.kind }}">{{ icon(record.advice.kind) }}<span>{{ record.advice.short }}</span></p>{% endif %}
+    </div>
+    {% if result %}
+    <span class="dns-status is-{{ result.state }}">
+      {%- if result.state == "found" %}<svg class="dns-status-tick" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.4l3 3 6-6.3"/></svg>{% endif -%}
+      {{ {"found": "Found", "missing": "Not found yet", "different": "Doesn't match", "elsewhere": "Not moved yet"}[result.state] }}</span>
+    {% endif %}
+  </div>
+  <dl class="dns-fields">
+    <dt>Type</dt>
+    <dd><span class="dns-box">{{ record.type }}</span></dd>
+    <dt>Host</dt>
+    <dd>{{ copy_box(record.host, "Copy the host") }}<span class="dns-full">Full name: {{ record.full_host }}</span></dd>
+    <dt>Value</dt>
+    <dd>
+      {%- if record.value %}{{ copy_box(record.value, "Copy the value") }}
+      {%- else %}<span class="dns-box is-placeholder">Use your server's public IP address</span>{% endif -%}
+    </dd>
+    {% if record.priority %}
+    <dt>Priority</dt>
+    <dd><span class="dns-box">{{ record.priority }}</span></dd>
+    {% endif %}
+  </dl>
+  {% if result and result.detail %}<p class="dns-detail">{{ result.detail }}</p>{% endif %}
+</article>
+{% endmacro %}

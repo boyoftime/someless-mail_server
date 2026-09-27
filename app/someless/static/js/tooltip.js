@@ -31,6 +31,7 @@
     var host = home(element);
     if (tip.parentNode !== host) host.appendChild(tip);
     tip.textContent = element.getAttribute("data-tip");
+    tip.classList.toggle("is-long", tip.textContent.length > 160);
     tip.classList.remove("is-shown");
     tip.style.left = "0px";
     tip.style.top = "0px";
