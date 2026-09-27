@@ -131,7 +131,8 @@
     if (turning) return;
     var toBack = back.hidden;
     flash();
-    document.dispatchEvent(new Event("someless:tips-away"));   // its tip is about the other side
+    // its tip is about the side going away: quiet until the pointer leaves it (tooltip.js)
+    document.dispatchEvent(new CustomEvent("someless:tips-away", { detail: { element: turner } }));
     if (reduceMotion || !dialog.animate) return show(toBack ? "back" : "front");
     turning = true;
     var way = toBack ? 1 : -1;

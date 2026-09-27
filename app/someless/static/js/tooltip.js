@@ -1,10 +1,13 @@
 // Tips: a word of help beside something (the ? next to a domain's status), in a small card in
 // the panel's own look instead of the browser's plain tooltip. Any element with data-tip shows
 // it on hover (a tap on a phone too, where it stays while the element has focus), and on the
-// keyboard's focus: not when a dialog opened with the mouse focuses its first button. The card sits on the
-// page itself, above the element (below it when there's no room), so a table that clips its
-// rows can't cut it off. The pointer can move onto the card to read it; moving away, Escape,
-// scrolling or leaving the page puts it away, and so does a "someless:tips-away" event.
+// keyboard's focus: not when a dialog opened with the mouse focuses its first button. The card
+// sits on the page itself, above the element (below it when there's no room), so a table that
+// clips its rows can't cut it off; in a dialog that's moving (opening, turning over), it waits
+// until the dialog is still. The pointer can move onto the card to read it; moving away,
+// Escape, scrolling or leaving the page puts it away. So does a "someless:tips-away" event
+// (detail.element: the element whose tip it was, which then stays quiet until the pointer
+// leaves it).
 (function () {
   var GAP = 10;   // between the element and the card
   var EDGE = 12;  // the least room kept between the card and the window's edges
@@ -14,6 +17,8 @@
   document.body.appendChild(tip);
   var shownFor = null;
   var hideTimer = null;
+  var waitingFor = null;  // wanted while its dialog moves: shown once it's still, if still wanted
+  var restingOn = null;   // its tip was put away (someless:tips-away): quiet until the pointer leaves it
 
   // the open dialog it's in (showModal), or the page: anything outside an open dialog sits under it
   function home(element) {
@@ -25,11 +30,32 @@
     }
   }
 
+  // what's moving the dialog (or the page) right now
+  function moving(host) {
+    return host.getAnimations ? host.getAnimations().filter(function (animation) {
+      return animation.playState === "running";
+    }) : [];
+  }
+
   function show(element) {
     clearTimeout(hideTimer);
-    if (shownFor === element) return;
-    shownFor = element;
+    if (shownFor === element || element === restingOn) return;
     var host = home(element);
+    // where the card would land in a moving dialog isn't where it'll stay: wait until it's still
+    var running = moving(host);
+    if (running.length) {
+      waitingFor = element;
+      Promise.all(running.map(function (animation) {
+        return animation.finished.catch(function () {});   // stopped short counts as done
+      })).then(function () {
+        if (waitingFor !== element) return;
+        waitingFor = null;
+        var wanted = element.matches(":hover") || (element === document.activeElement && byKeyboard(element));
+        if (element.isConnected && wanted) show(element);   // it may still be moving: then it waits again
+      });
+      return;
+    }
+    shownFor = element;
     if (tip.parentNode !== host) host.appendChild(tip);
     tip.textContent = element.getAttribute("data-tip");
     tip.classList.toggle("is-long", tip.textContent.length > 160);
@@ -50,18 +76,12 @@
     tip.setAttribute("data-side", below ? "below" : "above");
     void tip.offsetWidth; // fade in from where it now is
     tip.classList.add("is-shown");
-    // in a dialog that's still moving (opening, turning over), where the card lands isn't where
-    // it'll stay: placed again once the dialog is still
-    var moving = host.getAnimations ? host.getAnimations().filter(function (animation) {
-      return animation.playState === "running";
-    }) : [];
-    if (moving.length) {
-      Promise.all(moving.map(function (animation) { return animation.finished; })).then(function () {
-        if (shownFor !== element) return;
-        shownFor = null;
-        show(element);
-      }, function () {});
-    }
+  }
+
+  // the pointer has left the quiet element, the dialog being still (turning over moves the
+  // element from under the pointer, and back): its tip can show again
+  function wakeIfLeft(target) {
+    if (restingOn && !restingOn.contains(target) && !moving(home(restingOn)).length) restingOn = null;
   }
 
   // focus from the keyboard, not from a click or a script after one
@@ -75,6 +95,7 @@
 
   function hide(soon) {
     clearTimeout(hideTimer);
+    waitingFor = null;
     if (!shownFor) return;
     hideTimer = setTimeout(function () {
       shownFor = null;
@@ -84,12 +105,14 @@
 
   document.addEventListener("pointerover", function (event) {
     if (tip.contains(event.target)) return clearTimeout(hideTimer);
+    wakeIfLeft(event.target);
     var element = event.target.closest("[data-tip]");
     if (element) show(element);
   });
   document.addEventListener("pointerout", function (event) {
     var from = event.target.closest("[data-tip]") || (tip.contains(event.target) ? tip : null);
     if (!from || (event.relatedTarget && (from.contains(event.relatedTarget) || tip.contains(event.relatedTarget)))) return;
+    if (from === restingOn) wakeIfLeft(event.relatedTarget || document.documentElement);
     if (from === tip || from === shownFor) {
       if (shownFor && shownFor === document.activeElement) return; // focused: stays until it loses focus
       hide(true);
@@ -109,5 +132,14 @@
   window.addEventListener("resize", function () { hide(false); });
   document.addEventListener("someless:navigate", function () { hide(false); });
   // what it was for changes on the spot (a card turning over: config-devices.js)
-  document.addEventListener("someless:tips-away", function () { hide(false); });
+  document.addEventListener("someless:tips-away", function (event) {
+    restingOn = (event.detail && event.detail.element) || shownFor;
+    clearTimeout(hideTimer);
+    waitingFor = null;
+    shownFor = null;
+    tip.style.transition = "none";   // gone at once: fading, it would turn over with the card
+    tip.classList.remove("is-shown");
+    void tip.offsetWidth;
+    tip.style.transition = "";
+  });
 })();
