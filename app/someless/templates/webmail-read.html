@@ -1,0 +1,79 @@
+{% from "webmail-icons.html" import icon %}
+{# A message, open in the reading pane (webmail-mail.html): the page's own when it's opened by
+   its link, or on its way in without a new page (webmail.py, webmail-read.js). Its buttons
+   along the top, the subject, then the card: who it's from and when, its attachments, what it
+   says, and the replies. What it says is a page of its own (webmail-body.html, doc), in a frame
+   without scripts that loads nothing from anywhere else: a message is anyone's HTML. #}
+{% macro message_view(message, email, doc) %}
+<div class="wm-read" data-wm-read>
+  <div class="wm-read-tools" role="toolbar" aria-label="This message">
+    <button type="button" class="wm-icon wm-read-back" data-wm-back aria-label="Back to the mail" data-tip="Back to the mail">{{ icon("back") }}</button>
+    {% for name, label in [("reply", "Reply"), ("reply-all", "Reply all"), ("forward", "Forward"), ("unread", "Mark as unread"),
+                           ("star", "Mark as favorite"), ("archive", "Move to Archive"), ("trash", "Delete"), ("spam", "Mark as spam"),
+                           ("print", "Print"), ("download", "Download"), ("source", "View source")] %}
+    <button type="button" class="wm-icon" aria-label="{{ label }}" data-tip="{{ label }}">{{ icon(name) }}</button>
+    {% endfor %}
+  </div>
+  <div class="wm-read-scroll">
+    <h2 class="wm-read-subject">{{ message.subject }}</h2>
+    <article class="wm-read-card" aria-label="From {{ message.sender }}">
+      <header class="wm-read-head">
+        <span class="wm-read-avatar" aria-hidden="true">{{ message.sender[:1] | upper }}</span>
+        <div class="wm-read-who">
+          <p class="wm-read-name">{{ message.sender }}</p>
+          <a class="wm-read-address" href="mailto:{{ message.address }}">&lt;{{ message.address }}&gt;</a>
+          <p class="wm-read-to">To: &lt;{{ email }}&gt;</p>
+        </div>
+        <div class="wm-read-meta">
+          <time class="wm-read-date">{{ message.date }}</time>
+          <button type="button" class="wm-icon wm-mini" aria-label="Reply" data-tip="Reply">{{ icon("reply") }}</button>
+          <button type="button" class="wm-icon wm-mini wm-read-paper" data-wm-paper aria-pressed="false"
+                  aria-label="Show in light colors" data-tip="Show in light colors"
+                  data-tip-on="Show in dark colors" data-tip-off="Show in light colors">{{ icon("light") }}</button>
+          <span class="wm-read-shield" data-tip="Trackers blocked">{{ icon("shield") }}<span>0</span></span>
+        </div>
+      </header>
+
+      {% if message.attachments %}
+      {# its attachments: how many, and the files themselves when opened out #}
+      <section class="wm-files" data-wm-files aria-label="Attachments">
+        <div class="wm-files-head">
+          {{ icon("attachment") }}
+          <span class="wm-files-count">{{ message.attachments | length }} attachment{{ "s" if message.attachments | length > 1 }}</span>
+          <button type="button" class="wm-save-all">{{ icon("save") }}<span>Save all</span></button>
+          <button type="button" class="wm-icon wm-mini wm-files-toggle" data-wm-files-toggle aria-expanded="false" aria-controls="wm-files-{{ message.id }}"
+                  aria-label="Show the attachments" data-tip="Show the attachments"
+                  data-tip-on="Hide the attachments" data-tip-off="Show the attachments">{{ icon("chevron") }}</button>
+        </div>
+        <div class="wm-files-body">
+          <div class="wm-files-clip">
+            <ul class="wm-files-list" id="wm-files-{{ message.id }}">
+              {% for file in message.attachments %}
+              <li class="wm-file">
+                {{ icon("file") }}
+                <span class="wm-file-text">
+                  <span class="wm-file-name" title="{{ file.name }}"><span class="wm-file-base">{{ file.base }}</span><span class="wm-file-ext">{{ file.extension }}</span></span>
+                  <span class="wm-file-size">{{ file.size }}</span>
+                </span>
+                <button type="button" class="wm-icon wm-mini" aria-label="Download {{ file.name }}" data-tip="Download">{{ icon("download") }}</button>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      <iframe class="wm-read-body" data-wm-body title="The message from {{ message.sender }}"
+              sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" srcdoc="{{ doc }}"></iframe>
+
+      <footer class="wm-read-foot">
+        <button type="button" class="wm-read-action">{{ icon("reply") }}<span>Reply</span></button>
+        <button type="button" class="wm-read-action">{{ icon("reply-all") }}<span>Reply all</span></button>
+        <button type="button" class="wm-read-action">{{ icon("forward") }}<span>Forward</span></button>
+        <button type="button" class="wm-read-action is-spam">{{ icon("spam") }}<span>Mark as spam</span></button>
+      </footer>
+    </article>
+  </div>
+</div>
+{% endmacro %}

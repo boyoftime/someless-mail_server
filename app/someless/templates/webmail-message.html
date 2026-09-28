@@ -1,0 +1,20 @@
+{% from "webmail-icons.html" import icon %}
+{# One message in the webmail's list (webmail-mail.html): with the page, and in each piece that
+   comes in as the list is scrolled down (webmail.py, webmail-list.js), so both look the same.
+   Its link opens it in the reading pane (webmail-read.js); on a page of its own without it.
+   index: its place in its piece, for coming in one after another; more: in a piece that came
+   in; open: the one in the reading pane. #}
+{% macro message_row(message, index, more=false, open=false) %}
+<li class="wm-message{% if message.unread %} is-unread{% endif %}{% if more %} is-more{% endif %}{% if open %} is-open{% endif %}" style="--i: {{ index }}" data-id="{{ message.id }}">
+  <label class="wm-check"><input type="checkbox" aria-label="Select “{{ message.subject }}”"{% if open %} checked data-auto{% endif %}></label>
+  <a class="wm-message-link" href="{{ url_for('message', message_id=message.id) }}"{% if open %} aria-current="true"{% endif %}>
+    <span class="wm-from-line"><span class="wm-from">{{ message.sender }}</span><time class="wm-time">{{ message.time }}</time></span>
+    <span class="wm-subject">{{ message.subject }}</span>
+    <span class="wm-preview-line">
+      <span class="wm-preview">{{ message.preview }}</span>
+      {%- if message.forwarded %}<span class="wm-mark" title="Forwarded">{{ icon("forwarded") }}</span>{% endif %}
+      {%- if message.attachment %}<span class="wm-mark" title="Has attachments">{{ icon("attachment") }}</span>{% endif %}
+    </span>
+  </a>
+</li>
+{% endmacro %}

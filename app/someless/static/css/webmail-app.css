@@ -1,0 +1,575 @@
+/* The webmail (webmail-mail.html), laid out like the webmails people know: a white bar across
+   the top (the apps, search, the tools, the account), then the folders on soft grey, the mail
+   on white, and the reading pane. Light, and dark in the panel's navy (the theme switch is in
+   the account card). The page itself doesn't scroll: each column does. Sized like the
+   webmails too: 14px text, a 250px folder column. */
+body.webmail-app {
+  --wm-top: #ffffff;
+  --wm-side: #f7f8fa;
+  --wm-list: #ffffff;
+  --wm-reader: #f5f6f8;
+  --wm-line: #e6e8ed;
+  --wm-search-line: #d6d9df;
+  --wm-ink: #1c1f24;
+  --wm-soft: #5d636e;
+  --wm-faint: #878d98;
+  --wm-hover: #f2f4f7;
+  --wm-current: #e8ebf0;
+  --wm-blue: #3b63e6;
+  --wm-blue-hover: #2f55d6;
+  --wm-icon-hover: #eceef2;
+  --wm-check: #b7bcc6;
+  --wm-bar: #e3e6eb;
+  --wm-tip: #202124;
+  --wm-tip-ink: #ffffff;
+  --wm-card: #ffffff;
+  --wm-card-shadow: 0 10px 30px rgba(24, 32, 56, 0.16), 0 0 0 1px rgba(24, 32, 56, 0.05);
+  --wm-avatar: #e9ecfb;
+  --wm-avatar-ink: #3b63e6;
+  --wm-camera: #2b2d31;
+  --wm-env-top: #8f9197;
+  --wm-env-bottom: #b7b9bf;
+  --wm-env-flap: #cacbd0;
+  --wm-open: #e6ebf8;
+  --wm-link: #3b63e6;
+  --wm-read-card: #ffffff;
+  --wm-card-line: #e6e8ed;
+  --wm-shield: #e6ecfb;
+  --wm-top-height: 64px;
+  --wm-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--wm-top);
+  color: var(--wm-ink);
+}
+:root[data-theme="dark"] body.webmail-app {
+  --wm-top: #0e1639;
+  --wm-side: #0b1230;
+  --wm-list: #0f1839;
+  --wm-reader: #0a1130;
+  --wm-line: #1f2a55;
+  --wm-search-line: #2a3666;
+  --wm-ink: #edf0fa;
+  --wm-soft: #a7b0cd;
+  --wm-faint: #7c87a9;
+  --wm-hover: rgba(123, 150, 255, 0.07);
+  --wm-current: rgba(1, 149, 251, 0.15);
+  --wm-blue: #2f7df6;
+  --wm-blue-hover: #4a8ff8;
+  --wm-icon-hover: rgba(123, 150, 255, 0.12);
+  --wm-check: #3b4777;
+  --wm-bar: #1f2a55;
+  --wm-tip: #e9edf8;
+  --wm-tip-ink: #0f1a3d;
+  --wm-card: #111a40;
+  --wm-card-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(123, 150, 255, 0.16);
+  --wm-avatar: rgba(1, 149, 251, 0.18);
+  --wm-avatar-ink: #8cc8ff;
+  --wm-camera: #2f7df6;
+  --wm-env-top: #2b3562;
+  --wm-env-bottom: #404b7c;
+  --wm-env-flap: #56619a;
+  --wm-open: rgba(47, 125, 246, 0.2);
+  --wm-link: #8cb4ff;
+  --wm-read-card: #111a40;
+  --wm-card-line: rgba(123, 150, 255, 0.1);
+  --wm-shield: rgba(47, 125, 246, 0.22);
+}
+body.webmail-app svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+body.webmail-app svg.is-filled { fill: currentColor; stroke: none; }
+
+/* The bar across the top */
+.wm-top {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  height: var(--wm-top-height);
+  padding: 0 1rem 0 0.55rem;
+  border-bottom: 1px solid var(--wm-line);
+  background: var(--wm-top);
+}
+.wm-logo {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: 1.5rem;
+  padding: 0 0.25rem;
+  color: var(--wm-ink);
+  font-size: 1.08rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.wm-logo img { width: 30px; height: 30px; border-radius: 50%; }
+.wm-apps { display: flex; flex: none; gap: 0.5rem; }
+.wm-app, .wm-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--wm-ink);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.wm-app:hover, .wm-icon:hover, .wm-app.is-current { background: var(--wm-icon-hover); }
+.wm-app svg, .wm-icon svg { width: 20px; height: 20px; }
+.wm-search { position: relative; flex: 0 1 29rem; min-width: 0; margin-left: 1.9rem; }
+.wm-search svg { position: absolute; top: 50%; left: 0.95rem; width: 17px; height: 17px; color: var(--wm-ink); transform: translateY(-50%); pointer-events: none; }
+body.webmail-app .wm-search input {
+  width: 100%;
+  height: 40px;
+  padding: 0 1rem 0 2.65rem;
+  border: 1px solid var(--wm-search-line);
+  border-radius: 999px;
+  outline: none;
+  background: var(--wm-top);
+  color: var(--wm-ink);
+  font: inherit;
+  font-size: 0.88rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.wm-search input::placeholder { color: var(--wm-soft); }
+body.webmail-app .wm-search input:focus { border-color: var(--wm-blue); box-shadow: 0 0 0 1px var(--wm-blue); }
+.wm-tools { display: flex; flex: none; align-items: center; gap: 0.45rem; margin-left: auto; }
+.wm-divider { width: 1px; height: 24px; margin: 0 0.2rem; background: var(--wm-line); }
+
+/* The account: the round initial, and its card */
+.wm-account-wrap { position: relative; flex: none; margin-left: 0.3rem; }
+.wm-avatar {
+  display: grid;
+  place-items: center;
+  width: 37px;
+  height: 37px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--wm-avatar);
+  color: var(--wm-avatar-ink);
+  font: inherit;
+  font-size: 1.24rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease;
+}
+.wm-avatar:hover, .wm-avatar[aria-expanded="true"] { box-shadow: 0 0 0 3px var(--wm-icon-hover); }
+.wm-account {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: -5px;
+  z-index: 30;
+  width: 19rem;
+  max-width: calc(100vw - 1.25rem);
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--wm-card);
+  box-shadow: var(--wm-card-shadow);
+  color: var(--wm-ink);
+  animation: wm-drop 0.2s var(--menu-ease) both;
+}
+.wm-account[hidden] { display: none; }
+@keyframes wm-drop { from { opacity: 0; transform: translateY(-6px) scale(0.98); } }
+.wm-account-head { display: grid; justify-items: center; gap: 0.15rem; padding: 1.4rem 1rem 1.05rem; text-align: center; }
+.wm-account-photo { position: relative; margin-bottom: 0.5rem; }
+.wm-account-picture {
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--wm-avatar);
+  color: var(--wm-avatar-ink);
+  font-size: 2.5rem;
+  font-weight: 500;
+}
+.wm-account-camera {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 2.5px solid var(--wm-card);
+  border-radius: 50%;
+  background: var(--wm-camera);
+  color: #fff;
+  cursor: pointer;
+}
+.wm-account-camera svg { width: 14px; height: 14px; }
+.wm-account-name { margin: 0; font-size: 1.08rem; font-weight: 700; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.wm-account-email { display: flex; align-items: center; gap: 0.25rem; max-width: 100%; margin: 0; font-size: 0.85rem; }
+.wm-account-email > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.webmail-app .wm-copy { position: relative; flex: none; width: 26px; height: 26px; color: var(--wm-soft); }
+.wm-account-rows { padding: 0.3rem 0; border-top: 1px solid var(--wm-line); }
+.wm-account-rows form { margin: 0; }
+.wm-account-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.7rem 1.1rem;
+  border: 0;
+  background: transparent;
+  color: var(--wm-ink);
+  font: inherit;
+  font-size: 0.86rem;
+  text-align: left;
+  cursor: pointer;
+}
+.wm-account-row:hover { background: var(--wm-hover); }
+.wm-account-row svg { flex: none; width: 19px; height: 19px; }
+:root[data-theme="dark"] .wm-theme-sun, :root:not([data-theme="dark"]) .wm-theme-moon { display: none; }
+.wm-switch { position: relative; flex: none; width: 36px; height: 20px; margin-left: auto; border-radius: 999px; background: var(--wm-bar); transition: background-color 0.2s ease; }
+.wm-switch span { position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); transition: transform 0.22s var(--menu-ease); }
+.wm-theme[aria-checked="true"] .wm-switch { background: var(--wm-blue); }
+.wm-theme[aria-checked="true"] .wm-switch span { transform: translateX(16px); }
+
+/* Below the bar: the folders, the mail, the reading pane. On wide screens their widths are
+   dragged by the dividers between them (webmail-resize.js), as far as PrivateEmail lets them go:
+   the folders from 184 to 320px, the mail from 248px until the reading pane would be narrower
+   than 430px. They start at 250 and 336px, or as they were left (the wm_columns cookie). */
+.wm-shell {
+  --wm-side-width: 250px;
+  --wm-list-width: 336px;
+  --wm-side: clamp(184px, var(--wm-side-width), 320px);
+  display: grid;
+  grid-template-columns: var(--wm-side) clamp(248px, var(--wm-list-width), calc(100% - var(--wm-side) - 430px)) minmax(0, 1fr);
+  min-height: 0;
+}
+/* the dividers: 5px across each edge, seen only in the pointer (and when one has the keyboard) */
+.wm-resize { position: absolute; top: 0; bottom: 0; z-index: 1; width: 5px; background: transparent; cursor: col-resize; touch-action: none; }
+.wm-resize.is-side { left: -2px; }
+.wm-resize.is-list { right: -3px; }
+.wm-resize:focus-visible { outline: none; background: var(--wm-blue); }
+/* while one is dragged: the pointer stays that way, nothing gets selected, and what a message
+   says (a frame of its own) doesn't catch the pointer */
+body.is-resizing, body.is-resizing * { cursor: col-resize !important; user-select: none !important; }
+body.is-resizing iframe { pointer-events: none; }
+
+.wm-side { display: flex; flex-direction: column; min-height: 0; padding-top: 1.05rem; overflow-y: auto; background: var(--wm-side); scrollbar-width: thin; }
+.wm-compose {
+  flex: none;
+  height: 40px;
+  margin: 0 1rem 1.05rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--wm-blue);
+  box-shadow: 0 6px 14px -8px rgba(59, 99, 230, 0.85);
+  color: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.wm-compose:hover { background: var(--wm-blue-hover); }
+.wm-folders { display: grid; }
+.wm-folder {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  height: 32px;
+  padding: 0 1.15rem 0 1.25rem;
+  color: var(--wm-ink);
+  font-size: 0.86rem;
+  text-decoration: none;
+  transition: background-color 0.12s ease;
+}
+.wm-folder:hover { background: var(--wm-hover); }
+.wm-folder.is-current { background: var(--wm-current); }
+.wm-folder svg { flex: none; width: 17px; height: 17px; }
+.wm-folder.is-current svg { color: var(--wm-blue); }
+.wm-count { margin-left: auto; color: var(--wm-blue); font-size: 0.74rem; font-weight: 700; }
+.wm-storage { margin-top: auto; padding: 1.1rem 1rem 1.05rem; }
+.wm-storage-title { margin: 0 0 0.75rem; font-size: 0.92rem; font-weight: 700; }
+.wm-storage-bar { height: 6px; overflow: hidden; border-radius: 999px; background: var(--wm-bar); }
+.wm-storage-bar span { display: block; height: 100%; border-radius: inherit; background: var(--wm-blue); }
+.wm-storage-text { display: flex; justify-content: space-between; gap: 0.5rem; margin: 0.4rem 0 0; font-size: 0.76rem; }
+
+/* The mail */
+.wm-list { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid var(--wm-line); background: var(--wm-list); }
+.wm-list-head { display: flex; flex: none; align-items: center; justify-content: flex-end; height: 56px; padding: 0 1.5rem; border-bottom: 1px solid var(--wm-line); }
+.wm-filter { width: 32px; height: 32px; background: var(--wm-icon-hover); }
+.wm-filter svg { width: 17px; height: 17px; }
+.wm-scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--wm-check) transparent; }
+.wm-messages { margin: 0; padding: 0; list-style: none; }
+/* the end of the list, while the next mail is on its way (webmail-list.js) */
+.wm-more { display: flex; align-items: center; justify-content: center; gap: 0.55rem; margin: 0; padding: 1rem 0 1.3rem; color: var(--wm-soft); font-size: 0.8rem; }
+.wm-more[hidden] { display: none; }
+.wm-more-spin { width: 16px; height: 16px; border: 2px solid var(--wm-bar); border-top-color: var(--wm-blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
+.wm-message { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0.9rem; padding: 0 1.5rem 0 1.45rem; transition: background-color 0.12s ease; }
+.wm-message:hover { background: var(--wm-hover); }
+.wm-message.is-open, .wm-message.is-open:hover { margin: 0 0.5rem; padding-inline: 0.95rem 1rem; border-radius: 8px; background: var(--wm-open); }
+.wm-check { display: grid; }
+body.webmail-app .wm-check input {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1.5px solid var(--wm-check);
+  border-radius: 4px;
+  background: var(--wm-list);
+  cursor: pointer;
+  appearance: none;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+body.webmail-app .wm-check input:checked { border-color: var(--wm-blue); background: var(--wm-blue); }
+body.webmail-app .wm-check input:checked::after { content: ""; width: 8px; height: 4px; border-bottom: 2px solid #fff; border-left: 2px solid #fff; transform: translateY(-1px) rotate(-45deg); }
+.wm-message-link { display: grid; gap: 0.06rem; min-width: 0; padding: 0.72rem 0; color: inherit; text-decoration: none; }
+.wm-from-line { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; }
+.wm-from { overflow: hidden; color: var(--wm-soft); font-size: 0.86rem; text-overflow: ellipsis; white-space: nowrap; }
+.wm-time { flex: none; color: var(--wm-ink); font-size: 0.78rem; }
+.wm-subject { overflow: hidden; color: var(--wm-ink); font-size: 0.88rem; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.wm-preview-line { display: flex; align-items: center; gap: 0.45rem; min-width: 0; }
+.wm-preview { flex: 1; min-width: 0; overflow: hidden; color: var(--wm-soft); font-size: 0.8rem; text-overflow: ellipsis; white-space: nowrap; }
+.wm-mark { display: grid; flex: none; color: var(--wm-soft); }
+.wm-mark svg { width: 15px; height: 15px; }
+.wm-message.is-unread .wm-from, .wm-message.is-unread .wm-subject { color: var(--wm-ink); font-weight: 700; }
+.wm-message.is-unread .wm-time { color: var(--wm-blue); font-weight: 700; }
+
+/* The reading pane: the envelope while nothing is open, or the message (webmail-read.html): its
+   buttons along the top, then the subject and the card, which scroll under them */
+.wm-reader { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; background: var(--wm-reader); }
+.wm-empty { display: grid; justify-items: center; gap: 1.35rem; margin: auto; transform: translateY(-0.8rem); }
+.wm-empty[hidden], .wm-view[hidden] { display: none; }
+.wm-view, .wm-read { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.wm-read-tools {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.05rem;
+  height: 56px;
+  margin: 0 1rem;
+  padding-left: 0.05rem;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--wm-line);
+  scrollbar-width: none;
+}
+.wm-read-tools .wm-icon svg { width: 19px; height: 19px; }
+.wm-read-back { display: none; }
+.wm-read-scroll { flex: 1; min-height: 0; padding: 1.15rem 1rem 1.5rem; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--wm-check) transparent; }
+.wm-read-subject { margin: 0 0.4rem 1.15rem; font-size: 1.5rem; font-weight: 700; line-height: 1.3; letter-spacing: -0.015em; overflow-wrap: anywhere; }
+.wm-read-card { padding: 1.3rem 1.55rem 1.1rem; border: 1px solid var(--wm-card-line); border-radius: 14px; background: var(--wm-read-card); }
+.wm-read-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 0.5rem 0.9rem; }
+.wm-read-avatar {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--wm-avatar);
+  color: var(--wm-avatar-ink);
+  font-size: 1.35rem;
+  font-weight: 500;
+}
+.wm-read-who { display: grid; justify-items: start; gap: 0.1rem; min-width: 0; padding-top: 0.05rem; }
+.wm-read-name { margin: 0; font-size: 0.92rem; font-weight: 700; overflow-wrap: anywhere; }
+.wm-read-address { color: var(--wm-link); font-size: 0.92rem; text-decoration: none; overflow-wrap: anywhere; }
+.wm-read-address:hover { text-decoration: underline; text-underline-offset: 3px; }
+.wm-read-to { margin: 0.15rem 0 0; color: var(--wm-soft); font-size: 0.78rem; overflow-wrap: anywhere; }
+.wm-read-meta { display: flex; align-items: center; gap: 0.2rem; color: var(--wm-soft); font-size: 0.82rem; white-space: nowrap; }
+.wm-read-date { margin-right: 0.3rem; }
+.wm-icon.wm-mini { width: 30px; height: 30px; }
+.wm-icon.wm-mini svg { width: 17px; height: 17px; }
+:root:not([data-theme="dark"]) .wm-read-paper { display: none; }   /* the message's own light colours: it's in them already */
+.wm-read-paper[aria-pressed="true"] { background: var(--wm-icon-hover); color: #f5b400; }
+.wm-read-shield {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: 0.25rem;
+  padding: 0.2rem 0.55rem 0.2rem 0.45rem;
+  border-radius: 999px;
+  background: var(--wm-shield);
+  color: var(--wm-blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: default;
+}
+.wm-read-shield svg { width: 14px; height: 14px; }
+
+/* Its attachments: how many, then the files, opened out with the arrow */
+.wm-files { margin: 1.35rem 0 1.5rem; border: 1px solid var(--wm-line); border-radius: 12px; }
+.wm-files-head { display: flex; align-items: center; gap: 0.55rem; padding: 0.5rem 0.55rem 0.5rem 0.9rem; }
+.wm-files-head > svg { flex: none; width: 17px; height: 17px; color: var(--wm-link); }
+.wm-files-count { font-size: 0.84rem; font-weight: 700; }
+.wm-save-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+  padding: 0.35rem 0.75rem 0.35rem 0.6rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--wm-icon-hover);
+  color: var(--wm-link);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.wm-save-all svg { width: 15px; height: 15px; }
+.wm-files-toggle svg { transition: transform 0.3s var(--wm-ease); }
+.wm-files.is-open .wm-files-toggle svg { transform: rotate(180deg); }
+.wm-files-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.32s var(--wm-ease); }
+.wm-files.is-open .wm-files-body { grid-template-rows: 1fr; }
+.wm-files-clip { min-height: 0; overflow: hidden; }
+.wm-files-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.85rem 0.9rem 0.9rem;
+  border-top: 1px solid var(--wm-line);
+  list-style: none;
+}
+.wm-file { display: flex; align-items: center; gap: 0.6rem; min-width: 0; padding: 0.5rem 0.45rem 0.5rem 0.7rem; border: 1px solid var(--wm-line); border-radius: 8px; }
+.wm-file > svg { flex: none; width: 17px; height: 17px; color: var(--wm-soft); }
+.wm-file-text { display: grid; flex: 1; min-width: 0; }
+.wm-file-name { display: flex; min-width: 0; font-size: 0.8rem; font-weight: 700; }
+.wm-file-base { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wm-file-ext { flex: none; }
+.wm-file-size { color: var(--wm-soft); font-size: 0.72rem; }
+
+/* What it says (a frame of its own, as tall as the message), then the replies */
+.wm-read-body { display: block; width: 100%; height: 3rem; margin-top: 1.2rem; border: 0; border-radius: 10px; }
+.wm-files + .wm-read-body { margin-top: 0; }
+.wm-read-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 1.3rem; margin-top: 1.4rem; }
+.wm-read-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.15rem;
+  border: 0;
+  background: none;
+  color: var(--wm-link);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.wm-read-action:hover span { text-decoration: underline; text-underline-offset: 3px; }
+.wm-read-action svg { width: 17px; height: 17px; }
+.wm-read-action.is-spam { margin-left: auto; color: var(--wm-ink); }
+.wm-empty-art { width: 74px; height: auto; stroke: none !important; }
+.wm-empty p { margin: 0; font-size: 1.3rem; font-weight: 700; letter-spacing: -0.01em; }
+
+/* Tips as the webmails show them: small and dark (light in the dark theme) */
+body.webmail-app .tip {
+  padding: 0.38rem 0.62rem;
+  border: 0;
+  border-radius: 7px;
+  background: var(--wm-tip);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.2);
+  color: var(--wm-tip-ink);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+body.webmail-app .tip::after { border-color: transparent; background: var(--wm-tip); }
+
+/* Coming in, each time the inbox opens (body.is-arriving), after logging in or on a refresh: the
+   page cross-fades from the one before, the bar settles from above, Compose and the folders
+   follow one after another, the mail comes in row by row, the storage bar fills, and the reading
+   pane's envelope rises last. With less motion asked for, it's all simply there. (Held only
+   before each one starts: a transform left behind would pin the folders' drawer open on a phone.
+   And nothing in a column that scrolls moves past its bottom on the way in: that would bring a
+   scrollbar for a moment. So the storage grows from its own bottom edge, and the mail settles
+   from just above its place.) */
+@keyframes wm-in-down { from { opacity: 0; transform: translateY(-10px); } }
+@keyframes wm-in-left { from { opacity: 0; transform: translateX(-14px); } }
+@keyframes wm-in-up { from { opacity: 0; transform: translateY(14px); } }
+@keyframes wm-in-pop { from { opacity: 0; transform: scale(0.92); } }
+@keyframes wm-in-settle { from { opacity: 0; transform: translateY(-8px); } }
+@keyframes wm-in-fade { from { opacity: 0; } }
+@keyframes wm-fill { from { width: 0; } }
+@keyframes wm-read-in { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.35s; }
+  body.is-arriving .wm-top { animation: wm-in-down 0.5s var(--wm-ease) backwards; }
+  body.is-arriving .wm-compose { animation: wm-in-pop 0.5s var(--wm-ease) 0.12s backwards; }
+  body.is-arriving .wm-folder { animation: wm-in-left 0.45s var(--wm-ease) backwards; animation-delay: calc(0.18s + var(--i, 0) * 0.045s); }
+  body.is-arriving .wm-storage { transform-origin: 50% 100%; animation: wm-in-pop 0.5s var(--wm-ease) 0.42s backwards; }
+  body.is-arriving .wm-storage-bar span { animation: wm-fill 1.1s var(--wm-ease) 0.6s backwards; }
+  body.is-arriving .wm-list-head { animation: wm-in-fade 0.45s ease 0.15s backwards; }
+  body.is-arriving .wm-message:not(.is-more) { animation: wm-in-settle 0.5s var(--wm-ease) backwards; animation-delay: calc(0.22s + min(var(--i, 0), 10) * 0.055s); }
+  /* a message, as it opens in the reading pane */
+  .wm-read { animation: wm-read-in 0.3s var(--wm-ease) backwards; }
+  /* the next mail, as it comes in at the end of the list: quicker, one after another */
+  .wm-message.is-more { animation: wm-in-settle 0.35s var(--wm-ease) backwards; animation-delay: calc(min(var(--i, 0), 12) * 0.025s); }
+  body.is-arriving .wm-empty-art { animation: wm-in-pop 0.6s var(--wm-ease) 0.45s backwards; }
+  body.is-arriving .wm-empty p { animation: wm-in-up 0.55s var(--wm-ease) 0.58s backwards; }
+}
+
+/* Narrower screens: the reading pane waits for a message, the folders slide in from the left */
+.wm-menu { display: none; }
+.wm-scrim { position: fixed; inset: var(--wm-top-height) 0 0 0; z-index: 9; background: rgba(8, 12, 30, 0.45); }
+.wm-scrim[hidden] { display: none; }
+@media (max-width: 1199px) {
+  .wm-shell { grid-template-columns: 13.75rem 18.5rem minmax(0, 1fr); }
+  .wm-resize { display: none; }   /* as PrivateEmail: dragged on wide screens only */
+  .wm-logo { margin-right: 0.6rem; }
+  .wm-search { margin-left: 1rem; }
+}
+@media (max-width: 860px) {
+  .wm-shell { grid-template-columns: minmax(0, 1fr); }
+  .wm-reader, .wm-apps { display: none; }
+  .wm-menu { display: grid; }
+  .wm-side {
+    position: fixed;
+    top: var(--wm-top-height);
+    bottom: 0;
+    left: 0;
+    z-index: 10;
+    width: min(15.6rem, 86vw);
+    transform: translateX(-102%);
+    transition: transform 0.3s var(--menu-ease), box-shadow 0.3s ease;
+  }
+  .wm-side.is-open { box-shadow: 16px 0 36px -16px rgba(0, 0, 0, 0.35); transform: none; }   /* (closed: no shadow at the edge) */
+  .wm-list { border-right: 0; }
+  body.is-reading .wm-list { display: none; }   /* a message open: it takes the list's place */
+  body.is-reading .wm-reader { display: flex; }
+  .wm-read-back { display: grid; }
+}
+@media (max-width: 600px) {
+  body.webmail-app { --wm-top-height: 56px; }
+  .wm-top { gap: 0.3rem; padding: 0 0.6rem 0 0.4rem; }
+  .wm-logo { margin-right: 0; padding: 0; }
+  .wm-logo span, .wm-help, .wm-settings, .wm-divider { display: none; }
+  .wm-search { flex: 1 1 auto; margin-left: 0.2rem; }
+  body.webmail-app .wm-search input { height: 38px; padding-left: 2.35rem; }
+  .wm-search svg { left: 0.8rem; }
+  .wm-app, .wm-icon { width: 38px; height: 38px; }
+  .wm-avatar { width: 35px; height: 35px; font-size: 1.15rem; }
+  .wm-list-head { height: 50px; padding: 0 1rem; }
+  .wm-message { gap: 0.8rem; padding: 0 1rem; }
+  .wm-message.is-open, .wm-message.is-open:hover { padding-inline: 0.5rem; }
+  .wm-account { right: -0.4rem; }
+  .wm-read-tools { margin: 0 0.5rem; }
+  .wm-read-scroll { padding: 0.9rem 0.5rem 1.2rem; }
+  .wm-read-subject { margin: 0 0.35rem 0.9rem; font-size: 1.25rem; }
+  .wm-read-card { padding: 1rem 1rem 0.9rem; }
+  .wm-read-head { grid-template-columns: auto minmax(0, 1fr); }
+  .wm-read-meta { grid-column: 1 / -1; flex-wrap: wrap; }
+  .wm-read-action.is-spam { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wm-account { animation: none; }
+  .wm-side { transition: none; }
+  .wm-more-spin { animation-duration: 2.4s; }
+}

@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}{{ open_message.subject ~ " | " if open_message }}{{ "Inbox | " if not open_message }}Someless Webmail{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-app.css') }}">{% endblock %}
+{% block body_class %}webmail-app is-arriving{% if open_message %} is-reading{% endif %}{% endblock %}
+{% from "webmail-icons.html" import icon %}
+{% from "webmail-message.html" import message_row %}
+{% from "webmail-read.html" import message_view %}
+
+
+{% block body %}
+{# The webmail (webmail-app.css, webmail-app.js): a bar across the top (the apps, search, the
+   tools and the account), then the folders, the mail, and the message being read. Its design,
+   for now, with made-up mail (webmail_sample.py). #}
+<header class="wm-top">
+  <button type="button" class="wm-icon wm-menu" data-wm-menu aria-controls="wm-side" aria-expanded="false" aria-label="Folders">{{ icon("menu") }}</button>
+  <a class="wm-logo" href="{{ url_for('inbox') }}">
+    <img src="{{ url_for('static', filename='img/logo.webp') }}" alt="" width="30" height="30">
+    <span>Someless Mail</span>
+  </a>
+  <nav class="wm-apps" aria-label="Apps">
+    <a class="wm-app is-current" href="{{ url_for('inbox') }}" aria-current="page" aria-label="Email" data-tip="Email">{{ icon("mail") }}</a>
+    <a class="wm-app" href="#" aria-label="Calendar" data-tip="Calendar">{{ icon("calendar") }}</a>
+    <a class="wm-app" href="#" aria-label="Contacts" data-tip="Contacts">{{ icon("contacts") }}</a>
+  </nav>
+  <form class="wm-search" role="search" action="{{ url_for('inbox') }}">
+    <label class="visually-hidden" for="wm-search">Search mail</label>
+    {{ icon("search") }}
+    <input id="wm-search" name="q" type="search" placeholder="Search mail" autocomplete="off">
+  </form>
+  <div class="wm-tools">
+    <button type="button" class="wm-icon wm-help" aria-label="Help center" data-tip="Help center">{{ icon("help") }}</button>
+    <span class="wm-divider" aria-hidden="true"></span>
+    <button type="button" class="wm-icon" aria-label="Refresh" data-tip="Refresh">{{ icon("refresh") }}</button>
+    <button type="button" class="wm-icon wm-settings" aria-label="Settings" data-tip="Settings">{{ icon("settings") }}</button>
+    <div class="wm-account-wrap">
+      <button type="button" class="wm-avatar" data-wm-account aria-controls="wm-account" aria-expanded="false" aria-label="Your account">{{ initial }}</button>
+      {# the account: the mailbox, its address to copy, the theme, and logging out #}
+      <section class="wm-account" id="wm-account" aria-label="Your account" hidden>
+        <div class="wm-account-head">
+          <span class="wm-account-photo">
+            <span class="wm-account-picture" aria-hidden="true">{{ initial }}</span>
+            <button type="button" class="wm-account-camera" aria-label="Change your picture" data-tip="Change your picture">{{ icon("camera") }}</button>
+          </span>
+          <p class="wm-account-name">{{ name }}</p>
+          <p class="wm-account-email">
+            <span>{{ email }}</span>
+            <button type="button" class="copy-button wm-copy" data-copy="{{ email }}" aria-label="Copy your address" title="Copy your address">
+              <svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 5.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h.5"/></svg>
+              <svg class="copy-done" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+            </button>
+          </p>
+        </div>
+        <div class="wm-account-rows">
+          <button type="button" class="wm-account-row wm-theme" role="switch" data-theme-switch aria-checked="{{ 'true' if theme == 'dark' else 'false' }}">
+            {{ icon("moon") }}{{ icon("sun") }}<span>Dark theme</span>
+            <span class="wm-switch" aria-hidden="true"><span></span></span>
+          </button>
+          <form method="post" action="{{ url_for('logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="wm-account-row">{{ icon("logout") }}<span>Log out</span></button>
+          </form>
+        </div>
+      </section>
+    </div>
+  </div>
+</header>
+
+<div class="wm-shell" data-wm-shell{% if columns %} style="{{ columns }}"{% endif %}>
+  <aside class="wm-side" id="wm-side" aria-label="Folders">
+    <button type="button" class="wm-compose">Compose</button>
+    <nav class="wm-folders" aria-label="Folders">
+      {% for folder in folders %}
+      <a class="wm-folder{% if folder.key == 'inbox' %} is-current{% endif %}" href="#" style="--i: {{ loop.index0 }}"{% if folder.key == 'inbox' %} aria-current="page"{% endif %}>
+        {{ icon(folder.icon) }}<span class="wm-folder-name">{{ folder.label }}</span>
+        {%- if folder.count %}<span class="wm-count"{% if folder.key == 'inbox' %} data-wm-unread{% endif %}>{{ folder.count }}</span>{% endif %}
+      </a>
+      {% endfor %}
+    </nav>
+    <div class="wm-storage">
+      <p class="wm-storage-title">Storage</p>
+      <div class="wm-storage-bar" role="meter" aria-label="Storage used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ storage.percent }}"><span style="width: {{ storage.percent }}%"></span></div>
+      <p class="wm-storage-text"><span><strong>{{ storage.used }}</strong> of {{ storage.quota }}</span><span>{{ storage.percent }}%</span></p>
+    </div>
+  </aside>
+  <div class="wm-scrim" data-wm-scrim hidden></div>
+
+  <section class="wm-list" aria-labelledby="wm-list-title">
+    {# the dividers to drag, on the folders' edge and on the mail's, on wide screens (webmail-resize.js) #}
+    <span class="wm-resize is-side" data-wm-resize="side" role="separator" aria-orientation="vertical" tabindex="0"
+          aria-label="Resize the folders" aria-valuemin="184" aria-valuemax="320"></span>
+    <span class="wm-resize is-list" data-wm-resize="list" role="separator" aria-orientation="vertical" tabindex="0"
+          aria-label="Resize the mail list" aria-valuemin="248"></span>
+    <div class="wm-list-head">
+      <h1 class="visually-hidden" id="wm-list-title">Inbox</h1>
+      <button type="button" class="wm-icon wm-filter" aria-label="Filter" data-tip="Filter">{{ icon("filter") }}</button>
+    </div>
+    {# the newest mail; the next comes in as the list nears its end (webmail-list.js) #}
+    <div class="wm-scroll" data-wm-scroll>
+      <ul class="wm-messages" data-wm-messages>
+        {% for message in messages %}{{ message_row(message, loop.index0, open=open_message and message.id == open_message.id) }}{% endfor %}
+      </ul>
+      {% if next_url %}
+      <p class="wm-more" data-wm-more data-url="{{ next_url }}" role="status"><span class="wm-more-spin" aria-hidden="true"></span><span>Loading more mail…</span></p>
+      {% endif %}
+    </div>
+  </section>
+
+  {# the reading pane: the envelope while nothing is open, or the open message (webmail-read.js) #}
+  <section class="wm-reader" aria-label="Reading pane" data-wm-reader data-home="{{ url_for('inbox') }}">
+    <div class="wm-empty" data-wm-empty{% if open_message %} hidden{% endif %}>
+      {# a closed envelope #}
+      <svg class="wm-empty-art" viewBox="0 0 96 80" aria-hidden="true">
+        <defs>
+          <linearGradient id="wm-envelope" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" style="stop-color: var(--wm-env-top)"/>
+            <stop offset="1" style="stop-color: var(--wm-env-bottom)"/>
+          </linearGradient>
+        </defs>
+        <rect x="2" y="4" width="92" height="72" rx="15" fill="url(#wm-envelope)"/>
+        <path d="M5 14c0-5 3-8 9-8h68c6 0 9 3 9 8L52 41a7 7 0 0 1-8 0z" style="fill: var(--wm-env-flap)"/>
+      </svg>
+      <p>No mail selected</p>
+    </div>
+    <div class="wm-view" data-wm-view{% if open_message %} data-open="{{ open_message.id }}"{% else %} hidden{% endif %}>
+      {%- if open_message %}{{ message_view(open_message, email, body_doc) }}{% endif -%}
+    </div>
+  </section>
+</div>
+<script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+<script src="{{ url_for('static', filename='js/copy-button.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/webmail-app.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-list.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-read.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-resize.js') }}"></script>
+{% endblock %}

@@ -63,6 +63,13 @@ body.auth.webmail-home { grid-template-rows: auto 1fr auto; grid-template-column
 }
 .webmail-soon-note strong { color: var(--ink); }
 
+/* From the login to the inbox (and back, on logging out): a soft cross-fade, where the browser
+   can do one (webmail-app.css) */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.35s; }
+}
+
 @media (max-width: 640px) {
   .webmail-bar { padding-inline: 1rem; }
   .webmail-bar .webmail-brand span { display: none; }
