@@ -1,55 +1,48 @@
 {% extends "base.html" %}
-{% block title %}Webmail | Someless Mail{% endblock %}
+{% block title %}Log in | Someless Webmail{% endblock %}
 {% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/webmail.css') }}">{% endblock %}
-{% block body_class %}webmail{% endblock %}
+{% block body_class %}auth webmail{% endblock %}
 
 {% block body %}
-<main class="webmail-login">
-  <p class="webmail-brand"><img src="{{ url_for('static', filename='img/logo.webp') }}" alt="" width="36" height="36"><span>Someless <strong>Webmail</strong></span></p>
-  <section class="webmail-card" aria-labelledby="webmail-login-title">
-    {# a tray of letters; the top one opens as the page comes in: its flap folds away, an open
-       flap unfolds behind the letter, and the letter rises (webmail.css) #}
-    <svg class="letter-tray" viewBox="0 0 160 92" aria-hidden="true">
-      <rect class="tray-back" x="30" y="10" width="100" height="62" rx="9"/>
-      <rect class="tray-mid" x="20" y="20" width="120" height="62" rx="9"/>
-      <path class="envelope-flap is-open" d="M12 33l58-27a18 18 0 0 1 20 0l58 27z"/>
-      <rect class="letter-paper" x="28" y="0" width="104" height="56" rx="5"/>
-      <path class="letter-lines" d="M40 13h58M40 23h78M40 33h46"/>
-      <rect class="envelope" x="10" y="30" width="140" height="60" rx="10"/>
-      <path class="envelope-fold" d="M12 86l56-30a18 18 0 0 1 24 0l56 30"/>
-      <path class="envelope-flap is-shut" d="M12 33l58 30a18 18 0 0 0 20 0l58-30z"/>
-    </svg>
-    <h1 id="webmail-login-title" class="webmail-title">Sign in to your mailbox</h1>
-    <p class="webmail-hint">With your mailbox's address and password, the ones you'd type in a mail app.</p>
-    <form method="post" action="{{ url_for('login') }}" class="webmail-form" novalidate>
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      {% if problem %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't sign you in">{{ problem }}</p>{% endif %}
-      <div class="field">
-        <label class="field-label" for="webmail-email">Email</label>
-        <div class="input-wrap">
-          <span class="input-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><path d="M4 7l8 6 8-6"/></svg></span>
-          <input id="webmail-email" name="email" type="email" required autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="you@yourcompany.com" value="{{ email }}"{% if not email %} autofocus{% endif %}>
+{# The panel's login look (login.html): mail icons floating behind the card (FLOAT_ICONS), the
+   logo, and the mailbox's address and password #}
+<div class="login-bg" aria-hidden="true" data-icons="{% for name in float_icons %}{{ url_for('static', filename='img/float/' ~ name ~ '.webp') }}{% if not loop.last %} {% endif %}{% endfor %}"></div>
+<main class="auth-main">
+  <div class="flip-card">{# (the icons keep away from it: login-background.js) #}
+    <section class="auth-card" aria-labelledby="webmail-login-title">
+      <img class="auth-logo" src="{{ url_for('static', filename='img/logo.webp') }}" alt="Someless Mail" width="96" height="96">
+      <form method="post" action="{{ url_for('login') }}" class="form" novalidate>
+        <div class="form-head">
+          <h1 id="webmail-login-title" class="auth-title">Log in to your mailbox</h1>
+          <p class="auth-hint">Read and send your mail, with your email address and its password.</p>
         </div>
-      </div>
-      <div class="field">
-        <label class="field-label" for="webmail-password">Password</label>
-        <div class="input-wrap password-wrap">
-          <span class="input-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span>
-          <input id="webmail-password" name="password" type="password" required autocomplete="current-password" placeholder="Your mailbox's password"{% if email %} autofocus{% endif %}>
-          <button type="button" class="password-toggle" data-password-toggle aria-controls="webmail-password" aria-label="Show password" aria-pressed="false" hidden>
-            <svg class="icon-eye" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
-            <svg class="icon-eye-off" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1"/><path d="M6.6 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a10.4 10.4 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
-          </button>
+        {% if problem %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't log you in">{{ problem }}</p>{% endif %}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field">
+          <label class="field-label" for="webmail-email">Email</label>
+          <span class="control"><input id="webmail-email" name="email" type="email" required autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="you@yourcompany.com" value="{{ email }}"{% if not email %} autofocus{% endif %}></span>
         </div>
-      </div>
-      <button class="button button-block webmail-submit" type="submit" data-busy-label="Signing in…">
-        <span class="button-spinner" aria-hidden="true"></span>
-        <span class="button-label">Sign in</span>
-      </button>
-    </form>
-  </section>
-  <p class="webmail-foot">Someless Mail {{ version }}</p>
+        <div class="field">
+          <label class="field-label" for="webmail-password">Password</label>
+          <div class="control password-wrap">
+            <input id="webmail-password" name="password" type="password" required autocomplete="current-password"{% if email %} autofocus{% endif %}>
+            <button type="button" class="password-toggle" data-password-toggle aria-controls="webmail-password" aria-label="Show password" aria-pressed="false" hidden>
+              <svg class="icon-eye" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="icon-eye-off" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1"/><path d="M6.6 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a10.4 10.4 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+            </button>
+          </div>
+        </div>
+        <button class="button button-block" type="submit" data-busy-label="Logging in…">
+          <span class="button-spinner" aria-hidden="true"></span>
+          <span class="button-label">Log in</span>
+        </button>
+      </form>
+    </section>
+  </div>
 </main>
+<footer class="auth-footer">Someless Webmail {{ version }}</footer>
 <script src="{{ url_for('static', filename='js/password-toggle.js') }}"></script>
 <script src="{{ url_for('static', filename='js/busy-button.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pixi.min.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/login-background.js') }}" defer></script>
 {% endblock %}

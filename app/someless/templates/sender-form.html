@@ -46,14 +46,18 @@
     <div class="field">
       <label class="field-label" for="sender-local">From email</label>
       <p class="field-hint" id="sender-email-hint">
+        {%- if has_mailbox %}
+        It has a mailbox, so its address stays as it is. You can change its name.
+        {%- else %}
         Type the part before the @, and pick the domain: one of those you've authenticated.
         For another domain, authenticate it on the <a href="{{ url_for('domains.index') }}">Domains</a> page first, then come back.
+        {%- endif %}
       </p>
       {# the address in two parts: typed before the @, the domain picked (dropdown.js) #}
       <div class="email-parts">
         <div class="input-wrap">
           <span class="input-icon">{{ icon("mail") }}</span>
-          <input id="sender-local" name="local" required autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="no-reply" value="{{ typed.local }}" aria-describedby="sender-email-hint">
+          <input id="sender-local" name="local" required autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="no-reply" value="{{ typed.local }}" aria-describedby="sender-email-hint"{% if has_mailbox %} readonly{% endif %}>
         </div>
         <label class="visually-hidden" for="sender-domain">Domain</label>
         <select id="sender-domain" name="domain" data-dropdown>

@@ -32,6 +32,10 @@
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4.5h3.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H14"/><path d="M4.5 12h10"/><path d="M11 8.5l3.5 3.5-3.5 3.5"/></svg>
   {%- elif name == "phone" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.6"/><path d="M10.5 18.5h3"/></svg>
+  {%- elif name == "link" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4.2 4.2 0 0 0 6 0l3-3a4.2 4.2 0 0 0-6-6l-1 1"/><path d="M14 10a4.2 4.2 0 0 0-6 0l-3 3a4.2 4.2 0 0 0 6 6l1-1"/></svg>
+  {%- elif name == "share" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3.5"/><path d="M7.5 8L12 3.5 16.5 8"/><path d="M8 11H6.5A1.5 1.5 0 0 0 5 12.5v6A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5v-6a1.5 1.5 0 0 0-1.5-1.5H16"/></svg>
   {%- elif name == "globe" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.3 2.5 3.5 5.3 3.5 8.5s-1.2 6-3.5 8.5c-2.3-2.5-3.5-5.3-3.5-8.5s1.2-6 3.5-8.5z"/></svg>
   {%- endif -%}
@@ -145,8 +149,15 @@
     <h1 class="page-title">Mailboxes</h1>
     <p class="page-subtitle">A mailbox is an inbox at one of your domains, like ceo@yourcompany.com. Mail sent to it lands here, and you read it in any mail app: Outlook, Apple Mail, Thunderbird or the one on your phone.</p>
   </div>
-  {% if domains %}
-  <button type="button" class="button add-button" data-dialog-open="create-mailbox-dialog" aria-haspopup="dialog">{{ icon("plus") }}<span>Create mailbox</span></button>
+  {% if domains or mailboxes %}
+  <div class="page-header-actions">
+    {% if mailboxes %}
+    <button type="button" class="button button-quiet webmail-link-open" data-dialog-open="webmail-link-dialog" aria-haspopup="dialog">{{ icon("link") }}<span>Webmail link</span></button>
+    {% endif %}
+    {% if domains %}
+    <button type="button" class="button add-button" data-dialog-open="create-mailbox-dialog" aria-haspopup="dialog">{{ icon("plus") }}<span>Create mailbox</span></button>
+    {% endif %}
+  </div>
   {% endif %}
 </header>
 
@@ -234,13 +245,19 @@
       <span class="card-badge" aria-hidden="true">{{ icon("inbox") }}</span>
       <div>
         <h2 id="create-mailbox-title" class="rules-title">Create a mailbox</h2>
-        <p class="rules-hint">An inbox at one of your authenticated domains.</p>
+        <p class="rules-hint">An inbox for one of your senders: mail to its address lands here.</p>
       </div>
     </div>
     {% if create_problem %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't create the mailbox">{{ create_problem }}</p>{% endif %}
+    {% if free_senders %}
     <div class="field">
-      <label class="field-label" for="new-mailbox-local">Email address</label>
-      {{ address_parts("new-mailbox", typed.local or "", typed.domain, "ceo") }}
+      <label class="field-label" for="new-mailbox-sender">Sender</label>
+      <p class="field-hint" id="new-mailbox-sender-hint">Each mailbox is made for a sender. Another address? <a href="{{ url_for('senders.new') }}">Add it as a sender</a> first.</p>
+      <select id="new-mailbox-sender" name="email" data-dropdown aria-describedby="new-mailbox-sender-hint">
+        {% for sender in free_senders %}
+        <option value="{{ sender.email }}"{% if sender.email == typed.email %} selected{% endif %}>{{ sender.name }} &lt;{{ sender.email }}&gt;</option>
+        {% endfor %}
+      </select>
     </div>
     {{ password_field("mailbox-password", "password", "Mailbox password", "Enter a password", "mailbox-password-rules") }}
     {{ password_field("mailbox-confirm", "confirm", "Confirm password", "Enter the password again") }}
@@ -257,11 +274,51 @@
         <span class="button-label">Create mailbox</span>
       </button>
     </div>
+    {% else %}
+    {# every sender has its mailbox (or there's none yet): the sender comes first #}
+    <div class="mailbox-no-sender">
+      <p class="mailbox-no-sender-title">Add a sender first</p>
+      <p>Each mailbox is made for one of your senders, and every sender has one already. Add the address as a sender, then come back to create its mailbox.</p>
+    </div>
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet" data-dialog-close>Cancel</button>
+      <a class="button rules-save" href="{{ url_for('senders.new') }}">Add a sender</a>
+    </div>
+    {% endif %}
   </form>
 </dialog>
 {% endif %}
 
 {% if mailboxes %}
+{# The webmail's login link, to copy or share with the people who have a mailbox: as it is, or
+   with one's address filled in (webmail-link.js) #}
+<dialog class="rules-dialog domain-dialog is-wide" id="webmail-link-dialog" aria-labelledby="webmail-link-title">
+  <div class="rules-form">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("link") }}</span>
+      <div>
+        <h2 id="webmail-link-title" class="rules-title">Webmail login link</h2>
+        <p class="rules-hint">Share it with the people who have a mailbox: they log in there with its address and password.</p>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="webmail-link-for">Fill in an address</label>
+      <select id="webmail-link-for" data-dropdown data-webmail-link-for>
+        <option value="{{ webmail_login }}">None: they type it themselves</option>
+        {% for link in webmail_links %}
+        <option value="{{ link.url }}">{{ link.email }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="webmail-link" data-webmail-link>{{ copy_box(webmail_login, "Copy the webmail link") }}</div>
+    <p class="dns-group-hint">It opens the webmail at its address in <a href="{{ url_for('settings.misc') }}">Settings → Miscellaneous</a>.</p>
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet webmail-share" data-webmail-share hidden>{{ icon("share") }}<span>Share</span></button>
+      <button type="button" class="button rules-save" data-dialog-close>Done</button>
+    </div>
+  </div>
+</dialog>
+
 {# How a mail app connects: the same server for every mailbox; the username is the mailbox's
    address, filled in when the dialog opens (mailboxes-page.js) #}
 <dialog class="rules-dialog domain-dialog is-wider config-dialog" id="config-dialog" aria-labelledby="config-title">
@@ -498,4 +555,5 @@
 <script src="{{ url_for('static', filename='js/password-rules-dialog.js') }}"></script>
 <script src="{{ url_for('static', filename='js/mailboxes-page.js') }}"></script>
 <script src="{{ url_for('static', filename='js/config-devices.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-link.js') }}"></script>
 {% endblock %}

@@ -265,7 +265,7 @@ These two are set at your VPS provider, not in Someless Mail. Mail can go out wi
 
 ## Step 7: Add a sender
 
-A sender is the name and address your mail comes from, like `Google <no-reply@google.com>`. In **Senders**, click **Add sender**, type the name and the address, and the phone beside the form shows how it will look in an inbox. The address has to be at a domain you've authenticated in **Domains**; for any other domain, authenticate it first and come back. Deleting a domain deletes its senders; a domain with mailboxes can't be deleted until its mailboxes are.
+A sender is the name and address your mail comes from, like `Google <no-reply@google.com>`. In **Senders**, click **Add sender**, type the name and the address, and the phone beside the form shows how it will look in an inbox. The address has to be at a domain you've authenticated in **Domains**; for any other domain, authenticate it first and come back. Deleting a domain deletes its senders; a domain with mailboxes can't be deleted until its mailboxes are. A sender can also get its own mailbox, to receive mail at its address ([Step 11](#step-11-mailboxes-receive-mail)): then it shows **Has a mailbox**, keeps its address, and can't be deleted until its mailbox is.
 
 Your apps can send only from the senders on this list: anything else is refused, so a leaked key can't be used to fake your other addresses.
 
@@ -326,7 +326,7 @@ The round button with the animation beside **Generate SMTP key** opens the guide
 
 A mailbox is an inbox at one of your domains, like `ceo@example.com`. In **Mailboxes**, click **Create mailbox**:
 
-- **Email address:** type the part before the @ and pick the domain: one you've authenticated.
+- **Sender:** pick one of your senders ([Step 7](#step-7-add-a-sender)) that has no mailbox yet: each mailbox is made for a sender, at its address. For another address, add it as a sender first.
 - **Password and Confirm password:** it follows your password rules (**Settings → Password rules**). Someless Mail keeps only a fingerprint of it, like your own.
 - **Mailbox storage:** how much mail it can hold, in GB or MB. New mail is refused once it's full. The dialog shows how much room your server has.
 
@@ -351,7 +351,9 @@ To try it, send a message from your Gmail to the new mailbox, and open it in you
 
 ## Step 12: The webmail
 
-The people with a mailbox sign in at `http://your-server-ip:17090` with the mailbox's address and password. After 5 wrong passwords in a row, the address can't sign in for 5 minutes; choose other numbers in **Settings → Miscellaneous → Webmail sign-in lock**. The inbox itself is coming soon; until then, the page shows the mail app settings from [Step 11](#step-11-mailboxes-receive-mail).
+The people with a mailbox log in at `http://your-server-ip:17090` with the mailbox's address and password, on a page that looks like your own login. After 5 wrong passwords in a row, the address can't log in for 5 minutes; choose other numbers in **Settings → Miscellaneous → Webmail sign-in lock**. The inbox itself is coming soon; until then, the page says so, and which server to add the mailbox to in a mail app.
+
+To send them the link, click **Webmail link** on the **Mailboxes** page: copy it, or share it from a phone, as it is or with one mailbox's address already filled in.
 
 **On HTTPS, at `webmail.example.com`:** add an A record `webmail` pointing to your server's IP address, then a proxy host in Nginx Proxy Manager:
 

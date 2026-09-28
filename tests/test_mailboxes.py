@@ -1,5 +1,6 @@
 """The Mailboxes page (mailboxes.py): inboxes at the authenticated domains, each an account in
-the mail engine, with its password (kept only as a hash), storage and aliases."""
+the mail engine, with its password (kept only as a hash), storage and aliases. A mailbox is made
+for one of the senders: the sender first, then its mailbox."""
 import html
 import json
 import re
@@ -21,8 +22,14 @@ def plain(page):
     return re.sub(r"<[^>]+>", "", page)
 
 
-def create(client, local="ceo", domain="pineloop.online", password=GOOD, confirm=None, storage="15", unit="GB"):
-    return client.post("/mailboxes", data={"local": local, "domain": domain, "password": password,
+def create(client, local="ceo", domain="pineloop.online", password=GOOD, confirm=None, storage="15", unit="GB",
+           sender=True):
+    """A mailbox for local@domain, made the way the dialog makes it: for a sender, added first
+    (unless sender=False)."""
+    email = f"{local}@{domain}"
+    if sender:
+        client.post("/senders", data={"name": local.title(), "email": email})   # (there already: refused, fine)
+    return client.post("/mailboxes", data={"email": email, "password": password,
                                            "confirm": password if confirm is None else confirm,
                                            "storage": storage, "unit": unit})
 
@@ -57,18 +64,40 @@ def test_without_an_authenticated_domain_it_says_what_to_do_first(app, client, l
     assert 'name="local"' not in page
 
 
-def test_the_create_dialog_offers_only_authenticated_domains(app, client, login):
-    authenticated_domain(app, "pineloop.online")
-    authenticated_domain(app, "notyet.org", authenticated=False)
+def a_sender(app, domain_id, email, name="Sender"):
+    with app.app_context():
+        get_db().execute("INSERT INTO senders (name, email, domain_id, created_at) VALUES (?, ?, ?, 0)", (name, email, domain_id))
+        get_db().commit()
+
+
+def test_the_create_dialog_offers_the_senders_without_a_mailbox(app, client, login):
+    domain_id = authenticated_domain(app, "pineloop.online")
+    elsewhere = authenticated_domain(app, "notyet.org", authenticated=False)
+    a_sender(app, domain_id, "info@pineloop.online", "Info")
+    a_sender(app, elsewhere, "hi@notyet.org")   # its domain isn't authenticated (any more)
+    login()
+    create(client)   # ceo@pineloop.online: a sender with its mailbox now
+
+    page = text(client.get("/mailboxes"))
+
+    dialog = page[page.index('id="create-mailbox-dialog"'):]
+    select = re.search(r'<select[^>]*name="email"[^>]*>(.*?)</select>', dialog, re.S).group(1)
+    assert re.findall(r'<option value="([^"]+)"', select) == ["info@pineloop.online"]
+    assert "Info &lt;info@pineloop.online&gt;" in select or "Info <info@pineloop.online>" in select
+    assert re.search(r'<select[^>]*name="unit"', dialog) and "GB" in dialog and "MB" in dialog
+    assert 'name="password"' in dialog and 'name="confirm"' in dialog
+
+
+def test_without_a_free_sender_the_dialog_says_to_add_one(app, client, login):
+    authenticated_domain(app)
     login()
 
     page = text(client.get("/mailboxes"))
 
     dialog = page[page.index('id="create-mailbox-dialog"'):]
-    select = re.search(r'<select[^>]*name="domain"[^>]*>(.*?)</select>', dialog, re.S).group(1)
-    assert re.findall(r'<option value="([^"]+)"', select) == ["pineloop.online"]
-    assert re.search(r'<select[^>]*name="unit"', dialog) and "GB" in dialog and "MB" in dialog
-    assert 'name="password"' in dialog and 'name="confirm"' in dialog
+    dialog = dialog[:dialog.index("</dialog>")]
+    assert 'href="/senders/new"' in dialog and "Add a sender first" in plain(dialog)
+    assert 'name="password"' not in dialog
 
 
 def test_a_mailbox_is_created(app, client, login, engine):
@@ -125,15 +154,22 @@ def test_an_address_is_used_once(app, client, login):
     assert len(rows(app)) == 1
 
 
-def test_a_sender_address_can_be_a_mailbox_too(app, client, login):
+def test_a_mailbox_is_made_for_a_sender(app, client, login):
     domain_id = authenticated_domain(app)
-    with app.app_context():
-        get_db().execute("INSERT INTO senders (name, email, domain_id, created_at) VALUES ('Support', 'support@pineloop.online', ?, 0)",
-                         (domain_id,))
-        get_db().commit()
+    a_sender(app, domain_id, "support@pineloop.online", "Support")
     login()
 
-    assert create(client, local="support").headers["Location"] == "/mailboxes"
+    assert create(client, local="support", sender=False).headers["Location"] == "/mailboxes"
+
+
+def test_an_address_that_isnt_a_sender_gets_no_mailbox(app, client, login):
+    authenticated_domain(app)
+    login()
+
+    refused = create(client, local="nobody", sender=False)
+
+    assert refused.status_code == 400 and "isn't a sender" in text(refused) and 'href="/senders' in text(refused)
+    assert rows(app) == []
 
 
 def test_sizes_read_as_people_say_them():
@@ -291,7 +327,7 @@ def save_mailbox_rules(client, min_length="8", letters=True, numbers=True, speci
 
 
 def test_the_password_rules_can_be_changed_from_the_mailbox_dialogs(app, client, login):
-    authenticated_domain(app)
+    a_sender(app, authenticated_domain(app), "ceo@pineloop.online")   # so the dialog has its password fields
     login()
 
     page = text(client.get("/mailboxes"))

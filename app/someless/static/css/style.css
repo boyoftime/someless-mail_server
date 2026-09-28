@@ -3677,6 +3677,35 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
 .config-plain { display: flex; align-items: center; min-height: 2.6rem; font-weight: 600; }
 .config-or { display: flex; align-items: center; justify-content: flex-end; min-height: 2.6rem; color: var(--muted); font-style: italic; }
 
+/* A sender with its mailbox (senders.html), and the create dialog when no sender is free */
+.sender-mailbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid rgba(20, 184, 166, 0.45);
+  border-radius: 999px;
+  background: rgba(20, 184, 166, 0.1);
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.sender-mailbox:hover { border-color: #2dd4bf; background: rgba(20, 184, 166, 0.18); }
+.sender-mailbox svg { width: 16px; height: 16px; fill: none; stroke: #2dd4bf; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.mailbox-no-sender { padding: 1rem 1.15rem; border: 1px dashed var(--line); border-radius: 16px; }
+.mailbox-no-sender p { margin: 0; color: var(--muted); line-height: 1.55; }
+.mailbox-no-sender .mailbox-no-sender-title { margin-bottom: 0.3rem; color: var(--ink); font-weight: 700; }
+.field input[readonly] { opacity: 0.7; cursor: not-allowed; }
+
+/* Webmail link (webmail-link.js): the link in full, and the buttons in the page header */
+.webmail-link .copy-box { width: 100%; }
+.webmail-link .copy-box-text { overflow-wrap: anywhere; }
+.webmail-link-open, .webmail-share { display: inline-flex; align-items: center; gap: 0.5rem; }
+.webmail-link-open svg, .webmail-share svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.webmail-share { margin-right: auto; }
+
 /* Set it up on a device (config-devices.js): the phone at the top right turns the card over, to
    a tab each for Android, iPhone and Windows PC */
 .config-dialog .rules-form { position: relative; }

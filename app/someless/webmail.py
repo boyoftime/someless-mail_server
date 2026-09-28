@@ -1,9 +1,10 @@
 """The webmail: a little site of its own on port 17090 (the supervisor runs it beside the panel;
 Nginx Proxy Manager can put webmail.example.com in front of it). A mailbox logs in with its
-address and password, checked here against the hash the panel keeps: never through the mail
-engine, which would ban 127.0.0.1 after a few wrong passwords. So many wrong passwords in a row
-lock an address for a while (Settings > Miscellaneous, webmail_lock.py). The inbox itself is coming soon; until then the page says
-how to read the mail in a mail app.
+address and password, on a page that looks like the panel's login, checked here against the
+hash the panel keeps: never through the mail engine, which would ban 127.0.0.1 after a few wrong
+passwords. So many wrong passwords in a row lock an address for a while (Settings >
+Miscellaneous, webmail_lock.py). A login link can fill the address in (/login?email=..., shared
+from the Mailboxes page). The inbox itself is coming soon.
 
 Its session cookie has its own name and its own key: browsers share cookies between ports of
 the same host, and the admin's login mustn't be a mailbox's, or the other way round."""
@@ -18,15 +19,14 @@ from flask_wtf import CSRFProtect
 from flask_wtf.csrf import CSRFError
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from . import (DEFAULT_THEME, STATIC_CACHE_SECONDS, THEMES, VERSION, db, fingerprint_static_links, mail_password,
-               webmail_lock, webmail_site)
+from . import (DEFAULT_THEME, FLOAT_ICONS, STATIC_CACHE_SECONDS, THEMES, VERSION, db, fingerprint_static_links,
+               mail_password, webmail_lock, webmail_site)
 from .db import get_db
 from .domain_records import HOST_CHOICES
 from .engine import names
-from .mailboxes import MAIL_APPS
 
 WRONG = "The email or password is wrong."
-LEFT_OPEN = "This page was open for a long time. Sign in again."
+LEFT_OPEN = "This page was open for a long time. Log in again."
 # checked when the address isn't a mailbox, so a wrong address takes as long as a wrong password
 _DUMMY_HASH = mail_password.hash_password(secrets.token_hex(16))
 
@@ -89,8 +89,8 @@ def login_required(view):
 def login():
     if g.mailbox is not None:
         return redirect(url_for("inbox"))
-    if request.method == "GET":
-        return render_template("webmail-login.html", email="")
+    if request.method == "GET":   # a shared link can fill the address in
+        return render_template("webmail-login.html", email=request.args.get("email", "").strip().lower()[:254])
     email = request.form.get("email", "").strip().lower()[:254]
     password = request.form.get("password", "")
     if _locked(email):
@@ -118,7 +118,7 @@ def enter():
     if not row:
         return render_template("webmail-login.html", email="", problem=(
             "This link to the webmail was used already, or is too old. Open the webmail from the Mailboxes page "
-            "again, or sign in with the mailbox's password.")), 400
+            "again, or log in with the mailbox's password.")), 400
     session.clear()
     session["mailbox_id"] = row["id"]
     session["password_version"] = row["password_version"]
@@ -134,7 +134,7 @@ def logout():
 def inbox():
     email = g.mailbox["email"]
     server = names.server_name() or f"{HOST_CHOICES[0]}.{email.rpartition('@')[2]}"
-    return render_template("webmail-inbox.html", email=email, server=server, ports=MAIL_APPS)
+    return render_template("webmail-inbox.html", email=email, server=server)
 
 
 def healthz():
@@ -184,6 +184,6 @@ def create_webmail_app(test_config=None):
     @app.context_processor
     def inject_globals():
         theme = request.cookies.get("theme")
-        return {"version": VERSION, "theme": theme if theme in THEMES else DEFAULT_THEME}
+        return {"version": VERSION, "theme": theme if theme in THEMES else DEFAULT_THEME, "float_icons": FLOAT_ICONS}
 
     return app

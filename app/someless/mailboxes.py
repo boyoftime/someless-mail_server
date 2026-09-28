@@ -7,6 +7,7 @@ import json
 import re
 import shutil
 import time
+from urllib.parse import quote
 
 from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, url_for
 
@@ -81,8 +82,9 @@ def _password_problem(password, confirm):
     return None
 
 
-def _address(local, domain_name):
-    """(email, domain_id, None) for a free address at an authenticated domain, or (…, problem)."""
+def _address(local, domain_name, sender=False):
+    """(email, domain_id, None) for a free address at an authenticated domain, or (…, problem).
+    sender: it has to be one of the senders too (a mailbox is made for a sender; an alias isn't)."""
     local = local.strip().lower()
     if "@" in local:   # typed whole
         local, _, typed_domain = local.rpartition("@")
@@ -97,6 +99,9 @@ def _address(local, domain_name):
         return None, None, (f"{domain_name or 'That domain'} isn't one of your authenticated domains. "
                             "Authenticate it on the Domains page first.")
     email = f"{local}@{domain_name}"
+    if sender and not db.execute("SELECT 1 FROM senders WHERE lower(email) = ?", (email,)).fetchone():
+        return None, None, (f"{email} isn't a sender yet. Add it on the Senders page first: each mailbox "
+                            "is made for one of your senders.")
     if db.execute("SELECT 1 FROM mailboxes WHERE email = ?", (email,)).fetchone():
         return None, None, f"{email} is already a mailbox."
     if db.execute("SELECT 1 FROM mailbox_aliases WHERE email = ?", (email,)).fetchone():
@@ -169,11 +174,22 @@ def _page(status=200, **context):
                 "available": size_text(max(0, quota - in_use))},
         })
     domains = _authenticated_domains()
+    # what a new mailbox can be for: the senders at authenticated domains without one yet
+    free_senders = db.execute(
+        "SELECT senders.name, lower(senders.email) AS email FROM senders JOIN domains ON domains.id = senders.domain_id"
+        " WHERE domains.authenticated = 1 AND lower(senders.email) NOT IN (SELECT email FROM mailboxes)"
+        " AND lower(senders.email) NOT IN (SELECT email FROM mailbox_aliases)"
+        " ORDER BY senders.created_at DESC, senders.id DESC").fetchall()
     server = _server_for(boxes[0]["domain"]) if boxes else names.server_name()
+    # the webmail's login link, to share: as it is, or with a mailbox's address filled in
+    webmail_login = f"{webmail_site.address(request.host)}/login"
+    webmail_links = [{"email": box["email"], "url": f"{webmail_login}?email={quote(box['email'], safe='@')}"}
+                     for box in boxes]
     free = _free_space()
     return render_template(
         "mailboxes.html", mailboxes=boxes, domains=[domain["name"] for domain in domains],
         server=server, ports=MAIL_APPS, free=size_text(free) if free else None,
+        webmail_login=webmail_login, webmail_links=webmail_links, free_senders=free_senders,
         rules=password_checks(password_rules()), saved_rules=password_rules(), min_length=password_rules()["min_length"],
         notes=_receive_notes(sorted({box["domain"] for box in boxes})) if boxes else [],
         sync_error=state()["sync_error"] if enabled() else None,
@@ -206,8 +222,8 @@ def index():
 @bp.post("")
 @login_required
 def create():
-    typed = _typed("local", "domain", "storage", "unit")
-    email, domain_id, problem = _address(typed["local"], typed["domain"])
+    typed = _typed("email", "storage", "unit")   # the sender it's for, picked in the dialog
+    email, domain_id, problem = _address(typed["email"], "", sender=True)
     size = None
     if not problem:
         size, problem = _storage(typed["storage"], typed["unit"])

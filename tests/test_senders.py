@@ -38,6 +38,57 @@ def senders_in_db(app):
         return get_db().execute("SELECT * FROM senders ORDER BY id").fetchall()
 
 
+def test_the_newest_sender_is_on_top(client, login, app):
+    a_domain(app)
+    login()
+    add(client, "Cloudnix", "info@pineloop.online")
+    add(client, "Atlas", "dev@pineloop.online")   # later, and first by name: still under the newer one
+    add(client, "Katavi", "hello@pineloop.online")
+
+    page = text(client.get("/senders"))
+
+    assert re.findall(r'<span class="sender-name">([^<]+)</span>', page) == ["Katavi", "Atlas", "Cloudnix"]
+
+
+def a_mailbox_at(app, email):
+    with app.app_context():
+        db = get_db()
+        domain_id = db.execute("SELECT id FROM domains WHERE name = ?", (email.rpartition("@")[2],)).fetchone()["id"]
+        db.execute("INSERT INTO mailboxes (email, domain_id, quota_bytes, password_hash, created_at) VALUES (?, ?, 1, 'x', 0)",
+                   (email, domain_id))
+        db.commit()
+
+
+def test_a_sender_with_a_mailbox_cant_be_deleted(client, login, app):
+    a_domain(app)
+    login()
+    add(client, "Support", "support@pineloop.online")
+    a_mailbox_at(app, "support@pineloop.online")
+    sender_id = senders_in_db(app)[0]["id"]
+
+    refused = client.post(f"/senders/{sender_id}/delete", follow_redirects=True)
+
+    assert "Delete its mailbox first" in plain(text(refused))
+    assert len(senders_in_db(app)) == 1
+    card = text(client.get("/senders"))
+    assert "Has a mailbox" in plain(card)
+
+
+def test_a_sender_with_a_mailbox_keeps_its_address(client, login, app):
+    a_domain(app)
+    login()
+    add(client, "Support", "support@pineloop.online")
+    a_mailbox_at(app, "support@pineloop.online")
+    sender_id = senders_in_db(app)[0]["id"]
+
+    moved = client.post(f"/senders/{sender_id}", data={"name": "Support", "email": "help@pineloop.online"})
+    renamed = client.post(f"/senders/{sender_id}", data={"name": "Help desk", "email": "support@pineloop.online"})
+
+    assert moved.status_code == 400 and "has a mailbox" in text(moved)
+    assert renamed.headers["Location"] == "/senders"
+    assert (senders_in_db(app)[0]["name"], senders_in_db(app)[0]["email"]) == ("Help desk", "support@pineloop.online")
+
+
 def test_senders_need_login(client):
     assert client.get("/senders").headers["Location"] == "/login"
     assert client.get("/senders/new").headers["Location"] == "/login"

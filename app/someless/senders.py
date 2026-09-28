@@ -52,6 +52,11 @@ def _checked(typed, sender_id=None):
     return name, email, row["id"], None
 
 
+def _has_mailbox(email):
+    """Whether a mailbox was made for this sender (Mailboxes page): then it stays, with its address."""
+    return bool(get_db().execute("SELECT 1 FROM mailboxes WHERE email = lower(?)", (email,)).fetchone())
+
+
 def _typed(name=None, email=None):
     """The form as typed: the name, and the address in its two parts, the part before the @
     and the domain picked from the list. An address typed whole in the first part (or sent
@@ -69,7 +74,7 @@ def _typed(name=None, email=None):
 def _form(status=200, sender=None, typed=None, problem=None):
     return render_template(
         "sender-form.html", sender=sender, typed=typed or _typed("", ""), problem=problem,
-        domains=_authenticated_domains(),
+        domains=_authenticated_domains(), has_mailbox=bool(sender) and _has_mailbox(sender["email"]),
     ), status
 
 
@@ -101,12 +106,12 @@ def index():
     for row in get_db().execute(
             "SELECT senders.*, domains.name AS domain, domains.authenticated, domain_keys.checks FROM senders"
             " JOIN domains ON domains.id = senders.domain_id LEFT JOIN domain_keys ON domain_keys.domain_id = domains.id"
-            " ORDER BY senders.name, senders.email"):
+            " ORDER BY senders.created_at DESC, senders.id DESC"):   # the newest on top
         found = json.loads(row["checks"]) if row["checks"] else {}
         last = deliveries.last_for(row["id"])
         senders.append({
             "id": row["id"], "name": row["name"], "email": row["email"], "domain": row["domain"],
-            "ready": bool(row["authenticated"]),
+            "ready": bool(row["authenticated"]), "has_mailbox": _has_mailbox(row["email"]),
             "dkim": found.get("dkim", {}).get("state") == "found",
             "dmarc": found.get("dmarc", {}).get("state") == "found",
             "last_test": last and {"status": last["status"], "detail": last["detail"], "recipient": last["recipient"],
@@ -152,6 +157,9 @@ def update(sender_id):
     sender = _sender(sender_id)
     typed = _typed()
     name, email, domain_id, problem = _checked(typed, sender_id)
+    if not problem and email.lower() != sender["email"].lower() and _has_mailbox(sender["email"]):
+        problem = (f"{sender['email']} has a mailbox, so its address stays as it is. Change its name, or delete "
+                   "its mailbox first on the Mailboxes page.")
     if problem:
         return _form(400, sender=sender, typed=typed, problem=problem)
     db = get_db()
@@ -167,7 +175,11 @@ def update(sender_id):
 def delete(sender_id):
     db = get_db()
     sender = db.execute("SELECT name, email FROM senders WHERE id = ?", (sender_id,)).fetchone()
-    if sender:
+    if sender and _has_mailbox(sender["email"]):
+        # its mailbox (and the mail in it) goes first, on purpose
+        flash(f"{sender['name']} <{sender['email']}> has a mailbox. Delete its mailbox first, on the Mailboxes "
+              "page, then the sender.", "not-deleted")
+    elif sender:
         db.execute("DELETE FROM senders WHERE id = ?", (sender_id,))
         db.commit()
         engine_sync.after_change()

@@ -1,6 +1,6 @@
 """The webmail (webmail.py): its own little site on port 17090, where a mailbox logs in with
-its own address and password. For now it says the inbox is coming soon, and how to read the
-mail in a mail app."""
+its own address and password, on a page that looks like the panel's login. For now it says the
+inbox is coming soon. The Mailboxes page has its login link, to copy or share."""
 import html
 import re
 
@@ -47,7 +47,24 @@ def test_it_asks_to_log_in_first(mail):
     assert mail.get("/").headers["Location"] == "/login"
     page = text(mail.get("/login"))
     assert "Webmail" in page and 'name="email"' in page and 'name="password"' in page
-    assert "side-menu" not in page   # its own look, not the panel's
+    assert "side-menu" not in page   # its own site, not the panel
+
+
+def test_its_login_looks_like_the_panels(mail):
+    page = text(mail.get("/login"))
+
+    assert 'class="login-bg"' in page and "img/float/" in page   # the floating mail icons
+    assert 'class="auth-card' in page and "Log in to your mailbox" in page
+    assert re.search(r'<label[^>]*for="webmail-email"[^>]*>Email</label>', page)
+    assert re.search(r'<button class="button button-block"[^>]*type="submit"', page)
+
+
+def test_its_login_link_can_fill_in_the_address(mail):
+    page = text(mail.get("/login?email=%20CEO@PineLoop.online"))
+
+    email = re.search(r'<input id="webmail-email"[^>]*>', page).group(0)
+    assert 'value="ceo@pineloop.online"' in email and "autofocus" not in email
+    assert "autofocus" in re.search(r'<input id="webmail-password"[^>]*>', page).group(0)   # straight to the password
 
 
 def test_a_mailbox_logs_in_and_the_inbox_is_coming_soon(mail, mailbox):
@@ -55,9 +72,10 @@ def test_a_mailbox_logs_in_and_the_inbox_is_coming_soon(mail, mailbox):
 
     assert response.headers["Location"] == "/"
     page = text(mail.get("/"))
-    assert "Your inbox is coming soon" in page and "ceo@pineloop.online" in page
-    for value in ("mail.pineloop.online", "993", "465", "587", "995"):
-        assert f'data-copy="{value}"' in page, value
+    soon = page[page.index('class="webmail-soon"'):]
+    assert "Your inbox is coming soon" in soon and "ceo@pineloop.online" in page
+    assert "mail.pineloop.online" in soon   # until then, any mail app, at this server
+    assert "config-row" not in page   # no settings table: just the message, in the middle
     assert 'action="/logout"' in page
 
 
@@ -149,7 +167,7 @@ def test_a_sign_in_page_left_open_too_long_asks_again_nicely(app):
 
     assert response.status_code == 400
     page = text(response)
-    assert "Sign in to your mailbox" in page and 'data-board="error"' in page and "Sign in again" in page
+    assert "Log in to your mailbox" in page and 'data-board="error"' in page and "Log in again" in page
 
 
 def save_lock(client, tries="5", wait="5", unit="minutes"):
@@ -248,6 +266,29 @@ def test_a_ticket_lasts_a_minute(app, client, login, mail, mailbox, monkeypatch)
 
     assert mail.get(f"/enter?ticket={ticket}").status_code == 400
     assert mail.get("/enter?ticket=made-up").status_code == 400
+
+
+def test_the_mailboxes_page_shares_the_webmail_login_link(client, login, mailbox):
+    login()
+
+    page = text(client.get("/mailboxes"))
+
+    assert 'data-dialog-open="webmail-link-dialog"' in page
+    dialog = page[page.index('id="webmail-link-dialog"'):]
+    dialog = dialog[:dialog.index("</dialog>")]
+    assert 'data-copy="http://localhost:17090/login"' in dialog   # the webmail, beside the panel
+    options = re.findall(r'<option value="([^"]*)"', dialog)
+    assert options == ["http://localhost:17090/login", "http://localhost:17090/login?email=ceo@pineloop.online"]
+    assert "data-webmail-share" in dialog
+
+
+def test_the_link_uses_the_webmail_address_from_settings(client, login, mailbox):
+    login()
+    client.post("/settings/miscellaneous/webmail-address", data={"address": "https://webmail.pineloop.online"})
+
+    page = text(client.get("/mailboxes"))
+
+    assert 'data-copy="https://webmail.pineloop.online/login"' in page
 
 
 def test_only_the_admin_gets_a_ticket(client, mailbox):

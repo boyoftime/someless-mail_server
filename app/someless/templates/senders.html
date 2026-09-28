@@ -52,6 +52,13 @@
     <div class="sender-head">
       <span class="sender-avatar" aria-hidden="true">{{ sender.name[:1] | upper }}</span>
       <h2 class="sender-who"><span class="sender-name">{{ sender.name }}</span> <span class="sender-email">&lt;{{ sender.email }}&gt;</span></h2>
+      {% if sender.has_mailbox %}
+      {# its mailbox (Mailboxes page): the sender stays while it's there #}
+      <a class="sender-mailbox" href="{{ url_for('mailboxes.index') }}" data-tip="Its mailbox is on the Mailboxes page. Delete the mailbox before the sender.">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 13.5l2.6-7.3a2 2 0 0 1 1.9-1.2h8a2 2 0 0 1 1.9 1.2l2.6 7.3"/><path d="M3.5 13.5V18a1.5 1.5 0 0 0 1.5 1.5h14a1.5 1.5 0 0 0 1.5-1.5v-4.5h-5l-1.5 2.5h-4l-1.5-2.5z"/></svg>
+        <span>Has a mailbox</span>
+      </a>
+      {% endif %}
       {% if sender.ready %}
       <span class="domain-status is-ok"><span class="status-dot" aria-hidden="true"></span>Ready</span>
       {% else %}

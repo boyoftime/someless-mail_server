@@ -1,114 +1,27 @@
-/* The webmail (webmail-login.html, webmail-inbox.html): the panel's fields, buttons, notice
-   board and copy boxes (style.css), in a look of its own: sea-teal on a deep night, one tray of
-   letters as its picture, whose top letter opens when the sign-in page comes in. */
-body.webmail {
-  --wm-accent: #14b8a6;
-  --wm-accent-2: #0195fb;
-  --wm-glow: rgba(45, 212, 191, 0.55);
-  --wm-card: rgba(9, 22, 38, 0.78);
-  --wm-card-line: rgba(45, 212, 191, 0.28);
-  --wm-paper: #f4fbfa;
-  --wm-envelope: #0f2d3a;
-  --accent: var(--wm-accent);
-  --badge: linear-gradient(135deg, #0d9488, #14b8a6);
-  min-height: 100dvh;
-  background:
-    radial-gradient(60rem 36rem at 12% -10%, rgba(20, 184, 166, 0.22), transparent 60%),
-    radial-gradient(48rem 32rem at 100% 110%, rgba(1, 149, 251, 0.18), transparent 60%),
-    #06101d;
-  color: #e8f3f5;
-}
-:root[data-theme="light"] body.webmail {
-  --wm-card: rgba(255, 255, 255, 0.86);
-  --wm-card-line: rgba(13, 148, 136, 0.28);
-  --wm-envelope: #d9f2ef;
-  background:
-    radial-gradient(60rem 36rem at 12% -10%, rgba(20, 184, 166, 0.2), transparent 60%),
-    radial-gradient(48rem 32rem at 100% 110%, rgba(1, 149, 251, 0.14), transparent 60%),
-    #eef6f6;
-  color: var(--ink);
-}
+/* The webmail (webmail-login.html, webmail-inbox.html): the panel's login look (style.css: the
+   floating mail icons, the card, its fields and button). Signed in, a bar at the top with the
+   mailbox, and the inbox that's coming, in a card in the middle. */
+/* (body.auth.webmail-home: this file comes before style.css, whose body.auth would win otherwise;
+   one column that can be narrower than a long address, which then ends in …) */
+body.auth.webmail-home { grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr); }
 
-.webmail-brand { display: inline-flex; align-items: center; gap: 0.6rem; margin: 0; font-size: 1.1rem; letter-spacing: -0.01em; }
-.webmail-brand img { border-radius: 10px; }
-.webmail-brand strong { color: #2dd4bf; font-weight: 700; }
-:root[data-theme="light"] .webmail-brand strong { color: #0d9488; }
-
-.webmail-card {
-  width: 100%;
-  border: 1px solid var(--wm-card-line);
-  border-radius: 24px;
-  background: var(--wm-card);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.6), 0 0 60px -30px var(--wm-glow);
-}
-.webmail-title { margin: 0; font-size: clamp(1.5rem, 4vw, 1.9rem); font-weight: 700; letter-spacing: -0.02em; text-align: center; text-wrap: balance; }
-.webmail-hint { max-width: 34rem; margin: 0 auto; color: var(--muted); text-align: center; text-wrap: pretty; }
-body.webmail .field input { background: var(--input-bg); }
-body.webmail .field input:focus { outline: none; border-color: var(--wm-accent); box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.22); }
-body.webmail .field:focus-within .input-icon { color: var(--wm-accent); }
-
-/* Signing in */
-.webmail-login {
-  display: grid;
-  justify-items: center;
-  align-content: center;
-  gap: 1.5rem;
-  min-height: 100dvh;
-  padding: 2rem 1rem;
-}
-.webmail-login .webmail-card { display: grid; gap: 1rem; max-width: 27rem; padding: 1.75rem clamp(1.1rem, 5vw, 2rem) 2rem; }
-.webmail-form { display: grid; gap: 1.1rem; margin-top: 0.5rem; }
-/* (body.webmail: this file comes before style.css, whose .button would win otherwise) */
-body.webmail .webmail-submit, body.webmail .webmail-submit:hover, body.webmail .webmail-submit[aria-busy="true"] {
-  margin-top: 0.3rem;
-  background: linear-gradient(135deg, #0d9488, #14b8a6 55%, #0195fb);
-  box-shadow: 0 12px 28px -12px var(--wm-glow);
-  color: #fff;
-}
-body.webmail .webmail-submit:hover { filter: brightness(1.1); }
-.webmail-foot { margin: 0; color: var(--muted); font-size: 0.85rem; }
-
-/* The tray of letters */
-.letter-tray { justify-self: center; width: 9.5rem; height: auto; margin: 0 auto 0.25rem; overflow: visible; }
-.letter-tray rect, .letter-tray path { stroke-linejoin: round; stroke-linecap: round; }
-.tray-back { fill: color-mix(in srgb, var(--wm-accent) 16%, transparent); }
-.tray-mid { fill: color-mix(in srgb, var(--wm-accent) 30%, transparent); }
-.letter-paper { fill: var(--wm-paper); }
-.letter-lines { fill: none; stroke: #94d8cf; stroke-width: 4; }
-.envelope { fill: var(--wm-envelope); stroke: var(--wm-accent); stroke-width: 2.5; }
-.envelope-fold { fill: none; stroke: color-mix(in srgb, var(--wm-accent) 55%, transparent); stroke-width: 2.5; }
-.envelope-flap { fill: var(--wm-envelope); stroke: var(--wm-accent); stroke-width: 2.5; transform-box: fill-box; }
-.envelope-flap.is-shut { transform-origin: 50% 0; }
-.envelope-flap.is-open { transform-origin: 50% 100%; }
-.letter-tray { filter: drop-shadow(0 10px 26px var(--wm-glow)); }
-/* sign in: the shut flap folds up out of sight, the open one unfolds behind the letter, and the
-   letter rises out of the envelope, once */
-.webmail-login .envelope-flap.is-shut { animation: flap-fold 0.28s 0.4s ease-in both; }
-.webmail-login .envelope-flap.is-open { animation: flap-unfold 0.32s 0.68s ease-out both; }
-.webmail-login .letter-paper, .webmail-login .letter-lines { animation: letter-rise 0.7s 0.95s cubic-bezier(0.3, 0.7, 0.2, 1.2) both; }
-@keyframes flap-fold { to { transform: scaleY(0); } }
-@keyframes flap-unfold { from { transform: scaleY(0); } }
-@keyframes letter-rise { from { transform: translateY(34px); } }
-@media (prefers-reduced-motion: reduce) {
-  .webmail-login .envelope-flap.is-shut { animation: none; transform: scaleY(0); }
-  .webmail-login .envelope-flap.is-open, .webmail-login .letter-paper, .webmail-login .letter-lines { animation: none; }
-}
-
-/* Signed in: the bar, and the inbox that's coming */
 .webmail-bar {
+  position: relative;
+  z-index: 2;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem 1.5rem;
-  padding: 0.9rem clamp(1rem, 4vw, 2rem);
-  border-bottom: 1px solid var(--wm-card-line);
-  background: color-mix(in srgb, var(--wm-card) 70%, transparent);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  padding: 0.85rem clamp(1rem, 4vw, 2rem);
+  border-bottom: 1px solid var(--auth-card-border);
+  background: var(--auth-card-bg);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  min-width: 0;
 }
+.webmail-brand { display: inline-flex; align-items: center; gap: 0.6rem; margin: 0; font-size: 1.1rem; letter-spacing: -0.01em; }
+.webmail-brand img { border-radius: 10px; }
+.webmail-brand strong { color: var(--bar-blue); font-weight: 700; }
 .webmail-who { display: flex; align-items: center; gap: 0.65rem; min-width: 0; }
 .webmail-who form { flex: none; margin: 0; }
 .webmail-avatar {
@@ -118,18 +31,40 @@ body.webmail .webmail-submit:hover { filter: brightness(1.1); }
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #0d9488, #14b8a6 55%, #0195fb);
+  background: linear-gradient(135deg, #1463f3, #0195fb);
+  box-shadow: 0 0 16px -4px rgba(1, 149, 251, 0.85);
   color: #fff;
   font-weight: 800;
 }
 .webmail-email { min-width: 0; overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .webmail-logout { padding: 0.45rem 1rem; font-size: 0.9rem; white-space: nowrap; }
-.webmail-soon { display: grid; justify-items: center; gap: 1rem; max-width: 46rem; margin: 0 auto; padding: clamp(2rem, 6vw, 3.5rem) 1rem 3rem; }
-.webmail-soon .letter-tray { width: 8rem; }
-.webmail-settings { display: grid; gap: 1rem; margin-top: 1rem; padding: 1.4rem clamp(1rem, 4vw, 1.75rem) 1.6rem; }
-.webmail-card-title { margin: 0; font-size: 1.1rem; font-weight: 700; }
+
+/* The inbox that's coming: the card in the middle of the screen */
+.webmail-soon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem var(--gutter) 0;
+}
+.webmail-soon .welcome-animation { margin-top: -0.5rem; }
+.webmail-soon .auth-hint { margin-bottom: 1rem; }
+.webmail-soon-note {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--auth-card-border);
+  border-radius: 14px;
+  background: rgba(1, 149, 251, 0.07);
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+.webmail-soon-note strong { color: var(--ink); }
+
 @media (max-width: 640px) {
-  .webmail-bar { flex-wrap: nowrap; padding-inline: 1rem; }
+  .webmail-bar { padding-inline: 1rem; }
   .webmail-bar .webmail-brand span { display: none; }
   .webmail-who { gap: 0.5rem; }
   .webmail-logout { padding: 0.4rem 0.85rem; }

@@ -1,33 +1,12 @@
 {% extends "base.html" %}
-{% from "copy-box.html" import copy_box %}
 {% block title %}Inbox | Someless Webmail{% endblock %}
 {% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/webmail.css') }}">{% endblock %}
-{% block body_class %}webmail{% endblock %}
-
-{# One way to connect: the server, port and security on one row (as on the panel's Mailboxes page) #}
-{% macro config_row(kind, server, port, security) %}
-  <dl class="config-row">
-    <div class="config-cell is-wide">
-      {% if server %}
-      <dt>Server</dt>
-      <dd>{{ copy_box(server, "Copy the " ~ kind ~ " server") }}</dd>
-      {% else %}
-      <dt class="visually-hidden">Or</dt>
-      <dd class="config-or">or</dd>
-      {% endif %}
-    </div>
-    <div class="config-cell">
-      <dt>Port</dt>
-      <dd>{{ copy_box(port | string, "Copy the " ~ kind ~ " port " ~ port) }}</dd>
-    </div>
-    <div class="config-cell">
-      <dt>Security</dt>
-      <dd class="config-plain">{{ security }}</dd>
-    </div>
-  </dl>
-{% endmacro %}
+{% block body_class %}auth webmail webmail-home{% endblock %}
 
 {% block body %}
+{# Signed in: the same floating mail icons as the login, the mailbox at the top, and in the
+   middle, the inbox that's coming #}
+<div class="login-bg" aria-hidden="true" data-icons="{% for name in float_icons %}{{ url_for('static', filename='img/float/' ~ name ~ '.webp') }}{% if not loop.last %} {% endif %}{% endfor %}"></div>
 <header class="webmail-bar">
   <p class="webmail-brand"><img src="{{ url_for('static', filename='img/logo.webp') }}" alt="" width="32" height="32"><span>Someless <strong>Webmail</strong></span></p>
   <div class="webmail-who">
@@ -41,42 +20,18 @@
 </header>
 
 <main class="webmail-soon">
-  <svg class="letter-tray" viewBox="0 0 160 92" aria-hidden="true">
-    <rect class="tray-back" x="30" y="10" width="100" height="62" rx="9"/>
-    <rect class="tray-mid" x="20" y="20" width="120" height="62" rx="9"/>
-    <rect class="envelope" x="10" y="30" width="140" height="60" rx="10"/>
-    <path class="envelope-fold" d="M12 86l56-30a18 18 0 0 1 24 0l56 30"/>
-    <path class="envelope-flap is-shut" d="M12 33l58 30a18 18 0 0 0 20 0l58-30z"/>
-  </svg>
-  <h1 class="webmail-title">Your inbox is coming soon</h1>
-  <p class="webmail-hint">Reading and writing mail right here is on its way. Until then, any mail app does it all: Outlook, Apple Mail, Thunderbird or the one on your phone. Add your mailbox to it with these settings.</p>
-
-  <section class="webmail-card webmail-settings" aria-labelledby="settings-title">
-    <h2 id="settings-title" class="webmail-card-title">Mail app settings</h2>
-    <dl class="config-row is-login">
-      <div class="config-cell is-wide">
-        <dt>Username</dt>
-        <dd>{{ copy_box(email, "Copy the username") }}</dd>
-      </div>
-      <div class="config-cell is-two">
-        <dt>Password</dt>
-        <dd class="config-plain">The one you signed in with</dd>
-      </div>
-    </dl>
-    <section class="config-group" aria-labelledby="config-imap">
-      <h3 class="config-title" id="config-imap">IMAP <span>Incoming mail, kept on the server: best for more than one device</span></h3>
-      {{ config_row("IMAP", server, ports.imap, "SSL/TLS") }}
+  <div class="flip-card">{# (the icons keep away from it: login-background.js) #}
+    <section class="auth-card" aria-labelledby="soon-title">
+      <div class="welcome-animation" data-lottie="{{ url_for('static', filename='lottie/contact-mail.json') }}" aria-hidden="true"></div>
+      <h1 id="soon-title" class="auth-title">Your inbox is coming soon</h1>
+      <p class="auth-hint">Soon you'll read, write and send your mail right here.</p>
+      <p class="webmail-soon-note">Until then, your mail is safe on the server. Add <strong>{{ email }}</strong> to any mail app, at <strong>{{ server }}</strong>, with the same address and password.</p>
     </section>
-    <section class="config-group" aria-labelledby="config-smtp">
-      <h3 class="config-title" id="config-smtp">SMTP <span>Outgoing mail, with the same username and password</span></h3>
-      {{ config_row("SMTP", server, ports.smtp_ssl, "SSL/TLS") }}
-      {{ config_row("SMTP", none, ports.smtp_starttls, "STARTTLS") }}
-    </section>
-    <section class="config-group" aria-labelledby="config-pop3">
-      <h3 class="config-title" id="config-pop3">POP3 <span>Incoming mail, moved to one device</span></h3>
-      {{ config_row("POP3", server, ports.pop3, "SSL/TLS") }}
-    </section>
-  </section>
+  </div>
 </main>
-<script src="{{ url_for('static', filename='js/copy-button.js') }}"></script>
+<footer class="auth-footer">Someless Webmail {{ version }}</footer>
+<script src="{{ url_for('static', filename='js/lottie_light.min.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/lottie-autoplay.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/pixi.min.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/login-background.js') }}" defer></script>
 {% endblock %}
