@@ -106,7 +106,7 @@ jobs:
           curl -fsS http://127.0.0.1:17080/ | grep -Eq "Preparing your Someless Mail server|Welcome to"
           # the webmail answers on its own port, with its own sign-in
           curl -fsS http://127.0.0.1:17090/healthz | grep -qx ok
-          curl -fsS http://127.0.0.1:17090/login | grep -q "Sign in to your mailbox"
+          curl -fsS http://127.0.0.1:17090/login | grep -q "Log in to your mailbox"
           for i in $(seq 1 120); do
             docker exec -u someless smoke flask --app someless engine status > /dev/null 2>&1 && break
             sleep 1
