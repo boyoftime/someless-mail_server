@@ -186,7 +186,18 @@ def test_edit_storage_starts_from_the_size_as_it_was_typed(app, client, login):
     page = text(client.get("/mailboxes"))
 
     found = re.findall(r'data-storage-for="(\w)@[^"]+" [^>]*data-size="([^"]+)" data-unit="(\w+)"', page)
-    assert found == [("a", "15", "GB"), ("b", "14.87", "GB"), ("c", "500", "MB"), ("d", "1.5", "GB")]
+    assert sorted(found) == [("a", "15", "GB"), ("b", "14.87", "GB"), ("c", "500", "MB"), ("d", "1.5", "GB")]
+
+
+def test_the_newest_mailbox_is_listed_first(app, client, login):
+    authenticated_domain(app)
+    login()
+    for local in ("amy", "zed", "mia"):
+        create(client, local=local)
+
+    page = text(client.get("/mailboxes"))
+
+    assert re.findall(r'data-storage-for="(\w+)@', page) == ["mia", "zed", "amy"]
 
 
 def test_the_list_shows_each_mailboxs_storage_use(app, client, login, engine):

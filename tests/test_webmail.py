@@ -529,6 +529,13 @@ def test_the_mailboxs_own_folders_follow_with_theirs_inside(signed_in, jmap):
     assert 'data-name="Clients" data-depth="1"' in page and "wm-folder-opener" in page   # its folders fold away
 
 
+def test_the_mail_list_never_scrolls_sideways(signed_in):
+    css = signed_in.get("/static/css/webmail-app.css").get_data(as_text=True)
+    assert re.search(r"\.wm-scroll \{[^}]*overflow-x: hidden", css)
+    # a long name is cut short with the row as wide as the list, not the row made wider
+    assert re.search(r"\.wm-message-link \{[^}]*grid-template-columns: minmax\(0, 1fr\)", css)
+
+
 def test_counts_are_unread_but_drafts_counts_all(signed_in, jmap):
     jmap.add(unread=True)
     jmap.add(unread=True)
@@ -994,6 +1001,17 @@ def test_a_messages_attachments_are_listed(signed_in, jmap):
                              ("logo", "12.6 KB", "image")):
         assert name in page and size in page, name
         assert re.search(rf'data-kind="{kind}"', page), kind
+
+
+def test_save_all_turns_while_it_comes_and_the_whole_bar_opens_the_files(signed_in):
+    script = text(signed_in.get("/static/js/webmail-read.js"))
+    css = text(signed_in.get("/static/css/webmail-app.css"))
+    # Save all: the zip fetched with the arrows turning in the button, then handed to the browser
+    assert "saveFiles(saveAll)" in script and 'label.textContent = "Saving…"' in script
+    assert re.search(r"\.wm-files\.is-saving \.wm-files-head::after \{[^}]*animation: wm-files-run", css)
+    # a click anywhere along the bar opens the files, as the arrow does
+    assert 'event.target.closest(".wm-files-head")' in script
+    assert re.search(r"\.wm-files-head \{[^}]*cursor: pointer", css)
 
 
 def test_a_file_downloads_or_shows(signed_in, jmap):

@@ -149,23 +149,13 @@ body.webmail-app .wm-cm-subject { height: 34px; }
 .wm-cm-file-x:hover { background: var(--wm-icon-hover); color: var(--wm-ink); }
 .wm-cm-file-x svg { width: 13px; height: 13px; }
 
-/* a table being written (webmail-tables.js): its handles, over the frame, small and in the
-   theme's blue (move it, a column or a row more, its cell's menu, the cell pulled bigger), and a
-   glowing line where a table being moved would go */
-.wm-tt { position: fixed; z-index: 62; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 7px; background: var(--wm-blue); color: #fff; box-shadow: 0 2px 8px rgba(10, 14, 30, 0.35); cursor: pointer; transform: translate(-50%, -50%); animation: wm-tt-in 0.14s ease both; }
-.wm-tt[hidden] { display: none; }
-.wm-tt svg { width: 14px; height: 14px; }
-.wm-tt:hover { background: var(--wm-blue-hover); box-shadow: 0 2px 8px rgba(10, 14, 30, 0.35), var(--wm-lit-glow-small); }
-.wm-tt-move { cursor: grab; }
-.wm-tt-add { border-radius: 50%; }
-.wm-tt-menu { width: 20px; height: 20px; border-radius: 6px; }
-.wm-tt-size { width: 18px; height: 18px; border-radius: 5px; cursor: nwse-resize; }
-.wm-tt-size svg { width: 12px; height: 12px; }
-body.is-moving-table, body.is-moving-table * { cursor: grabbing !important; }
-body.is-sizing-cell, body.is-sizing-cell * { cursor: nwse-resize !important; }
-.wm-tt-drop { position: fixed; z-index: 62; height: 3px; border-radius: 2px; background: var(--wm-blue); box-shadow: 0 0 8px rgba(88, 156, 255, 0.8); pointer-events: none; }
-.wm-tt-drop[hidden] { display: none; }
-@keyframes wm-tt-in { from { opacity: 0; transform: translate(-50%, -50%) scale(0.7); } }
+/* a table being written (webmail-tables.js): the border of a column or a row pointed at, a
+   glowing line in the theme's blue along it, over the frame; dragged, the pointer stays a two-way
+   arrow wherever it goes */
+.wm-tt-guide { position: fixed; z-index: 62; border-radius: 2px; background: var(--wm-blue); box-shadow: 0 0 8px rgba(88, 156, 255, 0.75); pointer-events: none; }
+.wm-tt-guide[hidden] { display: none; }
+body.is-sizing-column, body.is-sizing-column * { cursor: col-resize !important; }
+body.is-sizing-row, body.is-sizing-row * { cursor: row-resize !important; }
 
 /* a reply under the message: ⋯ for what it answers, folded away so Send is just below the words */
 .wm-cm-quote { display: grid; flex: none; align-self: flex-start; place-items: center; width: 36px; height: 20px; margin: 4px 16px 10px; padding: 0; border: 0; border-radius: 10px; background: var(--wm-icon-hover); color: var(--wm-soft); cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; }
@@ -257,5 +247,5 @@ body.webmail-app .wm-cm-link-form input:focus { border-color: var(--wm-blue); }
   .wm-composer.is-minimized { width: calc(100vw - 16px); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .wm-composer, .wm-composer.is-full, .wm-composer.is-screen, .wm-cm-overlay, .wm-tt { animation: none; transition: none; }
+  .wm-composer, .wm-composer.is-full, .wm-composer.is-screen, .wm-cm-overlay { animation: none; transition: none; }
 }

@@ -457,10 +457,9 @@ def _message(data, tree, mail, draft):
     email = {
         "mailboxIds": {drafts["id"]: True}, "keywords": {"$draft": True, "$seen": True},
         "from": [{"name": name or None, "email": sender}], "to": to, "cc": cc, "bcc": bcc, "subject": subject,
-        "htmlBody": [{"partId": "html", "type": "text/html"}], "textBody": [{"partId": "text", "type": "text/plain"}],
+        "bodyStructure": _structure(files),
         "bodyValues": {"html": {"value": f"<!doctype html><html><body>{html_body}</body></html>"},
                        "text": {"value": to_text(html_body)}},
-        "attachments": [{key: value for key, value in part.items() if key != "size"} for part in files],
         "sentAt": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
     }
     reply = data.get("reply") if isinstance(data.get("reply"), dict) else None
@@ -477,6 +476,22 @@ def _message(data, tree, mail, draft):
         email["header:X-Priority:asText"] = "1 (Highest)"
         email["header:Importance:asText"] = "high"
     return email
+
+
+def _structure(files):
+    """How the message is put together: its words (text and HTML); the pictures shown in them
+    packed with them (multipart/related, so Gmail and the rest show them in the message and not
+    as attachments: the engine, left to it, puts them beside it); the files attached around it all."""
+    body = {"type": "multipart/alternative", "subParts": [{"partId": "text", "type": "text/plain"},
+                                                         {"partId": "html", "type": "text/html"}]}
+    parts = [{key: value for key, value in part.items() if key != "size"} for part in files]
+    shown = [part for part in parts if part["disposition"] == "inline"]
+    attached = [part for part in parts if part["disposition"] == "attachment"]
+    if shown:
+        body = {"type": "multipart/related", "subParts": [body, *shown]}
+    if attached:
+        body = {"type": "multipart/mixed", "subParts": [body, *attached]}
+    return body
 
 
 def _create_error(result, key):

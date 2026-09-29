@@ -377,6 +377,31 @@ def test_a_signatures_picture_goes_as_a_part_of_its_own(mail, jmap):
     assert jmap.blobs[parts[0]["blobId"]][0] == base64.b64decode(PIXEL)
 
 
+def test_a_picture_goes_with_what_it_says_and_files_around_them(mail, jmap):
+    """Gmail lists a picture as an attachment (a paper clip on the message) unless it's in
+    multipart/related with the HTML: there it's only shown in the message, as it's meant to be."""
+    file = mail.post("/compose/upload", data={"file": (io.BytesIO(b"some notes"), "notes.txt", "text/plain")}).get_json()
+    written = f'<p>Hi</p><div class="wm-signature"><img src="data:image/png;base64,{PIXEL}" alt=""></div>'
+
+    mail.post("/compose/send", json=message(html=written, attachments=[file]))
+
+    body = jmap.submissions[0]["email"]["_created"]["bodyStructure"]
+    assert body["type"] == "multipart/mixed"
+    related, attached = body["subParts"]
+    assert related["type"] == "multipart/related"
+    words, picture = related["subParts"]
+    assert words["type"] == "multipart/alternative" and [part["partId"] for part in words["subParts"]] == ["text", "html"]
+    assert (picture["type"], picture["disposition"]) == ("image/png", "inline") and picture["cid"]
+    assert (attached["name"], attached["disposition"]) == ("notes.txt", "attachment")
+
+
+def test_a_message_without_pictures_or_files_is_its_words_alone(mail, jmap):
+    mail.post("/compose/send", json=message(html="<p>Hi</p>"))
+
+    body = jmap.submissions[0]["email"]["_created"]["bodyStructure"]
+    assert body["type"] == "multipart/alternative"
+
+
 def test_a_signatures_picture_is_kept_with_a_draft_too(mail, jmap):
     mail.post("/compose/save", json=message(html=f'<p>Hi</p><img src="data:image/jpeg;base64,{PIXEL}">'))
 
@@ -431,6 +456,34 @@ def test_a_composer_can_take_the_whole_screen_beside_maximize(mail):
     screen = page.split('data-cm="screen"')[1].split(">")[0]
     assert 'aria-label="Maximize"' in maximize and 'data-tip-on="Restore"' in maximize
     assert 'aria-label="Full screen"' in screen and 'data-tip-on="Exit full screen"' in screen
+
+
+def test_compose_opens_a_new_message_maximized(mail):
+    # (the window in the middle, as Maximize makes it, not the small one at the bottom right)
+    script = mail.get("/static/js/webmail-compose.js").get_data(as_text=True)
+    assert 'openWindow({ kind: "new", full: true })' in script
+    assert "if (options.full) composer.toggleFull(true);" in script
+
+
+def test_the_signature_starts_out_of_sight_and_the_eye_shows_it(mail):
+    page = mail.get("/mail/inbox").get_data(as_text=True)
+    eye = page.split('data-cm="sig-show"')[1].split(">")[0]
+    assert 'aria-label="Show signature"' in eye and 'data-tip-on="Hide signature"' in eye and "hidden" in eye
+    script = mail.get("/static/js/webmail-compose.js").get_data(as_text=True)
+    assert "this.signatureFolded = true;" in script   # (out of sight to begin with)
+    assert "content:'Signature hidden (still sent)'" in script   # (its line, where it starts)
+    # sent all the same: the mark that hides it is never kept
+    core = mail.get("/static/js/webmail-core.js").get_data(as_text=True)
+    assert '"wm-sig-folded"' in core.split("var ONLY_SHOWN")[1].split(";")[0]
+
+
+def test_a_tables_borders_are_dragged_and_its_cells_right_clicked(mail):
+    script = mail.get("/static/js/webmail-tables.js").get_data(as_text=True)
+    assert "wm-tt-move" not in script and "wm-tt-add" not in script   # (no buttons round it any more)
+    assert 'kind: "column"' in script and 'kind: "row"' in script   # (a border pointed at, then dragged)
+    assert "Insert row above" in script and "Insert column right" in script and "Delete table" in script
+    compose = mail.get("/static/js/webmail-compose.js").get_data(as_text=True)
+    assert "cursor:col-resize" in compose and "cursor:row-resize" in compose
 
 
 def test_the_mail_page_brings_the_tools_for_tables_before_the_composer(mail):

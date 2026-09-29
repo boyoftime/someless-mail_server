@@ -680,15 +680,28 @@ def test_the_page_looks_again_once_its_last_look_is_old(client, login, app, dns)
     assert "example.com already uses Zoho Mail" in plain(page)
 
 
-def test_a_recent_look_is_not_done_again(client, login, dns):
+def test_opening_the_page_always_looks_afresh(client, login, dns):
+    """Authenticate clicked again a moment later: what DNS says now, not what it said then."""
     login()
     domain_id = add_domain(client)
-    client.get(f"/domains/{domain_id}")
+    client.get(f"/domains/{domain_id}")  # nothing set up yet
+    dns[("example.com", "MX")] = ZOHO_MX  # then the admin connects Zoho Mail, and opens it again at once
+
+    page = text(client.get(f"/domains/{domain_id}"))
+
+    assert "example.com already uses Zoho Mail" in plain(page)
+
+
+def test_the_page_a_check_goes_back_to_does_not_look_again(client, login, dns):
+    login()
+    domain_id = add_domain(client)
     asked = []
     dns_lookup = domain_records.lookup
     domain_records.lookup = lambda name, rdtype: asked.append(name) or dns_lookup(name, rdtype)
     try:
-        client.get(f"/domains/{domain_id}")  # as right after the check's own look
+        client.post(f"/domains/{domain_id}/check")   # (its own look)
+        asked.clear()
+        client.get(f"/domains/{domain_id}")   # the page it goes back to
     finally:
         domain_records.lookup = dns_lookup
 

@@ -269,14 +269,22 @@ class FakeJmap:
                 continue
             email_id = f"e{next(self._ids)}"
             values = email.get("bodyValues") or {}
+            structure = email.get("bodyStructure")
+            if structure:   # (its parts as they're put together: the words, and the files among them)
+                leaves = list(_leaves(structure))
+                files = [part for part in leaves if part.get("blobId")]
+                html_body = [part for part in leaves if part.get("partId") and part.get("type") == "text/html"]
+                text_body = [part for part in leaves if part.get("partId") and part.get("type") == "text/plain"]
+            else:
+                files, html_body, text_body = email.get("attachments") or [], email.get("htmlBody") or [], email.get("textBody") or []
             parts = []
-            for number, part in enumerate(email.get("attachments") or []):
+            for number, part in enumerate(files):
                 data, _ = self.blobs.get(part["blobId"], (b"", part.get("type")))
                 parts.append({"partId": str(10 + number), "blobId": part["blobId"], "name": part.get("name"),
                               "type": part.get("type"), "size": len(data), "disposition": part.get("disposition"),
                               "cid": part.get("cid")})
-            html = next((values[part["partId"]]["value"] for part in email.get("htmlBody") or [] if part["partId"] in values), None)
-            text = next((values[part["partId"]]["value"] for part in email.get("textBody") or [] if part["partId"] in values), "")
+            html = next((values[part["partId"]]["value"] for part in html_body if part["partId"] in values), None)
+            text = next((values[part["partId"]]["value"] for part in text_body if part["partId"] in values), "")
             raw = f"From: {email['from'][0]['email']}\r\nSubject: {email.get('subject', '')}\r\n\r\n{text}".encode()
             self.blobs[f"raw-{email_id}"] = (raw, "message/rfc822")
             self.emails[email_id] = {
@@ -586,6 +594,15 @@ class FakeJmap:
             elif self.events.pop(event_id, None) is not None:
                 destroyed.append(event_id)
         return {"created": created, "updated": updated, "destroyed": destroyed, "notUpdated": not_updated, "notCreated": {}}
+
+
+def _leaves(part):
+    """A message's parts that aren't multipart, in order (its bodyStructure, as the engine reads it)."""
+    if part.get("subParts"):
+        for sub in part["subParts"]:
+            yield from _leaves(sub)
+    else:
+        yield part
 
 
 def _pointer(value, path):

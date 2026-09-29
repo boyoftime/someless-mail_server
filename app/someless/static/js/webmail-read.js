@@ -315,13 +315,97 @@
     document.dispatchEvent(new CustomEvent("someless:tips-away", { detail: { element: button } }));
   }
 
+  // Save all: the zip made and brought down with the arrows turning in the button (and how far
+  // along, once its size is known), then handed to the browser to keep
+  function fileName(disposition) {
+    var coded = /filename\*=UTF-8''([^;]+)/i.exec(disposition || "");
+    if (coded) {
+      try { return decodeURIComponent(coded[1]); } catch (error) { /* (as it's written, below) */ }
+    }
+    var plain = /filename="?([^";]+)"?/i.exec(disposition || "");
+    return plain ? plain[1] : "";
+  }
+
+  function saveFiles(link) {
+    if (link.classList.contains("is-saving")) return;
+    var card = link.closest("[data-wm-files]");
+    var count = card ? card.querySelector(".wm-files-count") : null;
+    var label = link.querySelector("span");
+    var icon = link.querySelector("svg");
+    var turning = wm.spinner();
+    link.classList.add("is-saving");
+    link.setAttribute("aria-busy", "true");
+    if (card) card.classList.add("is-saving");
+    if (icon) icon.replaceWith(turning);
+    else link.insertBefore(turning, label);
+    label.textContent = "Saving…";
+    function done() {
+      wm.spinner.stop(turning);
+      if (icon) turning.replaceWith(icon);
+      else turning.remove();
+      label.textContent = "Save all";
+      link.classList.remove("is-saving");
+      link.removeAttribute("aria-busy");
+      if (card) card.classList.remove("is-saving");
+    }
+    fetch(link.href, { credentials: "same-origin" }).then(function (response) {
+      if (response.redirected && /\/login\b/.test(response.url)) {
+        location.href = response.url;   // (signed out meanwhile)
+        throw null;
+      }
+      if (!response.ok) throw new Error("status " + response.status);
+      var name = fileName(response.headers.get("Content-Disposition")) || "attachments.zip";
+      var total = Number(response.headers.get("Content-Length")) || 0;
+      if (!total || !response.body || !response.body.getReader) {
+        return response.blob().then(function (blob) { return { blob: blob, name: name }; });
+      }
+      var stream = response.body.getReader();
+      var chunks = [];
+      var got = 0;
+      return (function next() {
+        return stream.read().then(function (step) {
+          if (step.done) return { blob: new Blob(chunks, { type: "application/zip" }), name: name };
+          chunks.push(step.value);
+          got += step.value.length;
+          label.textContent = "Saving " + Math.min(99, Math.floor(got * 100 / total)) + "%";
+          return next();
+        });
+      })();
+    }).then(function (saved) {
+      var url = URL.createObjectURL(saved.blob);
+      var keep = document.createElement("a");
+      keep.href = url;
+      keep.download = saved.name;
+      keep.hidden = true;
+      document.body.appendChild(keep);
+      keep.click();
+      keep.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+      done();
+      wm.toast((count ? count.textContent.trim() : "The attachments") + " saved");
+    }).catch(function (error) {
+      done();
+      if (error === null) return;
+      wm.board("Couldn't save the attachments", "Something went wrong while getting them ready. Try again in a moment.");
+    });
+  }
+
   reader.addEventListener("click", function (event) {
     if (event.target.closest("[data-wm-back]")) {
       close();
       history.pushState(null, "", reader.dataset.home);
       return;
     }
+    var saveAll = event.target.closest(".wm-save-all");
+    if (saveAll && window.fetch && window.URL && URL.createObjectURL) {
+      event.preventDefault();
+      saveFiles(saveAll);
+      return;
+    }
+    // the arrow, or anywhere else along the bar: the files open out (or fold away)
     var files = event.target.closest("[data-wm-files-toggle]");
+    var bar = !files && !event.target.closest("a, button") && event.target.closest(".wm-files-head");
+    if (bar) files = bar.querySelector("[data-wm-files-toggle]");
     if (files) {
       var on = files.closest("[data-wm-files]").classList.toggle("is-open");
       files.setAttribute("aria-expanded", String(on));

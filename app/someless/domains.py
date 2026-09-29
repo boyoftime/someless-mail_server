@@ -103,7 +103,10 @@ def authenticate(domain_id):
     keys = domain_records.keys_for(domain_id)
     # domains added before providers were noted (or when DNS didn't answer) find out now
     provider = domain["provider"] or _note_provider(domain_id, domain["name"])
-    if domain_records.out_of_date(keys):  # see what the domain has for mail now
+    # each time it's opened (Authenticate), DNS is asked afresh: what the domain has for mail now,
+    # not what it had a moment ago; only as a check comes back to it, that look is the one to show
+    just_checked = session.pop("looked", None) == domain_id
+    if not just_checked or domain_records.out_of_date(keys):
         host, found, results = domain_records.look(domain["name"], keys, address)
         # a domain checked before is checked again, so what the check says fits the records
         # the page shows now
@@ -166,6 +169,7 @@ def check(domain_id):
     """Look the records up in DNS ("Authenticate this email domain")."""
     domain = _domain(domain_id)
     still = check_now(domain, request.host)
+    session["looked"] = domain_id   # (the page it goes back to shows this look, not another)
     if still is None:
         flash(f"{domain['name']} is authenticated.", "authenticated")
         session["celebrate"] = domain_id   # every check that finds it all right: the page celebrates

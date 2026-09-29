@@ -805,7 +805,7 @@
   // itself, so they turn in a message too, where nothing runs). For this page, and for each page
   // in a frame as it comes. The mark is never kept: contentOf() leaves it out. ---
   var PICTURE_LOADING = "wm-img-loading";
-  var ONLY_SHOWN = [PICTURE_LOADING, "wm-picked", "wm-write-here"];   // (marks never kept: contentOf)
+  var ONLY_SHOWN = [PICTURE_LOADING, "wm-picked", "wm-write-here", "wm-sig-folded"];   // (marks never kept: contentOf)
   function watchPictures(doc) {
     if (!doc || !doc.documentElement || doc.wmPictures) return;
     doc.wmPictures = true;
@@ -850,6 +850,7 @@
     Array.prototype.forEach.call(copy.querySelectorAll(marked), function (element) {
       ONLY_SHOWN.forEach(function (name) { element.classList.remove(name); });
       if (!element.classList.length) element.removeAttribute("class");
+      element.removeAttribute("contenteditable");   // (a folded signature's, while it's out of sight)
     });
     return copy.innerHTML;
   }

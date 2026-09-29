@@ -162,7 +162,8 @@ def _page(status=200, **context):
     used = _usage()
     boxes = []
     for row in db.execute("SELECT mailboxes.*, domains.name AS domain FROM mailboxes"
-                          " JOIN domains ON domains.id = mailboxes.domain_id ORDER BY mailboxes.email"):
+                          " JOIN domains ON domains.id = mailboxes.domain_id"
+                          " ORDER BY mailboxes.created_at DESC, mailboxes.id DESC"):   # (the newest on top)
         aliases = db.execute("SELECT id, email FROM mailbox_aliases WHERE mailbox_id = ? ORDER BY email",
                              (row["id"],)).fetchall()
         quota = row["quota_bytes"]

@@ -1,6 +1,7 @@
 // Writing mail in the webmail (webmail-mail.html, webmail-composer.html, compose.py), as in
-// PrivateEmail. Compose opens a window at the bottom right; several can be open (up to five),
-// each minimized to a bar or opened to full screen. A reply or a forward from the reading pane
+// PrivateEmail. Compose opens a window in the middle (Restore docks it at the bottom right, where
+// drafts open); several can be open (up to five), each minimized to a bar or opened to full
+// screen. A reply or a forward from the reading pane
 // is written right under the message (Maximize takes it to a window of its own).
 //
 // A composer: From (the mailbox's addresses), To, Cc and Bcc (each address a chip; what's typed
@@ -62,8 +63,23 @@
       "blockquote.wm-quote{margin:16px 0 0;padding:16px 0 0;border:0;border-top:1px solid " + (dark ? "#1f2a55" : "#e6e8ed") + "}" +
       ".wm-quote-title{margin:0 0 8px;color:" + (dark ? "#a7b0cd" : "#5d636e") + "}.wm-quote-head{margin-bottom:12px;color:" +
       (dark ? "#a7b0cd" : "#5d636e") + "}table{border-collapse:collapse}td,th{border:1px solid " + (dark ? "#3b4777" : "#c9ced8") +
-      ";padding:4px 8px;min-width:40px}.wm-signature{color:inherit}" +
+      ";padding:4px 8px;min-width:40px}" +
+      // the signature, under a line that says where it starts: "Signature" on it, and Hide; kept
+      // out of sight, just the line (Show), the signature there all the same (foldSignature)
+      ":root{interpolate-size:allow-keywords}" +
+      ".wm-signature{position:relative;margin-top:14px;padding-top:12px;border-top:1px solid transparent;border-image:linear-gradient(90deg," +
+      (dark ? "#3d8bff,rgba(61,139,255,.3) 40%,rgba(61,139,255,0)" : "#3b63e6,rgba(59,99,230,.28) 40%,rgba(59,99,230,0)") +
+      ") 1;color:inherit;transition:height .25s ease}" +
+      ".wm-signature::before,.wm-signature::after{display:block;height:18px;font:600 11.5px/18px Arial,Helvetica,sans-serif;cursor:pointer;user-select:none;-webkit-user-select:none}" +
+      ".wm-signature::before{content:'Signature';margin-bottom:8px;color:" + (dark ? "#8190bd" : "#6b7280") + "}" +
+      ".wm-signature::after{content:'Hide';position:absolute;top:12px;right:0;font-weight:700;color:" + (dark ? "#8cb4ff" : "#3b63e6") + "}" +
+      ".wm-signature.wm-sig-folded{height:18px;overflow:hidden}" +
+      ".wm-signature.wm-sig-folded::before{content:'Signature hidden (still sent)'}.wm-signature.wm-sig-folded::after{content:'Show'}" +
+      "@media (prefers-reduced-motion:reduce){.wm-signature{transition:none}}" +
       "img.wm-picked{outline:2px solid #3b82f6;outline-offset:2px}" +
+      // a table's border pointed at, and dragged (webmail-tables.js): the two-way arrow, no words picked
+      "html.wm-tt-col,html.wm-tt-col *{cursor:col-resize!important}html.wm-tt-row,html.wm-tt-row *{cursor:row-resize!important}" +
+      "html.wm-tt-sizing *{user-select:none!important;-webkit-user-select:none!important}" +
       ".wm-write-here::before{content:'Write your message here';position:absolute;color:" + (dark ? "#7c87a9" : "#878d98") + ";pointer-events:none}" +
       "body.wm-quote-folded blockquote.wm-quote{display:none}" + wm.frameCss() +
       "</style></head><body contenteditable=\"true\" spellcheck=\"true\" class=\"is-empty\"></body></html>";
@@ -89,6 +105,7 @@
     this.froms = [];
     this.important = false;
     this.signatures = [];
+    this.signatureFolded = true;   // (out of sight while writing, to begin with: foldSignature)
     this.changed = false;       // since it was last saved
     this.touched = false;       // since it opened
     this.saveTimer = null;
@@ -117,6 +134,7 @@
       self.wireEditor(doc);
       self.checkEmpty();
       self.foldQuote(!!self.quoteFolded);
+      self.foldSignature(self.signatureFolded);
       self.fit();
     });
     this.frame.srcdoc = editorPage();
@@ -158,6 +176,34 @@
     button.dataset.tip = tip;
     button.setAttribute("aria-label", tip);
     this.fit();
+  };
+
+  // The signature, under a line that says where it starts: out of sight while writing, so there's
+  // room to, and sent all the same (it's there; only a mark hides it, never kept: wm.contentOf).
+  // The line's Show, or the eye beside the signature button, brings it into view; Hide folds it.
+  Composer.prototype.foldSignature = function (folded) {
+    var doc = this.doc();
+    var block = doc ? doc.querySelector(".wm-signature") : null;
+    var button = this.element.querySelector('[data-cm="sig-show"]');
+    this.signatureFolded = folded;
+    if (block) {
+      block.classList.toggle("wm-sig-folded", folded);
+      if (folded) block.setAttribute("contenteditable", "false");   // (nothing typed into it unseen)
+      else block.removeAttribute("contenteditable");
+      if (folded && doc.getSelection().anchorNode && block.contains(doc.getSelection().anchorNode)) {
+        var before = block.previousElementSibling;   // (the words above it, to go on with)
+        if (before) doc.getSelection().collapse(before, before.childNodes.length);
+      }
+    }
+    button.hidden = !block;
+    button.setAttribute("aria-pressed", String(!!block && !folded));
+    button.classList.toggle("is-on", !!block && !folded);
+    var tip = folded ? button.dataset.tipOff : button.dataset.tipOn;
+    button.dataset.tip = tip;
+    button.setAttribute("aria-label", tip);
+    this.fit();
+    var self = this;
+    if (this.element.classList.contains("is-inline")) setTimeout(function () { self.fit(); }, 300);   // (once it's opened or closed)
   };
 
   // under a message: the frame as tall as what it says
@@ -894,6 +940,7 @@
       else if (action === "fullscreen") self.toggleFull();
       else if (action === "screen") self.toggleScreen();
       else if (action === "quote") self.foldQuote(!self.quoteFolded);
+      else if (action === "sig-show") self.foldSignature(!self.signatureFolded);
       else if (action === "close") self.close();
       else if (action === "popout") self.popOut();
       else if (action === "ccbcc") {
@@ -1021,6 +1068,13 @@
       self.checkEmpty();
       self.changedNow();
       self.fit();
+    });
+    // the signature's line ("Signature", Show / Hide): a click there folds it or brings it out
+    doc.addEventListener("mousedown", function (event) {
+      var block = event.button === 0 && event.target.closest && event.target.closest(".wm-signature");
+      if (!block || event.target !== block || event.clientY - block.getBoundingClientRect().top > 34) return;
+      event.preventDefault();
+      self.foldSignature(!block.classList.contains("wm-sig-folded"));
     });
     doc.addEventListener("keydown", function (event) {
       var mod = event.ctrlKey || event.metaKey;
@@ -1341,6 +1395,7 @@
       block.setAttribute("data-signature", signature.id);
       block.innerHTML = signature.html;
     }
+    this.foldSignature(signature ? false : this.signatureFolded);   // (one chosen: in view, to see it)
     this.checkEmpty();
     this.changedNow();
     this.fit();
@@ -1594,6 +1649,7 @@
     holder.appendChild(composer.element);
     layout();
     showLimit();
+    if (options.full) composer.toggleFull(true);
     start(options).then(function (started) {
       composer.element.classList.remove("is-loading");
       composer.fill(started);
@@ -1682,8 +1738,9 @@
     }
   }
 
+  // Compose: a new message in the window in the middle (as Maximize makes it); Restore docks it
   var compose = document.querySelector("[data-wm-compose]");
-  if (compose) compose.addEventListener("click", function () { openWindow({ kind: "new" }); });
+  if (compose) compose.addEventListener("click", function () { openWindow({ kind: "new", full: true }); });
 
   // before leaving the page: what's being written is kept
   window.addEventListener("beforeunload", function (event) {
