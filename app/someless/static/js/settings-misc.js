@@ -6,6 +6,7 @@
 //   number of minutes, hours or days, and under it the same time said in words ("90 minutes =
 //   1 hour and 30 minutes"). Switching the unit keeps the time when it's whole in the new one
 //   (120 minutes = 2 hours; 2 days = 2880 minutes).
+// - Webmail sign-in lock: how many and how long are greyed out the same way while it's off.
 (function () {
   var PER = { minutes: 1, hours: 60, days: 1440 };
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -31,6 +32,18 @@
     if (window.ResizeObserver) new ResizeObserver(function () { glide(group, true); }).observe(group);
     glide(group, true);
   });
+
+  var lockForm = document.querySelector("[data-lock-form]");
+  if (lockForm) {
+    var lockOn = lockForm.querySelector("[data-lock-on]");
+    var lockFields = lockForm.querySelector("[data-lock-fields]");
+    var showLock = function () {
+      lockFields.inert = !lockOn.checked;   // (not disabled: they're still sent, and kept)
+      lockFields.classList.toggle("is-off", !lockOn.checked);
+    };
+    lockOn.addEventListener("change", showLock);
+    showLock();
+  }
 
   var form = document.querySelector("[data-checks-form]");
   if (!form) return;

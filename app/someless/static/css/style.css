@@ -3796,6 +3796,14 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
 .lock-fields { display: grid; grid-template-columns: minmax(0, 14rem) minmax(0, 1fr); gap: 1rem 1.5rem; align-items: start; }
 .lock-wait { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0.6rem; }
 .lock-wait .input-wrap { flex: 0 1 9rem; }
+.lock-fields.is-off { opacity: 0.45; }   /* the lock switched off: kept, greyed (settings-misc.js) */
+.lock-locked { display: grid; gap: 0.5rem; margin-top: 1.25rem; padding-top: 1.1rem; border-top: 1px solid var(--line); }
+.lock-locked .field-label { margin: 0; }
+.lock-locked-list { display: grid; gap: 0.45rem; margin: 0; padding: 0; list-style: none; }
+.lock-locked-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.9rem; padding: 0.55rem 0.75rem; border: 1px solid var(--line); border-radius: 10px; }
+.lock-locked-email { flex: 1 1 12rem; min-width: 0; overflow: hidden; font-weight: 600; text-overflow: ellipsis; }
+.lock-locked-until { color: var(--muted); font-size: 0.85rem; }
+.lock-unlock { margin: 0; }
 @media (max-width: 640px) {
   .lock-fields { grid-template-columns: minmax(0, 1fr); }
 }

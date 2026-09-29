@@ -41,13 +41,17 @@ def _load_secret_key(data_dir):
 
 
 def _locked(email):
+    if not webmail_lock.is_on():   # (switched off in Settings > Miscellaneous)
+        return False
     row = get_db().execute("SELECT locked_until FROM webmail_tries WHERE email = ?", (email,)).fetchone()
     return bool(row and row["locked_until"] and row["locked_until"] > time.time())
 
 
 def _wrong_try(email):
     """One more wrong password in a row; the last one allowed locks the address (and starts the
-    count again)."""
+    count again). With the lock off, nothing is counted."""
+    if not webmail_lock.is_on():
+        return
     tries, minutes = webmail_lock.settings()
     database = get_db()
     database.execute("INSERT INTO webmail_tries (email) VALUES (?) ON CONFLICT (email) DO NOTHING", (email,))

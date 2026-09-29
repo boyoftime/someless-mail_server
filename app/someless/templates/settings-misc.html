@@ -152,7 +152,11 @@
         <span class="card-badge">{{ icon("lock") }}</span>
         <span class="card-titles">
           <span id="webmail-lock-title" class="card-title">Webmail sign-in lock</span>
-          <span class="card-hint">After {{ lock.tries }} wrong password{{ "s" if lock.tries != 1 }} in a row, an address waits {{ lock.text }}.</span>
+          <span class="card-hint">
+            {%- if lock.on %}After {{ lock.tries }} wrong password{{ "s" if lock.tries != 1 }} in a row, an address waits {{ lock.text }}.
+            {%- if lock.locked %} {{ lock.locked | length }} locked now.{% endif %}
+            {%- else %}Off: wrong passwords never make an address wait.{% endif -%}
+          </span>
         </span>
         <span class="card-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6"/></svg></span>
       </button>
@@ -166,9 +170,18 @@
             Mail apps aren't affected.
           </p>
           {# Save waits for a change (save-when-changed.js); after a problem, what's typed can be saved as it is #}
-          <form method="post" action="{{ url_for('settings.save_webmail_lock') }}" class="form card-form lock-form"{% if not lock_problem %} data-save-when-changed{% endif %}>
+          <form method="post" action="{{ url_for('settings.save_webmail_lock') }}" class="form card-form lock-form" data-lock-form{% if not lock_problem %} data-save-when-changed{% endif %}>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="lock-fields">
+            <label class="rule-toggle">
+              <span class="rule-toggle-text">
+                <span class="rule-toggle-label">Lock after wrong passwords</span>
+                <span class="rule-toggle-hint">Off: wrong passwords never make an address wait, so a password can be guessed at without end.</span>
+              </span>
+              <input type="checkbox" role="switch" name="on" data-lock-on{% if shown.on %} checked{% endif %}>
+              <span class="switch" aria-hidden="true"><span class="switch-knob"></span></span>
+            </label>
+            {# how many and how long: greyed while the switch is off, and kept (settings-misc.js) #}
+            <div class="lock-fields" data-lock-fields>
               <div class="field">
                 <label class="field-label" for="lock-tries">Wrong passwords in a row</label>
                 <div class="input-wrap">
@@ -199,6 +212,28 @@
               </button>
             </div>
           </form>
+          {% if lock.on and lock.locked %}
+          {# the addresses waiting now, each let in at once with Unlock #}
+          <div class="lock-locked">
+            <p class="field-label">Locked now</p>
+            <ul class="lock-locked-list">
+              {% for one in lock.locked %}
+              <li class="lock-locked-row">
+                <span class="lock-locked-email">{{ one.email }}</span>
+                <span class="lock-locked-until">until <time datetime="{{ one.until }}" data-local-moment>{{ one.until }}</time></span>
+                <form method="post" action="{{ url_for('settings.unlock_webmail_address') }}" class="lock-unlock">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="email" value="{{ one.email }}">
+                  <button class="button button-quiet" type="submit" data-busy-label="Unlocking…">
+                    <span class="button-spinner" aria-hidden="true"></span>
+                    <span class="button-label">Unlock</span>
+                  </button>
+                </form>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
         </div>
       </div>
     </div>

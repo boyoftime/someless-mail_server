@@ -127,6 +127,15 @@ def test_too_many_wrong_passwords_lock_the_address(client, engine, webmail):
     assert engine.sent == []
 
 
+def test_with_the_lock_off_wrong_passwords_never_lock(client, engine, webmail):
+    with webmail.app_context():
+        webmail_lock.switch(False)
+    for _ in range(8):
+        assert client.open("/dav/", method="PROPFIND", headers=basic(password="wrong")).status_code == 401
+
+    assert client.open("/dav/", method="PROPFIND", headers=basic()).status_code == 207
+
+
 def test_an_address_that_isnt_a_mailbox(client, engine):
     assert client.open("/dav/", method="PROPFIND", headers=basic("nobody@pineloop.online")).status_code == 401
 

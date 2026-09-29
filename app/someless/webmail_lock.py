@@ -1,5 +1,9 @@
 """The webmail's sign-in lock (Settings > Miscellaneous): after so many wrong passwords in a row,
-an address waits so long before it can try again (webmail.py). 5 and 5 minutes to start with."""
+an address waits so long before it can try again (webmail/__init__.py, and the calendar and
+contacts apps: webmail/dav.py). 5 and 5 minutes to start with. It can be switched off (then
+wrong passwords never make anyone wait), and an address locked now can be let in at once."""
+import time
+
 from .db import get_db
 
 MOST_TRIES = 20
@@ -16,6 +20,34 @@ def save(tries, minutes):
     db = get_db()
     db.execute("UPDATE webmail_lock SET tries = ?, lock_minutes = ? WHERE id = 1", (tries, minutes))
     db.commit()
+
+
+def is_on():
+    return bool(get_db().execute("SELECT lock_on FROM webmail_lock WHERE id = 1").fetchone()["lock_on"])
+
+
+def switch(on):
+    """On or off. Either way the wrong passwords so far are forgotten, so nobody is locked the
+    moment it's switched on again for tries made while it was off (or before)."""
+    db = get_db()
+    if bool(on) != is_on():
+        db.execute("DELETE FROM webmail_tries")
+    db.execute("UPDATE webmail_lock SET lock_on = ? WHERE id = 1", (1 if on else 0,))
+    db.commit()
+
+
+def locked_now():
+    """The addresses that can't sign in now: [(address, until: a time)], by address."""
+    return [(row["email"], row["locked_until"]) for row in get_db().execute(
+        "SELECT email, locked_until FROM webmail_tries WHERE locked_until > ? ORDER BY email", (time.time(),))]
+
+
+def unlock(email):
+    """Let an address in at once, its wrong passwords forgotten; whether it was locked."""
+    db = get_db()
+    gone = db.execute("DELETE FROM webmail_tries WHERE email = ? AND locked_until > ?", (email, time.time())).rowcount
+    db.commit()
+    return bool(gone)
 
 
 def describe(minutes):

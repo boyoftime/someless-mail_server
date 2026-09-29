@@ -353,7 +353,7 @@ To try it, send a message from your Gmail to the new mailbox, and open it in you
 
 ## Step 12: The webmail
 
-The people with a mailbox log in at `http://your-server-ip:17090` with the mailbox's address and password, on a page that looks like your own login. After 5 wrong passwords in a row, the address can't log in for 5 minutes; choose other numbers in **Settings → Miscellaneous → Webmail sign-in lock**.
+The people with a mailbox log in at `http://your-server-ip:17090` with the mailbox's address and password, on a page that looks like your own login. After 5 wrong passwords in a row, the address can't log in for 5 minutes; choose other numbers in **Settings → Miscellaneous → Webmail sign-in lock**, or switch the lock off there (then anyone can keep guessing a password). The same card lists the addresses locked right now, each with **Unlock** to let it in at once.
 
 To send them the link, click **Webmail link** on the **Mailboxes** page: copy it, or share it from a phone, as it is or with one mailbox's address already filled in.
 

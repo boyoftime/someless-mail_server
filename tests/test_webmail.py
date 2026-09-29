@@ -235,8 +235,11 @@ def test_a_sign_in_page_left_open_too_long_asks_again_nicely(app):
     assert "Log in to your mailbox" in page and 'data-board="error"' in page and "Log in again" in page
 
 
-def save_lock(client, tries="5", wait="5", unit="minutes"):
-    return client.post("/settings/miscellaneous/webmail-lock", data={"tries": tries, "wait": wait, "wait_unit": unit})
+def save_lock(client, tries="5", wait="5", unit="minutes", on=True):
+    form = {"tries": tries, "wait": wait, "wait_unit": unit}
+    if on:
+        form["on"] = "on"   # (the switch, as the form sends it when it's on)
+    return client.post("/settings/miscellaneous/webmail-lock", data=form)
 
 
 def test_the_lock_is_set_in_settings(client, login):
@@ -275,6 +278,55 @@ def test_the_webmail_locks_as_set(client, login, mail, mailbox, monkeypatch):
     now[0] += 9 * 60
     assert sign_in(mail).status_code == 429
     now[0] += 60 + 1
+    assert sign_in(mail).headers["Location"] == "/"
+
+
+def test_a_new_install_has_the_lock_on(client, login):
+    login()
+
+    page = text(client.get("/settings/miscellaneous"))
+
+    assert re.search(r'name="on"[^>]*checked', page) and "After 5 wrong passwords in a row, an address waits 5 minutes." in page
+
+
+def test_the_lock_can_be_switched_off(client, login, mail, mailbox):
+    login()
+
+    assert save_lock(client, on=False).headers["Location"] == "/settings/miscellaneous"
+
+    for _ in range(8):
+        assert sign_in(mail, password="wrong").status_code == 400   # never a wait
+    assert sign_in(mail).headers["Location"] == "/"
+    page = text(client.get("/settings/miscellaneous"))
+    assert "Off: wrong passwords never make an address wait." in page and not re.search(r'name="on"[^>]*checked', page)
+    assert re.search(r'name="tries"[^>]*value="5"', page)   # (kept, for when it's on again)
+
+
+def test_switching_the_lock_starts_the_count_again(client, login, mail, mailbox):
+    login()
+    for _ in range(4):
+        sign_in(mail, password="wrong")
+
+    save_lock(client, on=False)
+    save_lock(client, on=True)
+    for _ in range(4):
+        sign_in(mail, password="wrong")
+
+    assert sign_in(mail).headers["Location"] == "/"   # 4 and 4: never 5 in a row
+
+
+def test_a_locked_address_is_unlocked_in_settings(client, login, mail, mailbox):
+    login()
+    for _ in range(5):
+        sign_in(mail, password="wrong")
+    assert sign_in(mail).status_code == 429
+
+    page = text(client.get("/settings/miscellaneous"))
+    assert "Locked now" in page and "ceo@pineloop.online" in page
+    answer = client.post("/settings/miscellaneous/webmail-lock/unlock", data={"email": "ceo@pineloop.online"})
+
+    assert answer.headers["Location"] == "/settings/miscellaneous"
+    assert "ceo@pineloop.online can sign in to the webmail again." in text(client.get("/settings/miscellaneous"))
     assert sign_in(mail).headers["Location"] == "/"
 
 

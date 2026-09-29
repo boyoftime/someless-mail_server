@@ -123,7 +123,8 @@ CREATE TABLE IF NOT EXISTS mailboxes (
 CREATE TABLE IF NOT EXISTS webmail_lock (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     tries INTEGER NOT NULL DEFAULT 5,
-    lock_minutes INTEGER NOT NULL DEFAULT 5
+    lock_minutes INTEGER NOT NULL DEFAULT 5,
+    lock_on INTEGER NOT NULL DEFAULT 1   -- off: wrong passwords never make an address wait
 );
 INSERT OR IGNORE INTO webmail_lock (id) VALUES (1);
 -- Need help? Links that share a domain's records with a developer or IT (help_links.py): the
@@ -260,7 +261,8 @@ LATER_COLUMNS = [("domains", "provider", "TEXT"), ("domain_keys", "mail_host", "
                  ("webmail_settings", "reply_on", "INTEGER NOT NULL DEFAULT 0"), ("webmail_settings", "reply_start", "TEXT"),
                  ("webmail_settings", "reply_end", "TEXT"), ("webmail_settings", "reply_subject", "TEXT"),
                  ("webmail_settings", "reply_html", "TEXT"),
-                 ("mailboxes", "send_limit_mb", "INTEGER NOT NULL DEFAULT 50")]
+                 ("mailboxes", "send_limit_mb", "INTEGER NOT NULL DEFAULT 50"),
+                 ("webmail_lock", "lock_on", "INTEGER NOT NULL DEFAULT 1")]
 
 
 def _add_later_columns(db):

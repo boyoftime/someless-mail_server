@@ -279,8 +279,9 @@ def _misc_page(status=200, problem=None, typed=None, lock_problem=None, lock_typ
         custom_unit=custom_unit, custom_amount=every // {"days": 1440, "hours": 60, "minutes": 1}[custom_unit],
         problem=problem, typed=typed or {},
         last_run=row["last_run"] and _moment(row["last_run"]), longest_days=domain_checks.LONGEST // 1440,
-        lock={"tries": tries, "wait": minutes // 60 if minutes % 60 == 0 else minutes,
-              "unit": "hours" if minutes % 60 == 0 else "minutes", "text": webmail_lock.describe(minutes)},
+        lock={"tries": tries, "wait": minutes // 60 if minutes % 60 == 0 else minutes, "on": webmail_lock.is_on(),
+              "unit": "hours" if minutes % 60 == 0 else "minutes", "text": webmail_lock.describe(minutes),
+              "locked": [{"email": email, "until": _moment(until)} for email, until in webmail_lock.locked_now()]},
         lock_problem=lock_problem, lock_typed=lock_typed or {}, most_tries=webmail_lock.MOST_TRIES,
         webmail_saved=webmail_site.saved(), webmail_beside=webmail_site.beside(request.host),
         address_problem=address_problem, address_typed=address_typed,
@@ -334,13 +335,29 @@ def save_domain_checks():
 @bp.post("/miscellaneous/webmail-lock")
 @login_required
 def save_webmail_lock():
+    if not request.form.get("on"):   # switched off: what's typed stays as it was, for later
+        webmail_lock.switch(False)
+        flash("Webmail sign-in lock is off: wrong passwords never make an address wait.", "success")
+        return redirect(url_for("settings.misc"))
     tries, minutes, problem = webmail_lock.chosen(request.form)
     if problem:
         return _misc_page(400, lock_problem=problem, lock_typed={
-            "tries": request.form.get("tries", ""), "wait": request.form.get("wait", ""), "unit": request.form.get("wait_unit", "")})
+            "tries": request.form.get("tries", ""), "wait": request.form.get("wait", ""), "unit": request.form.get("wait_unit", ""),
+            "on": True})
     webmail_lock.save(tries, minutes)
+    webmail_lock.switch(True)
     flash(f"Webmail sign-in lock saved: after {tries} wrong password{'s' if tries != 1 else ''} in a row, "
           f"a wait of {webmail_lock.describe(minutes)}.", "success")
+    return redirect(url_for("settings.misc"))
+
+
+@bp.post("/miscellaneous/webmail-lock/unlock")
+@login_required
+def unlock_webmail_address():
+    """An address locked now, let in at once (its wrong passwords forgotten)."""
+    email = request.form.get("email", "").strip().lower()[:254]
+    if webmail_lock.unlock(email):
+        flash(f"{email} can sign in to the webmail again.", "success")
     return redirect(url_for("settings.misc"))
 
 
