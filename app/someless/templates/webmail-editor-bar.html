@@ -1,0 +1,20 @@
+{% from "webmail-icons.html" import icon %}
+{# The small editor's bar (webmail-editor.js), for a signature and the auto-reply's message. #}
+{% macro editor_bar() %}
+<div class="wm-editor-bar" data-editor-bar role="toolbar" aria-label="Formatting options">
+  <button type="button" class="wm-icon wm-mini" data-format="bold" aria-label="Bold" data-tip="Bold">{{ icon("bold") }}</button>
+  <button type="button" class="wm-icon wm-mini" data-format="italic" aria-label="Italics" data-tip="Italics">{{ icon("italic") }}</button>
+  <button type="button" class="wm-icon wm-mini" data-format="underline" aria-label="Underline" data-tip="Underline">{{ icon("underline") }}</button>
+  <button type="button" class="wm-icon wm-mini" data-editor-color aria-label="Text color" data-tip="Text color">{{ icon("text-color") }}</button>
+  <span class="wm-cm-divider" aria-hidden="true"></span>
+  <button type="button" class="wm-icon wm-mini" data-format="insertUnorderedList" aria-label="Bulleted list" data-tip="Bulleted list">{{ icon("bullets") }}</button>
+  <button type="button" class="wm-icon wm-mini" data-format="insertOrderedList" aria-label="Numbered list" data-tip="Numbered list">{{ icon("numbers") }}</button>
+  <button type="button" class="wm-icon wm-mini" data-format="justifyLeft" aria-label="Align left" data-tip="Align left">{{ icon("align-left") }}</button>
+  <button type="button" class="wm-icon wm-mini" data-format="justifyCenter" aria-label="Align center" data-tip="Align center">{{ icon("align-center") }}</button>
+  <span class="wm-cm-divider" aria-hidden="true"></span>
+  <button type="button" class="wm-icon wm-mini" data-editor-link aria-label="Insert link" data-tip="Insert link">{{ icon("link") }}</button>
+  <button type="button" class="wm-icon wm-mini" data-format="removeFormat" aria-label="Remove formatting" data-tip="Remove formatting">{{ icon("clear-format") }}</button>
+  <button type="button" class="wm-icon wm-mini" data-format="undo" aria-label="Undo" data-tip="Undo">{{ icon("undo") }}</button>
+  <button type="button" class="wm-icon wm-mini" data-format="redo" aria-label="Redo" data-tip="Redo">{{ icon("redo") }}</button>
+</div>
+{% endmacro %}

@@ -1,19 +1,32 @@
 {% from "webmail-icons.html" import icon %}
 {# One message in the webmail's list (webmail-mail.html): with the page, and in each piece that
-   comes in as the list is scrolled down (webmail.py, webmail-list.js), so both look the same.
-   Its link opens it in the reading pane (webmail-read.js); on a page of its own without it.
-   index: its place in its piece, for coming in one after another; more: in a piece that came
-   in; open: the one in the reading pane. #}
-{% macro message_row(message, index, more=false, open=false) %}
-<li class="wm-message{% if message.unread %} is-unread{% endif %}{% if more %} is-more{% endif %}{% if open %} is-open{% endif %}" style="--i: {{ index }}" data-id="{{ message.id }}">
+   comes in as the list is scrolled down (mail.py, webmail-list.js), so both look the same. Its
+   link opens it in the reading pane (webmail-read.js); the box ticks it (webmail-actions.js),
+   and it can be dragged onto a folder. What's marked on it: unread (bold), a favorite (the
+   star), sent as high priority (!), answered, forwarded, with attachments, and in a search, the
+   folder it's in. index: its place in its piece, for coming in one after another; more: in a
+   piece that came in; open: the one in the reading pane; folder_key: the list it's in (search,
+   with search: its words and folder). #}
+{% macro message_row(message, index, more=false, open=false, folder_key="inbox", search=none) %}
+<li class="wm-message{% if message.unread %} is-unread{% endif %}{% if message.flagged %} is-flagged{% endif %}{% if more %} is-more{% endif %}{% if open %} is-open{% endif %}"
+    style="--i: {{ index }}" data-id="{{ message.id }}" data-unread="{{ 1 if message.unread else 0 }}" data-flagged="{{ 1 if message.flagged else 0 }}"
+    {%- if message.draft %} data-draft{% endif %} draggable="true">
   <label class="wm-check"><input type="checkbox" aria-label="Select “{{ message.subject }}”"{% if open %} checked data-auto{% endif %}></label>
-  <a class="wm-message-link" href="{{ url_for('message', message_id=message.id) }}"{% if open %} aria-current="true"{% endif %}>
-    <span class="wm-from-line"><span class="wm-from">{{ message.sender }}</span><time class="wm-time">{{ message.time }}</time></span>
+  <a class="wm-message-link" href="{{ url_for('mail.message', folder=folder_key, email_id=message.id, **(search or {})) }}" draggable="false"
+     {%- if open %} aria-current="true"{% endif %}>
+    <span class="wm-from-line">
+      <span class="wm-from">{{ message.sender }}</span>
+      {%- if message.important %}<span class="wm-priority" title="High Priority">{{ icon("priority") }}</span>{% endif %}
+      <time class="wm-time" title="{{ message.date }}">{{ message.time }}</time>
+    </span>
     <span class="wm-subject">{{ message.subject }}</span>
     <span class="wm-preview-line">
       <span class="wm-preview">{{ message.preview }}</span>
+      {%- if message.located %}<span class="wm-located">{{ message.located.label }}</span>{% endif %}
+      {%- if message.answered %}<span class="wm-mark" title="Answered">{{ icon("answered") }}</span>{% endif %}
       {%- if message.forwarded %}<span class="wm-mark" title="Forwarded">{{ icon("forwarded") }}</span>{% endif %}
       {%- if message.attachment %}<span class="wm-mark" title="Has attachments">{{ icon("attachment") }}</span>{% endif %}
+      {%- if message.flagged %}<span class="wm-mark is-star" title="Favorite">{{ icon("star-filled") }}</span>{% endif %}
     </span>
   </a>
 </li>

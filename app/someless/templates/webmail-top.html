@@ -1,0 +1,92 @@
+{% from "webmail-icons.html" import icon %}
+{# The bar across the top of every webmail page (mail, settings, contacts, calendar), as
+   PrivateEmail's: the logo, the apps (Email, Calendar, Contacts), the search field with its panel
+   (webmail-search.js), then help, refresh, settings and the account card (webmail-app.js).
+   app: which app the page is. #}
+{% macro top_bar(app, email, name, initial, theme, folder_key="", folder_path="", query="", scope=None, searching=false) %}
+<header class="wm-top">
+  <button type="button" class="wm-icon wm-menu" data-wm-menu aria-controls="wm-side" aria-expanded="false" aria-label="Menu">{{ icon("menu") }}</button>
+  <a class="wm-logo" href="{{ url_for('mail.home') }}">
+    <img src="{{ url_for('static', filename='img/logo.webp') }}" alt="" width="30" height="30">
+    <span>Someless Mail</span>
+  </a>
+  <nav class="wm-apps" aria-label="Apps">
+    {%- for key, label, target in [("mail", "Email", url_for('mail.home')), ("calendar", "Calendar", url_for('calendar.index')),
+                                   ("contacts", "Contacts", url_for('contacts.index'))] %}
+    <a class="wm-app{% if app == key %} is-current{% endif %}" href="{{ target }}"{% if app == key %} aria-current="page"{% endif %}
+       aria-label="{{ label }}" data-tip="{{ label }}">{{ icon(key) }}</a>
+    {%- endfor %}
+  </nav>
+  {%- if app == "contacts" %}
+  {# in Contacts: the contacts, found as it's typed (webmail-contacts.js) #}
+  <form class="wm-search" role="search" action="{{ url_for('contacts.index') }}" data-wm-contacts-search>
+    <label class="visually-hidden" for="wm-search">Search contacts</label>
+    {{ icon("search") }}
+    <input id="wm-search" name="q" type="search" placeholder="Search contacts" autocomplete="off" maxlength="200" value="{{ query }}">
+  </form>
+  {%- else %}
+  {# search: what's typed shows its first results below at once, Enter or "All results" lists
+     them all; empty, it shows the recent searches (webmail-search.js) #}
+  <form class="wm-search" role="search" action="{{ url_for('mail.search') }}" data-wm-search
+        data-folder="{{ '' if searching else folder_key }}" data-folder-name="{{ '' if searching else folder_path }}">
+    <label class="visually-hidden" for="wm-search">Search mail</label>
+    {{ icon("search") }}
+    <input id="wm-search" name="q" type="search" placeholder="Search mail" autocomplete="off" maxlength="200" value="{{ query }}"
+           role="combobox" aria-controls="wm-search-panel" aria-expanded="false" aria-autocomplete="list">
+    <input type="hidden" name="in" value="{{ scope or '' }}" data-wm-search-scope>
+    <div class="wm-search-panel" id="wm-search-panel" data-wm-search-panel hidden>
+      <div class="wm-search-filters">
+        <span class="wm-search-chip" data-wm-chip-all>All mail</span>
+        <span class="wm-search-chip is-folder" data-wm-chip-folder hidden>
+          <span data-wm-chip-name></span>
+          <button type="button" class="wm-search-chip-x" data-wm-chip-remove aria-label="Remove folder filter" title="Remove folder filter">{{ icon("close") }}</button>
+        </span>
+      </div>
+      <div class="wm-search-recent" data-wm-recent hidden>
+        <p class="wm-search-recent-label">Recent searches</p>
+        <ul class="wm-search-recent-list" data-wm-recent-list></ul>
+      </div>
+      <div class="wm-search-body" data-wm-search-body></div>
+    </div>
+  </form>
+  {%- endif %}
+  <div class="wm-tools">
+    <a class="wm-icon wm-help{% if app == 'help' %} is-active{% endif %}" href="{{ url_for('settings.help_page') }}" aria-label="Help center" data-tip="Help center">{{ icon("help") }}</a>
+    <span class="wm-divider" aria-hidden="true"></span>
+    {%- if app == "mail" %}
+    <button type="button" class="wm-icon" data-wm-refresh aria-label="Refresh" data-tip="Refresh">{{ icon("refresh") }}</button>
+    {%- endif %}
+    <a class="wm-icon wm-settings{% if app == 'settings' %} is-active{% endif %}" href="{{ url_for('settings.index') }}" aria-label="Settings" data-tip="Settings">{{ icon("settings") }}</a>
+    <div class="wm-account-wrap">
+      <button type="button" class="wm-avatar" data-wm-account aria-controls="wm-account" aria-expanded="false" aria-label="Your account">{{ initial }}</button>
+      {# the account: the mailbox, its address to copy, the theme, and logging out #}
+      <section class="wm-account" id="wm-account" aria-label="Your account" hidden>
+        <div class="wm-account-head">
+          <span class="wm-account-photo">
+            <span class="wm-account-picture" aria-hidden="true">{{ initial }}</span>
+          </span>
+          <p class="wm-account-name">{{ name }}</p>
+          <p class="wm-account-email">
+            <span>{{ email }}</span>
+            <button type="button" class="copy-button wm-copy" data-copy="{{ email }}" aria-label="Copy your address" title="Copy your address">
+              <svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 5.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h.5"/></svg>
+              <svg class="copy-done" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+            </button>
+          </p>
+        </div>
+        <div class="wm-account-rows">
+          <a class="wm-account-row" href="{{ url_for('settings.index') }}">{{ icon("settings") }}<span>Settings</span></a>
+          <button type="button" class="wm-account-row wm-theme" role="switch" data-theme-switch aria-checked="{{ 'true' if theme == 'dark' else 'false' }}">
+            {{ icon("moon") }}{{ icon("sun") }}<span>Dark theme</span>
+            <span class="wm-switch" aria-hidden="true"><span></span></span>
+          </button>
+          <form method="post" action="{{ url_for('logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="wm-account-row">{{ icon("logout") }}<span>Log out</span></button>
+          </form>
+        </div>
+      </section>
+    </div>
+  </div>
+</header>
+{% endmacro %}

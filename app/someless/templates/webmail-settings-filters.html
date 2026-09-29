@@ -1,0 +1,81 @@
+{% extends "webmail-settings-base.html" %}
+{% from "webmail-icons.html" import icon %}
+{% block page_title %}Filters{% endblock %}
+{% block crumbs %}<a href="{{ url_for('settings.index') }}">Settings</a><span aria-current="page">Filters</span>{% endblock %}
+{# The mailbox's filters, as PrivateEmail's (settings.py, sieve.py, webmail-filters.js): "Filters
+   applied to your account", each with its name, what it looks for and does, and whether it's on;
+   they run in their order (dragged by their handles). Create a new filter, or one picked, opens
+   the form: its name, its conditions (all, any or none needed, with a group of their own inside),
+   its actions, and whether it stops the ones after it. #}
+{% block settings %}
+<header class="wm-settings-head">
+  <h1 class="wm-settings-title">Filters applied to your account</h1>
+  <div class="wm-head-actions">
+    <button type="button" class="wm-button is-ghost is-danger-text" data-wm-delete-rules hidden>Delete filters</button>
+    <button type="button" class="wm-button" data-wm-new-rule>{{ icon("plus") }}Create a new filter</button>
+  </div>
+</header>
+<div class="wm-panel wm-rules" data-wm-rules data-url="{{ url_for('settings.filter_create') }}"
+     data-rules="{{ rules | tojson | forceescape }}" data-folders="{{ folders | tojson | forceescape }}">
+  <table class="wm-table" data-wm-rules-table{% if not rules %} hidden{% endif %}>
+    <thead>
+      <tr>
+        <th scope="col" class="is-narrow"><span class="visually-hidden">Order</span></th>
+        <th scope="col" class="is-narrow"><label class="wm-check"><input type="checkbox" data-wm-rules-all aria-label="Select all filters"></label></th>
+        <th scope="col">Name</th>
+        <th scope="col">Conditions and actions</th>
+        <th scope="col" class="is-narrow">Status</th>
+        <th scope="col" class="is-narrow"><span class="visually-hidden">Options</span></th>
+      </tr>
+    </thead>
+    <tbody data-wm-rules-body></tbody>
+  </table>
+  <div class="wm-empty-state" data-wm-rules-empty{% if rules %} hidden{% endif %}>
+    {{ icon("filter") }}
+    <p class="wm-empty-state-title">No filters yet</p>
+    <p class="wm-empty-state-text">Filters you create will show here.</p>
+    <button type="button" class="wm-button is-ghost" data-wm-new-rule>Create a new filter</button>
+  </div>
+</div>
+
+{# a filter: made or changed #}
+<dialog class="wm-dialog wm-sheet wm-rule-sheet" data-wm-rule-dialog aria-labelledby="rule-title">
+  <form class="wm-sheet-card" data-wm-rule-form novalidate>
+    <header class="wm-sheet-head"><h2 class="wm-sheet-title" id="rule-title" data-wm-rule-title>Create a new filter</h2>
+      <button type="button" class="wm-icon wm-sheet-close" data-wm-rule-cancel aria-label="Close">{{ icon("close") }}</button></header>
+    <div class="wm-sheet-body">
+      <label class="wm-label" for="rule-name">Filter name</label>
+      <input id="rule-name" class="wm-input" name="name" type="text" maxlength="100" placeholder="Filter name goes here" autocomplete="off">
+      <p class="wm-label">Conditions</p>
+      <div class="wm-toggle-group is-wide" role="radiogroup" aria-label="Conditions" data-wm-operator>
+        <button type="button" class="wm-toggle" role="radio" aria-checked="true" data-value="all"
+                data-tip="When selected, the filter applies only to an email that matches every one of the conditions below.">All conditions apply</button>
+        <button type="button" class="wm-toggle" role="radio" aria-checked="false" data-value="any"
+                data-tip="When selected, the filter applies to an email that matches at least one of the conditions below.">Any conditions apply</button>
+        <button type="button" class="wm-toggle" role="radio" aria-checked="false" data-value="none"
+                data-tip="When selected, the filter applies to every incoming email and no conditions are needed.">No conditions</button>
+      </div>
+      <div class="wm-rule-conditions" data-wm-conditions></div>
+      <div class="wm-rule-adds" data-wm-condition-adds>
+        <button type="button" class="wm-button is-ghost is-small" data-wm-add-condition>{{ icon("plus") }}Add condition</button>
+        <button type="button" class="wm-button is-ghost is-small" data-wm-add-group>{{ icon("plus") }}Add nested conditions</button>
+      </div>
+      <p class="wm-label">Actions</p>
+      <div class="wm-rule-actions" data-wm-actions></div>
+      <div class="wm-rule-adds">
+        <button type="button" class="wm-button is-ghost is-small" data-wm-add-action>{{ icon("plus") }}Add action</button>
+      </div>
+      <label class="wm-check-line"><input type="checkbox" name="stop"><span>Stop filter rules execution if the current rule matches</span></label>
+      <p class="wm-field-problem" data-wm-problem hidden></p>
+    </div>
+    <footer class="wm-sheet-foot">
+      <button type="button" class="wm-button is-ghost" data-wm-rule-cancel>Cancel</button>
+      <button type="submit" class="wm-button">Save</button>
+    </footer>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/webmail-filters.js') }}"></script>
+{% endblock %}

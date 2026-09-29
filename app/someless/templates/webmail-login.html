@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Log in | Someless Webmail{% endblock %}
-{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/webmail.css') }}">{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/webmail.css') }}">
+<script src="{{ url_for('static', filename='js/webmail-zone.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-first.js') }}" data-login></script>{% endblock %}
 {% block body_class %}auth webmail{% endblock %}
 
 {% block body %}
@@ -17,6 +19,7 @@
           <p class="auth-hint">Read and send your mail, with your email address and its password.</p>
         </div>
         {% if problem %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't log you in">{{ problem }}</p>{% endif %}
+        {% if notice and not problem %}<p class="alert" role="status">{{ notice }}</p>{% endif %}
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="field">
           <label class="field-label" for="webmail-email">Email</label>

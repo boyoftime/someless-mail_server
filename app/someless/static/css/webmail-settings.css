@@ -1,0 +1,459 @@
+/* Settings (webmail-settings-base.html and its pages), as PrivateEmail's: the webmail's bar on
+   top, the parts of Settings down the side where the folders are, and the page on the sunken
+   grey (navy in dark): where it is, its title, and white cards with 8px corners and a bold 20px
+   title, their buttons centred at the foot. Forms have 38px fields with 8px corners, the blue
+   ring when they have the keyboard, and pill buttons as the mail's. */
+.wm-settings-shell {
+  --wm-ok: #1b8a4a;
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  min-height: 0;
+}
+:root[data-theme="dark"] .wm-settings-shell { --wm-ok: #4fd18b; }
+
+/* the side: back to the mail, and the parts */
+.wm-settings-back {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.6rem;
+  height: 40px;
+  margin: 0 1rem 1rem;
+  padding: 0 1rem;
+  border-radius: 999px;
+  background: var(--wm-blue);
+  box-shadow: 0 6px 14px -8px rgba(59, 99, 230, 0.85);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+.wm-settings-back:hover { background: var(--wm-blue-hover); }
+.wm-settings-back svg { width: 18px; height: 18px; }
+.wm-settings-nav { display: grid; align-content: start; }
+.wm-settings-link {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  height: 36px;
+  padding: 0 1rem 0 1.25rem;
+  color: var(--wm-ink);
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition: background-color 0.12s ease;
+}
+.wm-settings-link:hover { background: var(--wm-hover); }
+.wm-settings-link.is-current { background: var(--wm-current); font-weight: 700; }
+.wm-settings-link svg { flex: none; width: 17px; height: 17px; }
+.wm-settings-link:hover svg, .wm-settings-link.is-current svg { color: var(--wm-blue); }
+.wm-settings-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wm-settings-link:focus-visible, .wm-settings-back:focus-visible { outline: 2px solid var(--wm-blue); outline-offset: -2px; }
+
+/* the page */
+.wm-settings-page {
+  min-width: 0;
+  min-height: 0;
+  padding: 1.25rem 2rem 3rem;
+  overflow-y: auto;
+  background: var(--wm-reader);
+  scrollbar-width: thin;
+}
+.wm-settings-page > * { max-width: 72rem; }
+.wm-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin: 0 0 0.9rem; color: var(--wm-soft); font-size: 0.8rem; }
+.wm-crumbs a { color: var(--wm-soft); text-decoration: none; }
+.wm-crumbs a:hover { color: var(--wm-ink); text-decoration: underline; }
+.wm-crumbs > * + *::before { content: "/"; margin-right: 0.4rem; color: var(--wm-faint); }
+.wm-crumbs [aria-current] { color: var(--wm-ink); font-weight: 600; }
+.wm-settings-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1.5rem; }
+.wm-settings-head.is-stacked { display: block; }
+.wm-settings-title { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.3; }
+.wm-settings-sub { max-width: 44rem; margin: 0.35rem 0 0; color: var(--wm-soft); font-size: 0.875rem; line-height: 1.55; }
+.wm-head-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.wm-head-actions [hidden] { display: none; }
+
+/* All, Basic, Email, Security */
+.wm-settings-kinds { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--wm-sunken); }
+.wm-kind {
+  height: 32px;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--wm-soft);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+.wm-kind:hover { color: var(--wm-ink); }
+.wm-kind.is-on { background: var(--wm-card); box-shadow: 0 1px 3px rgba(20, 28, 50, 0.14); color: var(--wm-ink); }
+
+/* the cards */
+.wm-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(19.5rem, 1fr)); gap: 1.5rem; margin-top: 1.5rem; }
+.wm-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 1.5rem;
+  border-radius: 8px;
+  background: var(--wm-card);
+  box-shadow: 0 0 0 1px var(--wm-card-line);
+  font-size: 0.875rem;
+  animation: wm-card-in 0.35s var(--wm-ease) backwards;
+}
+.wm-card[hidden] { display: none; }
+.wm-card.is-wide { grid-column: 1 / -1; }
+.wm-card-title { margin: 0 0 0.5rem; font-size: 1.25rem; font-weight: 700; line-height: 1.3; }
+.wm-card-body { display: flex; flex: 1 0 auto; flex-direction: column; gap: 0.5rem; line-height: 1.55; }
+.wm-card-body[hidden] { display: none; }
+.wm-card-body p { margin: 0; }
+.wm-card-body.is-centred { align-items: center; justify-content: center; min-height: 5.5rem; color: var(--wm-soft); text-align: center; }
+.wm-card-text { margin: 0; color: var(--wm-soft); line-height: 1.55; }
+.wm-card-strong { color: var(--wm-ink); font-weight: 700; }
+.wm-card-foot { display: flex; justify-content: center; padding-top: 1.5rem; }
+.wm-card-foot[hidden] { display: none; }
+@keyframes wm-card-in { from { opacity: 0; transform: translateY(8px); } }
+
+/* Profile */
+.wm-profile-head { display: flex; align-items: center; gap: 0.9rem; margin: 0.25rem 0 0.5rem; }
+.wm-profile-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--wm-avatar);
+  color: var(--wm-avatar-ink);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+.wm-profile-who { min-width: 0; }
+.wm-profile-name { overflow: hidden; font-size: 1rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.wm-profile-email { overflow: hidden; color: var(--wm-soft); text-overflow: ellipsis; white-space: nowrap; }
+.wm-field-form { margin: 0; }
+.wm-field-row { display: flex; gap: 0.5rem; }
+.wm-field-row .wm-input { flex: 1; min-width: 0; }
+.wm-field-row .wm-button { flex: none; height: 38px; }
+
+/* fields */
+.wm-label { display: block; margin: 0.9rem 0 0.35rem; color: var(--wm-soft); font-size: 0.78rem; font-weight: 600; }
+.wm-card-body > .wm-label:first-child, .wm-sheet-body > .wm-label:first-child { margin-top: 0; }
+body.webmail-app .wm-input {
+  display: block;
+  width: 100%;
+  height: 38px;
+  padding: 0 0.8rem;
+  border: 1px solid var(--wm-search-line);
+  border-radius: 8px;
+  outline: none;
+  background: var(--wm-list);
+  color: var(--wm-ink);
+  font: inherit;
+  font-size: 0.875rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+body.webmail-app .wm-input::placeholder { color: var(--wm-faint); }
+body.webmail-app .wm-input:hover { border-color: var(--wm-faint); }
+body.webmail-app .wm-input:focus { border-color: var(--wm-blue); box-shadow: 0 0 0 3px var(--wm-blue-soft); }
+body.webmail-app .wm-input[hidden] { display: none; }
+body.webmail-app select.wm-input {
+  padding-right: 2rem;
+  background-image: linear-gradient(45deg, transparent 50%, var(--wm-soft) 50%), linear-gradient(135deg, var(--wm-soft) 50%, transparent 50%);
+  background-position: calc(100% - 15px) 52%, calc(100% - 10px) 52%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  appearance: none;
+}
+body.webmail-app select.wm-input option { background: var(--wm-card); color: var(--wm-ink); }
+body.webmail-app input.wm-input[type="date"], body.webmail-app input.wm-input[type="time"] { color-scheme: light; }
+:root[data-theme="dark"] body.webmail-app input.wm-input[type="date"],
+:root[data-theme="dark"] body.webmail-app input.wm-input[type="time"] { color-scheme: dark; }
+.wm-field-problem { margin: 0.45rem 0 0; color: var(--wm-danger); font-size: 0.8rem; line-height: 1.45; }
+.wm-field-problem[hidden] { display: none; }
+
+/* a value to copy: the address, a server, a port */
+.wm-copy-line { display: inline-flex; align-items: center; gap: 0.2rem; max-width: 100%; margin: 0; color: var(--wm-ink); font-weight: 600; }
+.wm-copy-line > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wm-copy-line .wm-icon.wm-mini { color: var(--wm-soft); }
+.wm-copy-line .wm-icon.wm-mini:hover { color: var(--wm-blue); }
+
+/* a choice of two or three (Light, Dark; IMAP, POP3; All, Any, No conditions) */
+.wm-toggle-group { display: inline-flex; gap: 2px; max-width: 100%; padding: 3px; border-radius: 999px; background: var(--wm-sunken); }
+.wm-toggle-group.is-wide { display: flex; }
+.wm-toggle-group.is-wide .wm-toggle, .wm-card-body > .wm-toggle-group .wm-toggle { flex: 1; }
+.wm-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 0;
+  height: 32px;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--wm-soft);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+.wm-toggle svg { width: 16px; height: 16px; }
+:root .wm-toggle .wm-theme-sun, :root .wm-toggle .wm-theme-moon { display: block; }   /* (the account card shows one at a time) */
+.wm-toggle:hover { color: var(--wm-ink); }
+.wm-toggle[aria-checked="true"] { background: var(--wm-card); box-shadow: 0 1px 3px rgba(20, 28, 50, 0.14); color: var(--wm-ink); }
+:root[data-theme="dark"] .wm-toggle[aria-checked="true"], :root[data-theme="dark"] .wm-kind.is-on { background: var(--wm-blue-soft); box-shadow: none; }
+
+/* a setting with its switch */
+.wm-setting-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0; }
+.wm-setting-text { flex: 1; min-width: 0; }
+.wm-setting-name { margin: 0; flex: 1; color: var(--wm-ink); font-weight: 600; }
+.wm-setting-text .wm-setting-name { flex: none; }
+.wm-setting-hint { margin: 0.15rem 0 0; color: var(--wm-soft); font-size: 0.8rem; line-height: 1.5; }
+.wm-switch-button { display: inline-grid; flex: none; place-items: center; margin: -4px; padding: 4px; border: 0; border-radius: 999px; background: none; cursor: pointer; }
+.wm-switch-button .wm-switch { margin: 0; }
+.wm-switch-button[aria-checked="true"] .wm-switch { background: var(--wm-blue); }
+.wm-switch-button[aria-checked="true"] .wm-switch span { transform: translateX(16px); }
+.wm-switch-button:focus-visible { outline: 2px solid var(--wm-blue); outline-offset: 1px; }
+.wm-status { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--wm-soft); font-size: 0.8rem; font-weight: 600; }
+.wm-status.is-on { color: var(--wm-ok); }
+.wm-status svg { width: 15px; height: 15px; stroke-width: 2.4; }
+.wm-badge { display: inline-flex; flex: none; align-items: center; height: 20px; padding: 0 0.5rem; border-radius: 999px; background: var(--wm-blue-soft); color: var(--wm-blue); font-size: 0.7rem; font-weight: 700; }
+:root[data-theme="dark"] .wm-badge { color: var(--wm-link); }
+.wm-button.is-danger-text { color: var(--wm-danger); }
+.wm-button[hidden] { display: none; }
+
+/* check boxes on a line of their own */
+.wm-check-line { display: flex; align-items: center; gap: 0.6rem; margin: 1rem 0 0; color: var(--wm-ink); font-size: 0.86rem; cursor: pointer; }
+.wm-check-line.is-inline { margin: 0; white-space: nowrap; }
+.wm-check-line[hidden] { display: none; }
+body.webmail-app .wm-check-line input {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1.5px solid var(--wm-check);
+  border-radius: 4px;
+  background: var(--wm-list);
+  cursor: pointer;
+  appearance: none;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+body.webmail-app .wm-check-line input:checked { border-color: var(--wm-blue); background: var(--wm-blue); }
+body.webmail-app .wm-check-line input:checked::after { content: ""; width: 8px; height: 4px; border-bottom: 2px solid #fff; border-left: 2px solid #fff; transform: translateY(-1px) rotate(-45deg); }
+body.webmail-app .wm-check-line input:focus-visible, body.webmail-app .wm-check input:focus-visible { outline: 2px solid var(--wm-blue); outline-offset: 2px; }
+.wm-form-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem; }
+
+/* a page's one long card, in parts (Auto-reply, Security Center, Filters) */
+.wm-panel { margin-top: 1.5rem; padding: 0 1.5rem; border-radius: 8px; background: var(--wm-card); box-shadow: 0 0 0 1px var(--wm-card-line); font-size: 0.875rem; }
+.wm-panel-section { padding: 1.25rem 0; }
+.wm-panel-section + .wm-panel-section { border-top: 1px solid var(--wm-line); }
+.wm-panel-section.is-off { opacity: 0.5; }
+.wm-panel-label { margin: 0 0 0.6rem; color: var(--wm-faint); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.wm-sheet-body .wm-panel-label { margin-top: 1.25rem; }
+.wm-panel > .wm-field-problem { margin: 0 0 0.5rem; }
+.wm-panel > .wm-form-actions { margin: 0; padding: 0 0 1.25rem; }
+.wm-autoreply { max-width: 52rem; }
+
+/* Auto-reply's time */
+.wm-when { display: grid; grid-template-columns: 4rem minmax(0, 11rem) minmax(0, 8rem); align-items: center; gap: 0.6rem 0.75rem; }
+.wm-when-label { margin: 0; font-weight: 600; }
+
+/* the small editor: a signature, the auto-reply's message */
+.wm-editor { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--wm-search-line); border-radius: 8px; background: var(--wm-list); }
+.wm-editor:focus-within { border-color: var(--wm-blue); box-shadow: 0 0 0 3px var(--wm-blue-soft); }
+.wm-editor-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 4px 6px; border-bottom: 1px solid var(--wm-line); background: var(--wm-card); }
+.wm-editor-bar .wm-icon.wm-mini { width: 28px; height: 28px; border-radius: 6px; }
+.wm-editor-bar .wm-icon.wm-mini svg { width: 16px; height: 16px; }
+.wm-editor-frame { display: block; width: 100%; height: 14rem; border: 0; background: transparent; }
+.wm-editor.is-tall .wm-editor-frame { height: 20rem; }
+.wm-cm-divider { display: inline-flex; flex: none; width: 1px; height: 16px; margin: 0 4px; background: var(--wm-line); }
+.wm-cm-link { width: 22rem; max-width: calc(100vw - 1rem); padding: 12px 14px; }
+.wm-cm-link-form { display: grid; gap: 10px; margin: 0; }
+.wm-cm-link-form label { display: grid; gap: 4px; color: var(--wm-soft); font-size: 0.78rem; }
+body.webmail-app .wm-cm-link-form input { height: 34px; padding: 0 10px; border: 1px solid var(--wm-search-line); border-radius: 8px; outline: none; background: var(--wm-list); color: var(--wm-ink); font: inherit; font-size: 0.86rem; }
+body.webmail-app .wm-cm-link-form input:focus { border-color: var(--wm-blue); }
+.wm-cm-link-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Signatures: the list on the left, the one open on the right */
+.wm-signatures { display: grid; grid-template-columns: minmax(15rem, 20rem) minmax(0, 1fr); align-items: start; gap: 1.5rem; margin-top: 1.5rem; }
+.wm-signature-list-card, .wm-signature-editor { padding: 0.75rem; border-radius: 8px; background: var(--wm-card); box-shadow: 0 0 0 1px var(--wm-card-line); font-size: 0.875rem; }
+.wm-signature-editor { padding: 1.25rem 1.5rem 1.5rem; animation: wm-card-in 0.3s var(--wm-ease) backwards; }
+.wm-signature-editor[hidden] { display: none; }
+.wm-signature-list { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.wm-signature-list:empty { display: none; }
+.wm-signature-item { display: flex; align-items: center; gap: 0.25rem; padding-right: 0.25rem; border-radius: 8px; transition: background-color 0.12s ease; }
+.wm-signature-item:hover { background: var(--wm-hover); }
+.wm-signature-item.is-open { background: var(--wm-current); }
+.wm-signature-open { display: flex; flex: 1; align-items: center; gap: 0.5rem; min-width: 0; height: 40px; padding: 0 0.75rem; border: 0; background: none; color: var(--wm-ink); font: inherit; text-align: left; cursor: pointer; }
+.wm-signature-item.is-open .wm-signature-open { font-weight: 700; }
+.wm-signature-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wm-signature-form .wm-editor { margin-top: 1rem; }
+.wm-signature-peek {
+  width: 100%;
+  max-height: 7.5rem;
+  margin-top: 0.4rem;
+  padding: 0.6rem 0.8rem;
+  overflow: hidden;
+  border: 1px solid var(--wm-line);
+  border-radius: 8px;
+  color: var(--wm-ink);
+  font-size: 0.8rem;
+  text-align: left;
+  -webkit-mask-image: linear-gradient(#000 70%, transparent);
+  mask-image: linear-gradient(#000 70%, transparent);
+}
+.wm-signature-peek img { max-width: 100%; height: auto; }
+
+/* nothing yet: No signatures yet, No filters yet */
+.wm-empty-state { display: grid; justify-items: center; gap: 0.4rem; padding: 2.5rem 1rem; color: var(--wm-soft); text-align: center; }
+.wm-empty-state[hidden] { display: none; }
+.wm-empty-state > svg { width: 42px; height: 42px; margin-bottom: 0.4rem; color: var(--wm-faint); stroke-width: 1.4; }
+.wm-empty-state-title { margin: 0; color: var(--wm-ink); font-size: 1rem; font-weight: 700; }
+.wm-empty-state-text { margin: 0 0 0.6rem; font-size: 0.86rem; }
+
+/* tables: the filters, the logins, the shortcuts */
+.wm-table-wrap { margin: 0 -0.25rem; overflow-x: auto; }
+.wm-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.wm-table[hidden] { display: none; }
+.wm-table th { padding: 0.75rem; border-bottom: 1px solid var(--wm-line); color: var(--wm-soft); font-size: 0.78rem; font-weight: 600; text-align: left; white-space: nowrap; }
+.wm-table td { padding: 0.7rem 0.75rem; border-bottom: 1px solid var(--wm-line); vertical-align: middle; }
+.wm-table tbody tr { transition: background-color 0.12s ease; }
+.wm-table tbody tr:hover { background: var(--wm-hover); }
+.wm-table tbody tr:last-child td { border-bottom: 0; }
+.wm-table .is-narrow { width: 1%; white-space: nowrap; }
+.wm-table.is-log td:first-child { white-space: nowrap; }
+.wm-rules { padding: 0.25rem 0.75rem; }
+.wm-rule-name { font-weight: 600; cursor: pointer; }
+.wm-rule-summary { color: var(--wm-soft); line-height: 1.45; cursor: pointer; }
+.wm-drag-handle { display: grid; place-items: center; width: 24px; height: 28px; border-radius: 6px; color: var(--wm-faint); cursor: grab; touch-action: none; }
+.wm-drag-handle:hover { background: var(--wm-icon-hover); color: var(--wm-ink); }
+.wm-drag-handle svg { width: 16px; height: 16px; }
+.wm-table tr.is-dragged { opacity: 0.45; }
+
+/* a filter's form */
+.wm-rule-sheet .wm-sheet-card { width: 48rem; }
+.wm-sheet-foot { display: flex; flex: none; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; padding: 0.9rem 1.4rem; border-top: 1px solid var(--wm-line); }
+.wm-sheet-head .wm-sheet-close { width: 34px; height: 34px; }
+.wm-sheet-head .wm-sheet-close svg { width: 18px; height: 18px; }
+.wm-rule-sheet .wm-toggle-group { margin-bottom: 0.9rem; }
+.wm-rule-conditions[hidden], .wm-rule-adds[hidden] { display: none; }
+.wm-rule-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+.wm-rule-row > .wm-input { width: auto; }
+.wm-rule-row > .is-prop, .wm-rule-row > .is-action { flex: 0 0 9.5rem; }
+.wm-rule-row > .is-op { flex: 0 0 11.5rem; }
+.wm-rule-row > .is-headers { flex: 0 1 10rem; }
+.wm-rule-row > .is-value, .wm-rule-row > .is-folder { flex: 1 1 10rem; min-width: 0; }
+.wm-rule-row > .is-mark { flex: 0 0 9rem; }
+.wm-rule-row > .wm-icon { margin-left: auto; color: var(--wm-soft); }
+.wm-rule-group { margin: 0 0 0.6rem; padding: 0.75rem 0.75rem 0.4rem; border: 1px dashed var(--wm-search-line); border-radius: 8px; }
+.wm-rule-group-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 0.6rem; }
+.wm-rule-group-title { flex: 1; font-weight: 600; }
+.wm-rule-group-head .wm-input { flex: 0 0 8rem; width: auto; }
+.wm-rule-group > .wm-button { margin-bottom: 0.4rem; }
+.wm-rule-adds { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.25rem 0 0.25rem; }
+
+/* the keyboard shortcuts */
+.wm-keys { width: 100%; margin: 0 0 1.25rem; border-collapse: collapse; font-size: 0.86rem; }
+.wm-keys:last-child { margin-bottom: 0; }
+.wm-keys th { padding: 0 0 0.4rem; color: var(--wm-faint); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-align: left; text-transform: uppercase; }
+.wm-keys td { padding: 0.4rem 0; border-top: 1px solid var(--wm-line); }
+.wm-keys td:last-child { text-align: right; }
+.wm-keys kbd { display: inline-block; padding: 0.12rem 0.5rem; border: 1px solid var(--wm-line); border-radius: 6px; background: var(--wm-sunken); color: var(--wm-ink); font: inherit; font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
+
+/* Connect third-party apps: the details, as label and value */
+.wm-details { display: grid; gap: 0.7rem; margin: 0.4rem 0 0; }
+.wm-detail { display: grid; grid-template-columns: minmax(9rem, 16rem) minmax(0, 1fr); align-items: center; gap: 1rem; }
+.wm-detail dt { color: var(--wm-soft); }
+.wm-detail dd { min-width: 0; margin: 0; font-weight: 600; }
+.wm-detail-note { color: var(--wm-soft); font-size: 0.8rem; font-weight: 400; }
+dd .wm-detail-note { display: block; }
+.wm-sheet-body > .wm-detail-note { margin-top: 1.25rem; line-height: 1.55; }
+.wm-sheet-body > .wm-toggle-group + .wm-panel-label { margin-top: 1rem; }
+.wm-cards.is-apps { grid-template-columns: repeat(auto-fill, minmax(19.5rem, 1fr)); }
+
+/* Security Center: the new password's rules, ticked off as it's typed */
+.wm-password-card { width: 28rem; }
+.wm-password-card .wm-label:first-of-type { margin-top: 0.4rem; }
+.wm-password-rules { display: grid; gap: 0.3rem; margin: 0.6rem 0 0; padding: 0; color: var(--wm-soft); font-size: 0.8rem; list-style: none; }
+.wm-password-rules li { display: flex; align-items: center; gap: 0.45rem; transition: color 0.15s ease; }
+.wm-password-rules svg { flex: none; width: 14px; height: 14px; stroke-width: 2.6; opacity: 0.3; transition: opacity 0.15s ease, transform 0.2s var(--wm-ease); }
+.wm-password-rules li.is-met { color: var(--wm-ok); }
+.wm-password-rules li.is-met svg { opacity: 1; transform: scale(1.1); }
+
+/* narrower screens: the parts of Settings slide in from the left, as the folders do */
+@media (max-width: 1199px) {
+  .wm-settings-shell { grid-template-columns: 13.75rem minmax(0, 1fr); }
+  .wm-settings-page { padding: 1.1rem 1.5rem 2.5rem; }
+}
+@media (max-width: 860px) {
+  .wm-settings-shell { grid-template-columns: minmax(0, 1fr); }
+  .wm-signatures { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .wm-settings-page { padding: 0.9rem 0.75rem 2rem; }
+  .wm-settings-title { font-size: 1.3rem; }
+  .wm-cards { grid-template-columns: minmax(0, 1fr); gap: 1rem; margin-top: 1.1rem; }
+  .wm-card { padding: 1.2rem 1.1rem; }
+  .wm-panel { padding: 0 1rem; }
+  .wm-rules { padding: 0.25rem 0.25rem; }
+  .wm-detail { grid-template-columns: minmax(0, 1fr); gap: 0.15rem; }
+  .wm-when { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+  .wm-when-label { grid-column: 1 / -1; margin-top: 0.3rem; }
+  .wm-when .wm-input { padding: 0 0.6rem; }
+  .wm-rule-row > .is-prop, .wm-rule-row > .is-op, .wm-rule-row > .is-action, .wm-rule-row > .is-mark { flex: 1 1 40%; }
+  /* a filter: its name and switch on one line, what it does under them */
+  .wm-rules .wm-table thead { display: none; }
+  .wm-rules .wm-table tr {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "grip tick name status menu" "grip tick summary summary summary";
+    align-items: center;
+    column-gap: 0.5rem;
+    padding: 0.65rem 0.25rem;
+    border-bottom: 1px solid var(--wm-line);
+  }
+  .wm-rules .wm-table tr:last-child { border-bottom: 0; }
+  .wm-rules .wm-table td { padding: 0; border: 0; }
+  .wm-rules .wm-table td:nth-child(1) { grid-area: grip; }
+  .wm-rules .wm-table td:nth-child(2) { grid-area: tick; padding: 0 0.25rem; }
+  .wm-rules .wm-table td:nth-child(3) { grid-area: name; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wm-rules .wm-table td:nth-child(4) { grid-area: summary; margin-top: 0.2rem; font-size: 0.8rem; }
+  .wm-rules .wm-table td:nth-child(5) { grid-area: status; }
+  .wm-rules .wm-table td:nth-child(6) { grid-area: menu; }
+  .wm-table.is-log thead { display: none; }
+  .wm-table.is-log tr { display: grid; padding: 0.5rem 0; border-bottom: 1px solid var(--wm-line); }
+  .wm-table.is-log td { padding: 0.15rem 0.25rem; border: 0; }
+  .wm-table.is-log td::before { content: attr(data-label) ": "; color: var(--wm-soft); }
+  .wm-settings-kinds { width: 100%; }
+  .wm-kind { flex: 1; padding: 0 0.5rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wm-card, .wm-signature-editor { animation: none; }
+}
+
+/* the Help center: each question opens its answer */
+.wm-faqs { max-width: 52rem; padding: 0.35rem 1.5rem; }
+.wm-faq + .wm-faq { border-top: 1px solid var(--wm-line); }
+.wm-faq-question { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 0; color: var(--wm-ink); font-size: 0.95rem; font-weight: 700; list-style: none; cursor: pointer; }
+.wm-faq-question::-webkit-details-marker { display: none; }
+.wm-faq-question svg { flex: none; width: 18px; height: 18px; color: var(--wm-soft); transition: transform 0.2s var(--wm-ease); }
+.wm-faq[open] .wm-faq-question svg { transform: rotate(180deg); }
+.wm-faq-question:focus-visible { outline: 2px solid var(--wm-blue); outline-offset: 2px; border-radius: 6px; }
+.wm-faq-answer { padding: 0 0 1.1rem; color: var(--wm-soft); font-size: 0.875rem; line-height: 1.6; }
+.wm-faq-answer p { margin: 0 0 0.6rem; }
+.wm-faq-answer p:last-child { margin-bottom: 0; }
+.wm-faq-answer a { color: var(--wm-link); font-weight: 600; text-decoration: none; }
+.wm-faq-answer a:hover { text-decoration: underline; }
+.wm-faq-answer b { color: var(--wm-ink); }
+@media (prefers-reduced-motion: no-preference) {
+  .wm-faq[open] .wm-faq-answer { animation: wm-card-in 0.25s var(--wm-ease); }
+}

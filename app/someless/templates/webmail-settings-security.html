@@ -1,0 +1,71 @@
+{% extends "webmail-settings-base.html" %}
+{% from "webmail-icons.html" import icon %}
+{% block page_title %}Security Center{% endblock %}
+{% block crumbs %}<a href="{{ url_for('settings.index') }}">Settings</a><span aria-current="page">Security center</span>{% endblock %}
+{# Security Center (settings.py): the password, changed as PrivateEmail changes it ("Change my
+   password", then "Save & log out": the webmail logs in again with the new one), and where the
+   mailbox logged in to the webmail from, newest first. #}
+{% block settings %}
+<header class="wm-settings-head is-stacked">
+  <h1 class="wm-settings-title">Security Center</h1>
+  <p class="wm-settings-sub">Update your password, and check your account's activity logs.</p>
+</header>
+
+<div class="wm-panel">
+  <section class="wm-panel-section" aria-labelledby="password-title">
+    <h2 class="wm-panel-label" id="password-title">Password</h2>
+    <div class="wm-setting-row">
+      <div class="wm-setting-text">
+        <p class="wm-setting-name">Change password</p>
+        <p class="wm-setting-hint">The webmail logs out once it's saved, to log in again with the new one. Mail apps ask for it too.</p>
+      </div>
+      <button type="button" class="wm-button is-ghost" data-wm-open="password">Change my password</button>
+    </div>
+  </section>
+  <section class="wm-panel-section" aria-labelledby="logins-title">
+    <h2 class="wm-panel-label" id="logins-title">Activity log</h2>
+    {%- if logins %}
+    <div class="wm-table-wrap">
+      <table class="wm-table is-log">
+        <thead><tr><th scope="col">Logged in</th><th scope="col">Device</th><th scope="col">IP address</th></tr></thead>
+        <tbody>
+          {%- for login in logins %}
+          <tr><td data-label="Logged in">{{ login.when }}</td><td data-label="Device">{{ login.device }}</td><td data-label="IP address">{{ login.address or "—" }}</td></tr>
+          {%- endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="wm-setting-hint">Logins to the webmail, the last {{ logins | length }}. One you don't know? Change your password.</p>
+    {%- else %}
+    <p class="wm-setting-hint">No logins yet.</p>
+    {%- endif %}
+  </section>
+</div>
+
+{# the new password #}
+<dialog class="wm-dialog" data-wm-dialog="password" aria-labelledby="new-password-title">
+  <form class="wm-dialog-card wm-password-card" data-wm-password-form data-url="{{ url_for('settings.password') }}" novalidate>
+    <h2 class="wm-dialog-title" id="new-password-title">Change my password</h2>
+    <label class="wm-label" for="current-password">Current password</label>
+    <input id="current-password" class="wm-input" name="current" type="password" autocomplete="current-password" required>
+    <label class="wm-label" for="new-password">New password</label>
+    <input id="new-password" class="wm-input" name="password" type="password" autocomplete="new-password" required>
+    <ul class="wm-password-rules" data-wm-password-rules data-min-length="{{ min_length }}" aria-label="Your new password needs">
+      {%- for check in checks %}
+      <li data-rule="{{ check.key }}">{{ icon("check") }}<span>{{ check.label }}</span><span class="visually-hidden" data-state></span></li>
+      {%- endfor %}
+    </ul>
+    <label class="wm-label" for="confirm-password">Confirm new password</label>
+    <input id="confirm-password" class="wm-input" name="confirm" type="password" autocomplete="new-password" required>
+    <p class="wm-field-problem" data-wm-problem hidden></p>
+    <div class="wm-dialog-actions">
+      <button type="button" class="wm-button is-ghost" data-wm-close>Cancel</button>
+      <button type="submit" class="wm-button">Save &amp; log out</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/webmail-settings.js') }}"></script>
+{% endblock %}

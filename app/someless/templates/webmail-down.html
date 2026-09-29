@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Someless Webmail{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/webmail.css') }}">{% endblock %}
+{% block body_class %}webmail-page{% endblock %}
+{% block body %}
+{# The webmail when the mail engine doesn't answer, or refuses (mail.py): what happened, a way to
+   try again, and a way out. #}
+<main class="webmail-down">
+  <section class="webmail-down-card" aria-labelledby="down-title">
+    <img class="webmail-down-logo" src="{{ url_for('static', filename='img/logo.webp') }}" alt="" width="56" height="56">
+    <h1 id="down-title">Your mail is out of reach</h1>
+    <p>{{ problem }}</p>
+    <div class="webmail-down-actions">
+      <a class="webmail-down-retry" href="{{ request.full_path if request.query_string else request.path }}">Try again</a>
+      <form method="post" action="{{ url_for('logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="webmail-down-out">Log out of {{ email }}</button>
+      </form>
+    </div>
+  </section>
+</main>
+{% endblock %}

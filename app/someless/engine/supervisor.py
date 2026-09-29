@@ -40,9 +40,10 @@ FORGIVEN_AFTER = 300   # seconds up before a stop counts as the first again
 GUNICORN = ["gunicorn", "--bind", "0.0.0.0:17080", "--workers", "2", "--worker-class", "gthread", "--threads", "4",
             "--preload", "--no-control-socket", "--access-logfile", "-", "someless:create_app()"]
 # The webmail: the same, on its own port. main() has made the database by then, so the two never
-# race to make it.
+# race to make it. Each open webmail tab keeps one thread for new mail as it comes (its WebSocket,
+# webmail/live.py), so it has many, which mostly wait.
 WEBMAIL_GUNICORN = ["gunicorn", "--bind", "0.0.0.0:17090", "--workers", "2", "--worker-class", "gthread",
-                    "--threads", "4", "--preload", "--no-control-socket", "--access-logfile", "-",
+                    "--threads", "64", "--preload", "--no-control-socket", "--access-logfile", "-",
                     "someless.webmail:create_webmail_app()"]
 
 

@@ -1,78 +1,162 @@
 {% from "webmail-icons.html" import icon %}
 {# A message, open in the reading pane (webmail-mail.html): the page's own when it's opened by
-   its link, or on its way in without a new page (webmail.py, webmail-read.js). Its buttons
-   along the top, the subject, then the card: who it's from and when, its attachments, what it
-   says, and the replies. What it says is a page of its own (webmail-body.html, doc), in a frame
-   without scripts that loads nothing from anywhere else: a message is anyone's HTML. #}
+   its link, or on its way in without a new page (mail.py, webmail-read.js). As PrivateEmail
+   shows it: the buttons along the top (a draft's are Edit draft, Delete, Print, View source and
+   Download; the others' Archive, Move to Inbox and Spam only where they make sense), the subject,
+   then the card: who it's from, who it's to, when, the shield counting the links cleaned of
+   tracking, its attachments, what it says, and the replies. What it says is a page of its own
+   (webmail-body.html, doc), in a frame without scripts that loads nothing but pictures: a
+   message is anyone's HTML. The buttons' data-act is what webmail-actions.js does. #}
+{% macro people(label, addresses, kind) %}
+{%- if addresses %}
+<p class="wm-people" data-wm-people>
+  <span class="wm-people-label">{{ label }}</span>
+  {%- for person in addresses %}
+  <span class="wm-person"{% if loop.index > 3 %} data-more hidden{% endif %} title="{{ person.email }}">
+    {%- if person.name and person.name != person.email %}<span class="wm-person-name">{{ person.name }}</span> {% endif -%}
+    <span class="wm-person-email">&lt;{{ person.email }}&gt;</span>{{ "," if not loop.last }}
+  </span>
+  {%- endfor %}
+  {%- if addresses | length > 3 %}
+  <button type="button" class="wm-people-more" data-wm-more-people data-more-text="Show {{ addresses | length - 3 }} more" data-less-text="Show less">Show {{ addresses | length - 3 }} more</button>
+  {%- endif %}
+</p>
+{%- endif %}
+{% endmacro %}
+
+{% macro tool(act, name, label, extra="") %}
+<button type="button" class="wm-icon{{ extra }}" data-act="{{ act }}" aria-label="{{ label }}" data-tip="{{ label }}">{{ icon(name) }}</button>
+{%- endmacro %}
+
 {% macro message_view(message, email, doc) %}
-<div class="wm-read" data-wm-read>
+{%- set acts = message.actions %}
+{%- set listed = message.files | rejectattr("hidden") | list %}
+<div class="wm-read" data-wm-read data-id="{{ message.id }}" data-unread="{{ 1 if message.unread else 0 }}"
+     data-flagged="{{ 1 if message.flagged else 0 }}"{% if acts.draft %} data-draft{% endif %}
+     data-subject="{{ message.subject }}" data-print="{{ url_for('mail.print_view', email_id=message.id) }}"
+     data-source="{{ url_for('mail.source', email_id=message.id) }}"
+     data-download="{{ url_for('mail.source', email_id=message.id, download=1) }}">
   <div class="wm-read-tools" role="toolbar" aria-label="This message">
-    <button type="button" class="wm-icon wm-read-back" data-wm-back aria-label="Back to the mail" data-tip="Back to the mail">{{ icon("back") }}</button>
-    {% for name, label in [("reply", "Reply"), ("reply-all", "Reply all"), ("forward", "Forward"), ("unread", "Mark as unread"),
-                           ("star", "Mark as favorite"), ("archive", "Move to Archive"), ("trash", "Delete"), ("spam", "Mark as spam"),
-                           ("print", "Print"), ("download", "Download"), ("source", "View source")] %}
-    <button type="button" class="wm-icon" aria-label="{{ label }}" data-tip="{{ label }}">{{ icon(name) }}</button>
-    {% endfor %}
+    <button type="button" class="wm-icon wm-read-back" data-wm-back aria-label="Back" data-tip="Back">{{ icon("back") }}</button>
+    {%- if acts.draft %}
+    {{ tool("edit-draft", "edit", "Edit draft") }}
+    {{ tool("delete", "trash", "Delete") }}
+    {{ tool("print", "print", "Print") }}
+    {{ tool("source", "source", "View source") }}
+    {{ tool("download", "download", "Download") }}
+    {%- else %}
+    {{ tool("reply", "reply", "Reply") }}
+    {{ tool("reply-all", "reply-all", "Reply all") }}
+    {{ tool("forward", "forward", "Forward") }}
+    {%- if message.unread %}{{ tool("read", "read", "Mark as read") }}{% else %}{{ tool("unread", "unread", "Mark as unread") }}{% endif %}
+    {%- if message.flagged %}{{ tool("unflag", "star-filled", "Unmark as favorite", " is-favorite") }}{% else %}{{ tool("flag", "star", "Mark as favorite") }}{% endif %}
+    {%- if acts.archive %}{{ tool("archive", "archive", "Move to Archive") }}{% endif %}
+    {%- if acts.inbox %}{{ tool("inbox", "inbox", "Move to Inbox") }}{% endif %}
+    {{ tool("delete", "trash", "Delete") }}
+    {%- if acts.not_spam %}{{ tool("notspam", "not-spam", "Not spam") }}
+    {%- elif acts.spam %}{{ tool("spam", "spam", "Mark as spam. Our algorithms tailor your inbox to you and your selections.") }}{% endif %}
+    {{ tool("print", "print", "Print") }}
+    {{ tool("download", "download", "Download") }}
+    {{ tool("source", "source", "View source") }}
+    {%- endif %}
   </div>
-  <div class="wm-read-scroll">
-    <h2 class="wm-read-subject">{{ message.subject }}</h2>
+  <div class="wm-read-scroll" data-wm-read-scroll>
+    <div class="wm-read-heading">
+      <h2 class="wm-read-subject">{{ message.subject }}</h2>
+      {%- if message.important %}<span class="wm-read-priority">{{ icon("priority") }}High Priority</span>{% endif %}
+    </div>
     <article class="wm-read-card" aria-label="From {{ message.sender }}">
       <header class="wm-read-head">
         <span class="wm-read-avatar" aria-hidden="true">{{ message.sender[:1] | upper }}</span>
         <div class="wm-read-who">
           <p class="wm-read-name">{{ message.sender }}</p>
-          <a class="wm-read-address" href="mailto:{{ message.address }}">&lt;{{ message.address }}&gt;</a>
-          <p class="wm-read-to">To: &lt;{{ email }}&gt;</p>
+          {%- if message.address %}<a class="wm-read-address" href="mailto:{{ message.address }}" data-wm-write-to="{{ message.address }}">&lt;{{ message.address }}&gt;</a>{% endif %}
+          <div class="wm-read-people">
+            {{ people("To:", message.to, "to") }}
+            {{ people("Cc:", message.cc, "cc") }}
+            {{ people("Bcc:", message.bcc, "bcc") }}
+            {%- if not message.to and not message.cc and not message.bcc %}<p class="wm-people"><span class="wm-people-label">To:</span> <span class="wm-person">&lt;{{ email }}&gt;</span></p>{% endif %}
+          </div>
         </div>
         <div class="wm-read-meta">
           <time class="wm-read-date">{{ message.date }}</time>
-          <button type="button" class="wm-icon wm-mini" aria-label="Reply" data-tip="Reply">{{ icon("reply") }}</button>
+          {%- if not acts.draft %}
+          <button type="button" class="wm-icon wm-mini" data-act="reply" aria-label="Reply" data-tip="Reply">{{ icon("reply") }}</button>
+          {%- endif %}
           <button type="button" class="wm-icon wm-mini wm-read-paper" data-wm-paper aria-pressed="false"
                   aria-label="Show in light colors" data-tip="Show in light colors"
                   data-tip-on="Show in dark colors" data-tip-off="Show in light colors">{{ icon("light") }}</button>
-          <span class="wm-read-shield" data-tip="Trackers blocked">{{ icon("shield") }}<span>0</span></span>
+          {%- set trackers = message.cleaned | length %}
+          <button type="button" class="wm-read-shield{% if not trackers %} is-none{% endif %}" data-wm-shield
+                  data-tip="{{ 'No trackers found' if not trackers else ('1 tracking link was cleaned' if trackers == 1 else trackers ~ ' tracking links were cleaned') }}"
+                  aria-label="Links cleaned from tracking: {{ trackers }}">{{ icon("shield") }}<span>{{ trackers }}</span></button>
         </div>
       </header>
+      {%- if trackers %}
+      {# the links cleaned of tracking ("See details", webmail-read.js) #}
+      <template data-wm-trackers>
+        {%- for was, now, removed in message.cleaned %}
+        <li class="wm-tracker">
+          <p class="wm-tracker-line"><span class="wm-tag">Original</span><span class="wm-tracker-url">{{ was }}</span></p>
+          <p class="wm-tracker-line"><span class="wm-tag is-cleaned">Cleaned</span><span class="wm-tracker-url">{{ now }}</span>
+            <button type="button" class="wm-icon wm-mini" data-wm-copy-link="{{ now }}" aria-label="Copy the link" data-tip="Copy">{{ icon("copy") }}</button></p>
+          <p class="wm-tracker-line"><span class="wm-tag is-removed">Removed</span><span class="wm-tracker-url">{{ removed | join(", ") }}</span></p>
+        </li>
+        {%- endfor %}
+      </template>
+      {%- endif %}
 
-      {% if message.attachments %}
+      {%- if listed %}
       {# its attachments: how many, and the files themselves when opened out #}
       <section class="wm-files" data-wm-files aria-label="Attachments">
         <div class="wm-files-head">
           {{ icon("attachment") }}
-          <span class="wm-files-count">{{ message.attachments | length }} attachment{{ "s" if message.attachments | length > 1 }}</span>
-          <button type="button" class="wm-save-all">{{ icon("save") }}<span>Save all</span></button>
+          <span class="wm-files-count">{{ listed | length }} attachment{{ "s" if listed | length > 1 }}</span>
+          <a class="wm-save-all" href="{{ url_for('mail.zip_all', email_id=message.id) }}" download>{{ icon("save") }}<span>Save all</span></a>
           <button type="button" class="wm-icon wm-mini wm-files-toggle" data-wm-files-toggle aria-expanded="false" aria-controls="wm-files-{{ message.id }}"
-                  aria-label="Show the attachments" data-tip="Show the attachments"
-                  data-tip-on="Hide the attachments" data-tip-off="Show the attachments">{{ icon("chevron") }}</button>
+                  aria-label="Show attachments" data-tip="Show attachments"
+                  data-tip-on="Hide attachments" data-tip-off="Show attachments">{{ icon("chevron") }}</button>
         </div>
         <div class="wm-files-body">
           <div class="wm-files-clip">
             <ul class="wm-files-list" id="wm-files-{{ message.id }}">
-              {% for file in message.attachments %}
+              {%- for file in listed %}
+              {%- set download = url_for('mail.blob', email_id=message.id, blob_id=file.blob) %}
               <li class="wm-file">
-                {{ icon("file") }}
-                <span class="wm-file-text">
-                  <span class="wm-file-name" title="{{ file.name }}"><span class="wm-file-base">{{ file.base }}</span><span class="wm-file-ext">{{ file.extension }}</span></span>
-                  <span class="wm-file-size">{{ file.size }}</span>
-                </span>
-                <button type="button" class="wm-icon wm-mini" aria-label="Download {{ file.name }}" data-tip="Download">{{ icon("download") }}</button>
+                <button type="button" class="wm-file-open" data-wm-preview data-name="{{ file.name }}" data-size="{{ file.size }}" data-bytes="{{ file.bytes }}"
+                        data-kind="{{ 'image' if file.image else ('pdf' if file.pdf else 'other') }}" data-download="{{ download }}"
+                        {%- if file.image or file.pdf %} data-view="{{ url_for('mail.blob', email_id=message.id, blob_id=file.blob, inline=1) }}"{% endif %}
+                        aria-label="Preview {{ file.name }}">
+                  {{ icon("image" if file.image else ("pdf" if file.pdf else "file")) }}
+                  <span class="wm-file-text">
+                    <span class="wm-file-name" title="{{ file.name }}"><span class="wm-file-base">{{ file.base }}</span><span class="wm-file-ext">{{ file.extension }}</span></span>
+                    <span class="wm-file-size">{{ file.size }}</span>
+                  </span>
+                </button>
+                <a class="wm-icon wm-mini" href="{{ download }}" download="{{ file.name }}" aria-label="Download {{ file.name }}" data-tip="Download">{{ icon("download") }}</a>
               </li>
-              {% endfor %}
+              {%- endfor %}
             </ul>
           </div>
         </div>
       </section>
-      {% endif %}
+      {%- endif %}
 
-      <iframe class="wm-read-body" data-wm-body title="The message from {{ message.sender }}"
+      <iframe class="wm-read-body" data-wm-body title="Email content"
               sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox" srcdoc="{{ doc }}"></iframe>
 
+      {%- if not acts.draft %}
       <footer class="wm-read-foot">
-        <button type="button" class="wm-read-action">{{ icon("reply") }}<span>Reply</span></button>
-        <button type="button" class="wm-read-action">{{ icon("reply-all") }}<span>Reply all</span></button>
-        <button type="button" class="wm-read-action">{{ icon("forward") }}<span>Forward</span></button>
-        <button type="button" class="wm-read-action is-spam">{{ icon("spam") }}<span>Mark as spam</span></button>
+        <button type="button" class="wm-read-action" data-act="reply">{{ icon("reply") }}<span>Reply</span></button>
+        <button type="button" class="wm-read-action" data-act="reply-all">{{ icon("reply-all") }}<span>Reply all</span></button>
+        <button type="button" class="wm-read-action" data-act="forward">{{ icon("forward") }}<span>Forward</span></button>
+        {%- if acts.not_spam %}
+        <button type="button" class="wm-read-action is-spam" data-act="notspam">{{ icon("not-spam") }}<span>Not spam</span></button>
+        {%- elif acts.spam %}
+        <button type="button" class="wm-read-action is-spam" data-act="spam">{{ icon("spam") }}<span>Mark as spam</span></button>
+        {%- endif %}
       </footer>
+      {%- endif %}
     </article>
   </div>
 </div>

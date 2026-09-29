@@ -11,7 +11,7 @@ Welcome to **Someless Mail Server**: your own mail server in a single Docker ima
 
 **Version:** 1.0.0
 
-> **Status:** sending and receiving work. Connect and authenticate your domain, add the addresses your mail comes from, create mailboxes, and read them in any mail app. The webmail's sign-in works; its inbox comes next.
+> **Status:** sending and receiving work, and so does the webmail. Connect and authenticate your domain, add the addresses your mail comes from, create mailboxes, and read them in the webmail or any mail app: mail, calendar and contacts, with new mail arriving as it lands.
 
 ## Why Someless Mail
 
@@ -22,7 +22,8 @@ Hosted suites charge for every user, every month, and keep your mail on their se
 - **Trusted delivery.** Every message is signed with DKIM, with SPF and DMARC in place, so it lands like mail from the big providers.
 - **DNS made simple.** The panel shows the exact records for your provider, checks them for you, and can hand them over as a file or a link for your developer.
 - **Built for your apps.** Websites and apps send through SMTP keys of their own, with expiry dates, apart from your team's mailboxes.
-- **On every device.** IMAP, POP3 and SMTP for any mail app, with quick setup for Android, iPhone and Windows.
+- **A complete webmail.** Mail, calendar and contacts in the browser, light or dark: folders, search, a compose window with formatting and attachments, filters, auto-reply, forwarding and signatures, and new mail that arrives with a sound, without reloading.
+- **On every device.** IMAP, POP3 and SMTP for any mail app, CalDAV and CardDAV for calendars and contacts, with quick setup for Android, iPhone and Windows.
 - **Secure by design.** Two-factor sign-in for the web interface, a lock after wrong passwords in the webmail, and encrypted connections for every mail app.
 - **A modern engine.** Built on [Stalwart](https://github.com/stalwartlabs/stalwart), a fast, secure mail engine written in Rust, in a single Docker image you update with one command.
 
@@ -34,7 +35,7 @@ This guide takes you from installing to your first email landing in a Gmail inbo
 
 - **The web interface** (port 17080) is where you set everything up: domains, senders, SMTP keys.
 - **The mail engine**, [Stalwart](https://github.com/stalwartlabs/stalwart), runs in the same container: it sends the mail, receives it into your mailboxes, and serves your mail apps. You never set it up yourself: the web interface does it for you.
-- **The webmail** (port 17090) is where the people with a mailbox sign in with its address and password.
+- **The webmail** (port 17090) is where the people with a mailbox sign in with its address and password, to read and send mail and to keep their calendar and contacts.
 - **[Nginx Proxy Manager](https://nginxproxymanager.com/)** (optional, recommended) puts the web interface on HTTPS, and passes Let's Encrypt's check through to the mail engine so your mail server gets its own certificate.
 
 ## What you need
@@ -351,9 +352,19 @@ To try it, send a message from your Gmail to the new mailbox, and open it in you
 
 ## Step 12: The webmail
 
-The people with a mailbox log in at `http://your-server-ip:17090` with the mailbox's address and password, on a page that looks like your own login. After 5 wrong passwords in a row, the address can't log in for 5 minutes; choose other numbers in **Settings → Miscellaneous → Webmail sign-in lock**. The inbox itself is coming soon; until then, the page says so, and which server to add the mailbox to in a mail app.
+The people with a mailbox log in at `http://your-server-ip:17090` with the mailbox's address and password, on a page that looks like your own login. After 5 wrong passwords in a row, the address can't log in for 5 minutes; choose other numbers in **Settings → Miscellaneous → Webmail sign-in lock**.
 
 To send them the link, click **Webmail link** on the **Mailboxes** page: copy it, or share it from a phone, as it is or with one mailbox's address already filled in.
+
+What they find there:
+
+- **Mail:** the folders (their own too, folders inside folders, dragged into place), the mail 50 at a time with more as they scroll, the message beside the list, tracking links cleaned, attachments to preview or download, and search with its first results as they type. New mail arrives by itself, with a short tone and, if they allow it, a notification on their computer.
+- **Writing:** a compose window with formatting, attachments, signatures, replies under the message, drafts saved as they write, and several windows at once.
+- **Settings:** their name, light or dark, the new-mail sound, signatures, filters (conditions, and what happens to the mail), an auto-reply between two dates, forwarding, a new password, where they logged in from, and how to connect their phone and mail apps.
+- **Calendar:** a day, the working week, a week or a month; events that repeat, all-day events, people invited by email, and invitations to accept, decline or answer maybe.
+- **Contacts:** their address book, with photos, found as they type; the compose window suggests them.
+
+Filters, the auto-reply and forwarding are kept in the mail engine, so they work when the webmail is closed too.
 
 **On HTTPS, at `webmail.example.com`:** add an A record `webmail` pointing to your server's IP address, then a proxy host in Nginx Proxy Manager:
 
@@ -363,9 +374,12 @@ To send them the link, click **Webmail link** on the **Mailboxes** page: copy it
 | Scheme | `http` |
 | Forward hostname | `someless-mail` |
 | Forward port | `17090` |
+| Websockets Support | **On** (new mail arrives without reloading) |
 | SSL tab | Request a new SSL certificate, with **Force SSL** and **HTTP/2** on |
 
-Then, in **Settings → Miscellaneous → Webmail address**, type `https://webmail.example.com`, so the Mailboxes page opens the webmail there. And close the way in by IP: in `docker-compose.yml`, put a `#` at the start of the `"17090:17090"` line and run `docker compose up -d` (and `sudo ufw delete allow 17090/tcp` if you opened it).
+Then, in **Settings → Miscellaneous → Webmail address**, type `https://webmail.example.com`, so the Mailboxes page opens the webmail there.
+
+**Calendar and contacts apps** (Thunderbird, an iPhone, DAVx⁵ on Android) connect through the same address: `https://webmail.example.com/dav/`, with the mailbox's address and password. Most apps find the calendars and address books by themselves from `https://webmail.example.com`; the webmail's **Settings → Connect third-party apps** shows the exact addresses. Wrong passwords there count towards the same sign-in lock. And close the way in by IP: in `docker-compose.yml`, put a `#` at the start of the `"17090:17090"` line and run `docker compose up -d` (and `sudo ufw delete allow 17090/tcp` if you opened it).
 
 Signing in to the webmail and to the web interface are separate: a mailbox's password never opens the web interface.
 
@@ -537,3 +551,6 @@ The same thanks, and the donate button, are in the web interface too: **Credits*
 - Programming language logos in the SMTP guide: [Devicon](https://github.com/devicons/devicon) 2.16.0 (MIT). The logos belong to their owners.
 - Android, Apple and Windows logos in the device setup: [Iconify's "logos"](https://github.com/gilbarbara/logos) and [Simple Icons](https://github.com/simple-icons/simple-icons) sets (CC0). The logos belong to their owners.
 - iPhone setup QR codes: [segno](https://github.com/heuer/segno), as above; the phone animation is from [LottieFiles](https://lottiefiles.com/).
+- The webmail's live new mail: [flask-sock](https://github.com/miguelgrinberg/flask-sock) 0.7.0 and [simple-websocket](https://github.com/miguelgrinberg/simple-websocket) 1.1.0 (MIT).
+- Cleaning the mail's HTML: [nh3](https://github.com/messense/nh3) 0.3.7 (MIT), built on [ammonia](https://github.com/rust-ammonia/ammonia).
+- The new-mail sound: "Modern short message tone" by [digitalstore07](https://pixabay.com/users/digitalstore07/) on [Pixabay](https://pixabay.com/) (Pixabay Content License).

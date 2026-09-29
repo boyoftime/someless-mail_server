@@ -1,0 +1,97 @@
+{% from "webmail-icons.html" import icon %}
+{# The composer, as PrivateEmail's (webmail-compose.js makes one from this for each message being
+   written, in a window at the bottom right, or under the message it answers): the title and its
+   buttons (minimize, full screen, close), From, To, Cc/Bcc, Subject, the formatting bar (Aa
+   shows it), what it says, its files, and along the bottom Send, the tools and Discard. #}
+{% macro tool(action, name, label, extra="") %}
+<button type="button" class="wm-icon wm-cm-tool" data-cm="{{ action }}" aria-label="{{ label }}" data-tip="{{ label }}"{{ extra | safe }}>{{ icon(name) }}</button>
+{%- endmacro %}
+
+{% macro format_tool(command, name, label, keys="") %}
+<button type="button" class="wm-icon wm-cm-format" data-format="{{ command }}" aria-label="{{ label }}" data-tip="{{ label }}{{ ' (' ~ keys ~ ')' if keys }}" aria-pressed="false">{{ icon(name) }}</button>
+{%- endmacro %}
+
+{% macro composer_template() %}
+<template id="wm-composer">
+  <section class="wm-composer" role="dialog" aria-label="Compose Email" tabindex="-1">
+    <header class="wm-cm-head" data-cm-head>
+      <h2 class="wm-cm-title" data-cm-title>Compose Email</h2>
+      <div class="wm-cm-controls">
+        <button type="button" class="wm-icon wm-mini" data-cm="minimize" aria-label="Minimize" data-tip="Minimize">{{ icon("minimize") }}</button>
+        <button type="button" class="wm-icon wm-mini" data-cm="fullscreen" aria-label="Full screen" data-tip="Full screen"
+                data-tip-on="Exit full screen" data-tip-off="Full screen">{{ icon("maximize") }}</button>
+        <button type="button" class="wm-icon wm-mini" data-cm="close" aria-label="Close" data-tip="Close">{{ icon("close") }}</button>
+      </div>
+    </header>
+    <div class="wm-cm-inline-head" data-cm-inline-head>
+      <p class="wm-cm-inline-title" data-cm-inline-title></p>
+      <button type="button" class="wm-icon wm-mini" data-cm="popout" aria-label="Maximize" data-tip="Maximize">{{ icon("maximize") }}</button>
+    </div>
+    <div class="wm-cm-body" data-cm-body>
+      <div class="wm-cm-fields">
+        <div class="wm-cm-row is-from" data-cm-from-row>
+          <span class="wm-cm-label">From:</span>
+          <button type="button" class="wm-cm-from" data-cm="from" aria-haspopup="listbox"><span data-cm-from-text></span>{{ icon("chevron") }}</button>
+        </div>
+        {%- for field, label in [("to", "To:"), ("cc", "Cc:"), ("bcc", "Bcc:")] %}
+        <div class="wm-cm-row" data-cm-row="{{ field }}"{% if field != "to" %} hidden{% endif %}>
+          <span class="wm-cm-label">{{ label }}</span>
+          <div class="wm-cm-tags" data-cm-tags="{{ field }}">
+            <input type="text" class="wm-cm-input" data-cm-input="{{ field }}" autocomplete="off" spellcheck="false"
+                   aria-label="{{ label[:-1] }}" aria-autocomplete="list" aria-expanded="false">
+          </div>
+          {%- if field == "to" %}
+          <button type="button" class="wm-cm-ccbcc" data-cm="ccbcc">Cc/Bcc</button>
+          {%- endif %}
+        </div>
+        {%- endfor %}
+        <div class="wm-cm-row is-subject">
+          <span class="wm-cm-label">Subject:</span>
+          <input type="text" class="wm-cm-subject" data-cm-subject maxlength="255" aria-label="Subject" autocomplete="off">
+        </div>
+      </div>
+      <div class="wm-cm-toolbar" data-cm-toolbar role="toolbar" aria-label="Formatting options" hidden>
+        <button type="button" class="wm-cm-select" data-cm-pick="font" aria-label="Font" data-tip="Font"><span data-cm-font>Arial</span>{{ icon("chevron") }}</button>
+        <button type="button" class="wm-cm-select is-size" data-cm-pick="size" aria-label="Text size" data-tip="Text size"><span data-cm-size>Normal</span>{{ icon("chevron") }}</button>
+        <span class="wm-cm-divider" aria-hidden="true"></span>
+        {{ format_tool("bold", "bold", "Bold", "Ctrl+B") }}
+        {{ format_tool("italic", "italic", "Italics", "Ctrl+I") }}
+        {{ format_tool("underline", "underline", "Underlined", "Ctrl+U") }}
+        <button type="button" class="wm-icon wm-cm-format" data-cm-pick="color" aria-label="Text color" data-tip="Text color">{{ icon("text-color") }}</button>
+        <button type="button" class="wm-icon wm-cm-format" data-cm-pick="back" aria-label="Highlight color" data-tip="Highlight color">{{ icon("highlight") }}</button>
+        <span class="wm-cm-divider" aria-hidden="true"></span>
+        {{ format_tool("insertUnorderedList", "bullets", "Bulleted list", "Ctrl+Shift+8") }}
+        {{ format_tool("insertOrderedList", "numbers", "Numbered list", "Ctrl+Shift+7") }}
+        <button type="button" class="wm-icon wm-cm-format" data-cm-pick="align" aria-label="Align" data-tip="Align">{{ icon("align-left") }}</button>
+        {{ format_tool("outdent", "indent-less", "Indent less", "Ctrl+[") }}
+        {{ format_tool("indent", "indent-more", "Indent more", "Ctrl+]") }}
+        <button type="button" class="wm-icon wm-cm-format" data-cm-pick="table" aria-label="Insert table" data-tip="Insert table">{{ icon("table") }}</button>
+        <span class="wm-cm-divider" aria-hidden="true"></span>
+        {{ format_tool("removeFormat", "clear-format", "Remove formatting", "Ctrl+\\") }}
+        {{ format_tool("undo", "undo", "Undo", "Ctrl+Z") }}
+        {{ format_tool("redo", "redo", "Redo", "Ctrl+Y") }}
+      </div>
+      <div class="wm-cm-editor-wrap" data-cm-editor-wrap>
+        <iframe class="wm-cm-editor" data-cm-editor title="Write your message here" sandbox="allow-same-origin"></iframe>
+      </div>
+      <ul class="wm-cm-files" data-cm-files aria-label="Attachments" hidden></ul>
+    </div>
+    <footer class="wm-cm-foot">
+      <button type="button" class="wm-button wm-cm-send" data-cm="send">Send</button>
+      <span class="wm-cm-divider is-tall" aria-hidden="true"></span>
+      {{ tool("format", "format", "Formatting options", ' aria-pressed="false"') }}
+      {{ tool("attach", "attachment", "Attach file") }}
+      {{ tool("link", "link", "Insert link") }}
+      {{ tool("picture", "image", "Insert image") }}
+      {{ tool("signature", "signature", "Add signature") }}
+      <button type="button" class="wm-icon wm-cm-tool" data-cm="important" aria-pressed="false" aria-label="Mark as important"
+              data-tip="Mark as important" data-tip-on="Unmark as important" data-tip-off="Mark as important">{{ icon("priority") }}</button>
+      <span class="wm-cm-status" data-cm-status role="status"></span>
+      {{ tool("discard", "trash", "Discard") }}
+      <input type="file" multiple hidden data-cm-files-input>
+      <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden data-cm-picture-input>
+    </footer>
+    <div class="wm-cm-drop" data-cm-drop hidden><span>{{ icon("attachment") }}Drop files to attach them</span></div>
+  </section>
+</template>
+{% endmacro %}

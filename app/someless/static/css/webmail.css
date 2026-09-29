@@ -1,67 +1,38 @@
-/* The webmail (webmail-login.html, webmail-inbox.html): the panel's login look (style.css: the
-   floating mail icons, the card, its fields and button). Signed in, a bar at the top with the
-   mailbox, and the inbox that's coming, in a card in the middle. */
-/* (body.auth.webmail-home: this file comes before style.css, whose body.auth would win otherwise;
-   one column that can be narrower than a long address, which then ends in …) */
-body.auth.webmail-home { grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr); }
-
-.webmail-bar {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem 1.5rem;
-  padding: 0.85rem clamp(1rem, 4vw, 2rem);
-  border-bottom: 1px solid var(--auth-card-border);
-  background: var(--auth-card-bg);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  min-width: 0;
-}
-.webmail-brand { display: inline-flex; align-items: center; gap: 0.6rem; margin: 0; font-size: 1.1rem; letter-spacing: -0.01em; }
-.webmail-brand img { border-radius: 10px; }
-.webmail-brand strong { color: var(--bar-blue); font-weight: 700; }
-.webmail-who { display: flex; align-items: center; gap: 0.65rem; min-width: 0; }
-.webmail-who form { flex: none; margin: 0; }
-.webmail-avatar {
+/* The webmail's own pages outside the mail (webmail-login.html, webmail-down.html): the panel's
+   login look (style.css: the floating mail icons, the card, its fields and button), and the page
+   that says the mail can't be reached right now. */
+/* The mail out of reach (webmail-down.html): a card in the middle, a way to try again and out */
+body.webmail-page { display: grid; min-height: 100vh; min-height: 100dvh; place-items: center; padding: 1.5rem 1rem; }
+.webmail-down-card {
   display: grid;
-  place-items: center;
-  flex: none;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #1463f3, #0195fb);
-  box-shadow: 0 0 16px -4px rgba(1, 149, 251, 0.85);
-  color: #fff;
-  font-weight: 800;
+  justify-items: center;
+  gap: 0.75rem;
+  width: min(26rem, 100%);
+  padding: 2rem 1.5rem 1.6rem;
+  border: 1px solid var(--line, rgba(123, 150, 255, 0.16));
+  border-radius: 18px;
+  background: var(--card, #111a40);
+  text-align: center;
 }
-.webmail-email { min-width: 0; overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.webmail-logout { padding: 0.45rem 1rem; font-size: 0.9rem; white-space: nowrap; }
-
-/* The inbox that's coming: the card in the middle of the screen */
-.webmail-soon {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  padding: 1.5rem var(--gutter) 0;
+.webmail-down-logo { border-radius: 14px; }
+.webmail-down-card h1 { margin: 0.3rem 0 0; font-size: 1.3rem; }
+.webmail-down-card p { margin: 0; color: var(--muted); line-height: 1.55; }
+.webmail-down-actions { display: grid; gap: 0.6rem; width: 100%; margin-top: 0.8rem; }
+.webmail-down-actions form { margin: 0; }
+.webmail-down-retry, .webmail-down-out {
+  display: block;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
 }
-.webmail-soon .welcome-animation { margin-top: -0.5rem; }
-.webmail-soon .auth-hint { margin-bottom: 1rem; }
-.webmail-soon-note {
-  margin: 0;
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--auth-card-border);
-  border-radius: 14px;
-  background: rgba(1, 149, 251, 0.07);
-  color: var(--muted);
-  font-size: 0.92rem;
-  line-height: 1.55;
-  overflow-wrap: anywhere;
-  text-wrap: pretty;
-}
-.webmail-soon-note strong { color: var(--ink); }
+.webmail-down-retry { background: #2f7df6; color: #fff; }
+.webmail-down-out { overflow: hidden; background: rgba(123, 150, 255, 0.12); color: inherit; text-overflow: ellipsis; white-space: nowrap; }
 
 /* From the login to the inbox (and back, on logging out): a soft cross-fade, where the browser
    can do one (webmail-app.css) */
@@ -70,9 +41,3 @@ body.auth.webmail-home { grid-template-rows: auto 1fr auto; grid-template-column
   ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.35s; }
 }
 
-@media (max-width: 640px) {
-  .webmail-bar { padding-inline: 1rem; }
-  .webmail-bar .webmail-brand span { display: none; }
-  .webmail-who { gap: 0.5rem; }
-  .webmail-logout { padding: 0.4rem 0.85rem; }
-}

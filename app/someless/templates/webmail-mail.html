@@ -1,112 +1,109 @@
 {% extends "base.html" %}
-{% block title %}{{ open_message.subject ~ " | " if open_message }}{{ "Inbox | " if not open_message }}Someless Webmail{% endblock %}
-{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-app.css') }}">{% endblock %}
+{% block title %}{% if inbox_unread %}({{ inbox_unread }}) {% endif %}{{ open_message.subject if open_message else ("Search results" if searching else folder_path) }} | Someless Webmail{% endblock %}
+{% block head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-app.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-compose.css') }}">
+<script src="{{ url_for('static', filename='js/webmail-zone.js') }}" data-redraw></script>
+<script src="{{ url_for('static', filename='js/webmail-first.js') }}"></script>
+{% endblock %}
 {% block body_class %}webmail-app is-arriving{% if open_message %} is-reading{% endif %}{% endblock %}
 {% from "webmail-icons.html" import icon %}
+{% from "webmail-folders.html" import folder_list %}
 {% from "webmail-message.html" import message_row %}
 {% from "webmail-read.html" import message_view %}
-
+{% from "webmail-composer.html" import composer_template %}
+{% from "webmail-top.html" import top_bar %}
 
 {% block body %}
-{# The webmail (webmail-app.css, webmail-app.js): a bar across the top (the apps, search, the
-   tools and the account), then the folders, the mail, and the message being read. Its design,
-   for now, with made-up mail (webmail_sample.py). #}
-<header class="wm-top">
-  <button type="button" class="wm-icon wm-menu" data-wm-menu aria-controls="wm-side" aria-expanded="false" aria-label="Folders">{{ icon("menu") }}</button>
-  <a class="wm-logo" href="{{ url_for('inbox') }}">
-    <img src="{{ url_for('static', filename='img/logo.webp') }}" alt="" width="30" height="30">
-    <span>Someless Mail</span>
-  </a>
-  <nav class="wm-apps" aria-label="Apps">
-    <a class="wm-app is-current" href="{{ url_for('inbox') }}" aria-current="page" aria-label="Email" data-tip="Email">{{ icon("mail") }}</a>
-    <a class="wm-app" href="#" aria-label="Calendar" data-tip="Calendar">{{ icon("calendar") }}</a>
-    <a class="wm-app" href="#" aria-label="Contacts" data-tip="Contacts">{{ icon("contacts") }}</a>
-  </nav>
-  <form class="wm-search" role="search" action="{{ url_for('inbox') }}">
-    <label class="visually-hidden" for="wm-search">Search mail</label>
-    {{ icon("search") }}
-    <input id="wm-search" name="q" type="search" placeholder="Search mail" autocomplete="off">
-  </form>
-  <div class="wm-tools">
-    <button type="button" class="wm-icon wm-help" aria-label="Help center" data-tip="Help center">{{ icon("help") }}</button>
-    <span class="wm-divider" aria-hidden="true"></span>
-    <button type="button" class="wm-icon" aria-label="Refresh" data-tip="Refresh">{{ icon("refresh") }}</button>
-    <button type="button" class="wm-icon wm-settings" aria-label="Settings" data-tip="Settings">{{ icon("settings") }}</button>
-    <div class="wm-account-wrap">
-      <button type="button" class="wm-avatar" data-wm-account aria-controls="wm-account" aria-expanded="false" aria-label="Your account">{{ initial }}</button>
-      {# the account: the mailbox, its address to copy, the theme, and logging out #}
-      <section class="wm-account" id="wm-account" aria-label="Your account" hidden>
-        <div class="wm-account-head">
-          <span class="wm-account-photo">
-            <span class="wm-account-picture" aria-hidden="true">{{ initial }}</span>
-            <button type="button" class="wm-account-camera" aria-label="Change your picture" data-tip="Change your picture">{{ icon("camera") }}</button>
-          </span>
-          <p class="wm-account-name">{{ name }}</p>
-          <p class="wm-account-email">
-            <span>{{ email }}</span>
-            <button type="button" class="copy-button wm-copy" data-copy="{{ email }}" aria-label="Copy your address" title="Copy your address">
-              <svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 5.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h.5"/></svg>
-              <svg class="copy-done" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
-            </button>
-          </p>
-        </div>
-        <div class="wm-account-rows">
-          <button type="button" class="wm-account-row wm-theme" role="switch" data-theme-switch aria-checked="{{ 'true' if theme == 'dark' else 'false' }}">
-            {{ icon("moon") }}{{ icon("sun") }}<span>Dark theme</span>
-            <span class="wm-switch" aria-hidden="true"><span></span></span>
-          </button>
-          <form method="post" action="{{ url_for('logout') }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="wm-account-row">{{ icon("logout") }}<span>Log out</span></button>
-          </form>
-        </div>
-      </section>
-    </div>
-  </div>
-</header>
+{# The webmail (webmail-app.css; its scripts below), laid out and working as PrivateEmail's: a bar
+   across the top (the apps, search, the tools and the account), then the folders, the mail, and
+   the message being read, or the messages ticked. The mail comes from the mail engine (mail.py). #}
+{{ top_bar("mail", email, name, initial, theme, folder_key, folder_path, query, scope, searching) }}
 
-<div class="wm-shell" data-wm-shell{% if columns %} style="{{ columns }}"{% endif %}>
+<div class="wm-shell" data-wm-shell{% if columns %} style="{{ columns }}"{% endif %} data-do-url="{{ url_for('mail.act') }}"
+     data-create-url="{{ url_for('mail.create_folder') }}" data-order-url="{{ url_for('mail.folder_order') }}"
+     data-folder-url="{{ url_for('mail.folder_act', folder='__key__') }}"
+     data-live-url="/live" data-sound="{{ 1 if preferences.new_mail_sound else 0 }}" data-notify="{{ 1 if preferences.notifications else 0 }}"
+     data-sound-url="{{ url_for('static', filename='sounds/new-mail.mp3') }}" data-icon-url="{{ url_for('static', filename='img/favicon.png') }}">
   <aside class="wm-side" id="wm-side" aria-label="Folders">
-    <button type="button" class="wm-compose">Compose</button>
-    <nav class="wm-folders" aria-label="Folders">
-      {% for folder in folders %}
-      <a class="wm-folder{% if folder.key == 'inbox' %} is-current{% endif %}" href="#" style="--i: {{ loop.index0 }}"{% if folder.key == 'inbox' %} aria-current="page"{% endif %}>
-        {{ icon(folder.icon) }}<span class="wm-folder-name">{{ folder.label }}</span>
-        {%- if folder.count %}<span class="wm-count"{% if folder.key == 'inbox' %} data-wm-unread{% endif %}>{{ folder.count }}</span>{% endif %}
-      </a>
-      {% endfor %}
+    <button type="button" class="wm-compose" data-wm-compose>Compose</button>
+    {# the folders: their menus, folding, and messages or folders dropped on them (webmail-folders.js) #}
+    <nav class="wm-folders" aria-label="Folders" data-wm-folders data-current="{{ '' if searching else folder_key }}"
+         data-by-name="{{ 1 if by_name else 0 }}">
+      {{ folder_list(tree, '' if searching else folder_key) }}
     </nav>
-    <div class="wm-storage">
+    <div class="wm-storage{% if storage.full %} is-full{% endif %}">
       <p class="wm-storage-title">Storage</p>
       <div class="wm-storage-bar" role="meter" aria-label="Storage used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ storage.percent }}"><span style="width: {{ storage.percent }}%"></span></div>
       <p class="wm-storage-text"><span><strong>{{ storage.used }}</strong> of {{ storage.quota }}</span><span>{{ storage.percent }}%</span></p>
+      {%- if storage.full %}
+      <p class="wm-storage-alert">Your storage is full. To continue sending and receiving emails, ask your admin for more storage.</p>
+      {%- endif %}
     </div>
   </aside>
   <div class="wm-scrim" data-wm-scrim hidden></div>
 
-  <section class="wm-list" aria-labelledby="wm-list-title">
+  <section class="wm-list" aria-labelledby="wm-list-title" data-wm-list data-folder="{{ folder_key }}" data-q="{{ query }}"
+           data-in="{{ scope or '' }}" data-total="{{ total }}" data-view-url="{{ url_for('mail.list_view', folder=folder_key) }}"
+           data-list-url="{{ url_for('mail.rows', folder=folder_key) }}"
+           data-actions="{{ actions | tojson | forceescape }}">
     {# the dividers to drag, on the folders' edge and on the mail's, on wide screens (webmail-resize.js) #}
     <span class="wm-resize is-side" data-wm-resize="side" role="separator" aria-orientation="vertical" tabindex="0"
           aria-label="Resize the folders" aria-valuemin="184" aria-valuemax="320"></span>
     <span class="wm-resize is-list" data-wm-resize="list" role="separator" aria-orientation="vertical" tabindex="0"
           aria-label="Resize the mail list" aria-valuemin="248"></span>
-    <div class="wm-list-head">
-      <h1 class="visually-hidden" id="wm-list-title">Inbox</h1>
-      <button type="button" class="wm-icon wm-filter" aria-label="Filter" data-tip="Filter">{{ icon("filter") }}</button>
+    <div class="wm-list-head{% if searching %} has-results{% endif %}">
+      <h1 class="visually-hidden" id="wm-list-title">{{ "Search results" if searching else folder_path }}</h1>
+      <p class="wm-results" data-wm-results{% if not searching %} hidden{% endif %}>{{ total }} result{{ "s" if total != 1 }}</p>
+      {# "Sort and filter": the folder's own, kept for next time (webmail-list.js) #}
+      <div class="wm-sort-wrap">
+        <button type="button" class="wm-icon wm-filter" data-wm-sort-toggle aria-expanded="false" aria-controls="wm-sort"
+                aria-label="Sort and filter" data-tip="Sort and filter">{{ icon("filter") }}</button>
+        <span class="wm-sort-badge" data-wm-sort-badge{% if not filters %} hidden{% endif %}>{{ filters | length }}</span>
+        <section class="wm-sort" id="wm-sort" data-wm-sort aria-label="Filter and sort emails" hidden>
+          <p class="wm-sort-title">Filter and sort emails</p>
+          <div class="wm-sort-section" role="group" aria-labelledby="wm-sort-filter">
+            <p class="wm-sort-label" id="wm-sort-filter">Filter</p>
+            {%- for key, label, mark in [("unread", "Unread", "unread"), ("favorites", "Favorites", "star"), ("important", "High Priority", "priority")] %}
+            <button type="button" class="wm-sort-option" role="menuitemcheckbox" aria-checked="{{ 'true' if key in filters else 'false' }}" data-wm-filter="{{ key }}">
+              <span class="wm-sort-box" aria-hidden="true"></span>{{ icon(mark) }}<span>{{ label }}</span>
+            </button>
+            {%- endfor %}
+          </div>
+          <div class="wm-sort-section" role="group" aria-labelledby="wm-sort-by">
+            <p class="wm-sort-label" id="wm-sort-by">Sort by</p>
+            {%- for key, label in [("newest", "Newest first"), ("oldest", "Oldest first"), ("largest", "Largest first"), ("smallest", "Smallest first")] %}
+            <button type="button" class="wm-sort-option" role="menuitemradio" aria-checked="{{ 'true' if key == sort else 'false' }}" data-wm-sort-by="{{ key }}">
+              <span>{{ label }}</span>{{ icon("check") }}
+            </button>
+            {%- endfor %}
+          </div>
+          <div class="wm-sort-foot">
+            <button type="button" class="wm-sort-reset" data-wm-sort-reset{% if sort == 'newest' and not filters %} disabled{% endif %}>Reset</button>
+          </div>
+        </section>
+      </div>
     </div>
     {# the newest mail; the next comes in as the list nears its end (webmail-list.js) #}
     <div class="wm-scroll" data-wm-scroll>
-      <ul class="wm-messages" data-wm-messages>
-        {% for message in messages %}{{ message_row(message, loop.index0, open=open_message and message.id == open_message.id) }}{% endfor %}
+      <ul class="wm-messages" data-wm-messages aria-label="Messages">
+        {%- for message in messages %}{{ message_row(message, loop.index0, open=open_message and message.id == open_message.id, folder_key=folder_key, search=search) }}{% endfor %}
       </ul>
-      {% if next_url %}
+      <div class="wm-list-empty" data-wm-list-empty{% if messages %} hidden{% endif %}>
+        <svg class="wm-list-empty-art" viewBox="0 0 48 48" aria-hidden="true"><rect x="5" y="9" width="38" height="30" rx="6"/><path d="M6 13l18 12 18-12"/></svg>
+        <p>{{ "We could not find any messages that match your search request." if searching else "No messages found" }}</p>
+      </div>
+      {%- if next_url %}
       <p class="wm-more" data-wm-more data-url="{{ next_url }}" role="status"><span class="wm-more-spin" aria-hidden="true"></span><span>Loading more mail…</span></p>
-      {% endif %}
+      {%- endif %}
     </div>
   </section>
 
-  {# the reading pane: the envelope while nothing is open, or the open message (webmail-read.js) #}
-  <section class="wm-reader" aria-label="Reading pane" data-wm-reader data-home="{{ url_for('inbox') }}">
+  {# the reading pane: the envelope while nothing is open, the messages ticked (two or more), or
+     the open message (webmail-read.js, webmail-actions.js) #}
+  <section class="wm-reader" aria-label="Reading pane" data-wm-reader
+           data-home="{{ url_for('mail.search', q=query, **({'in': scope} if scope else {})) if searching else url_for('mail.folder', folder=folder_key) }}">
     <div class="wm-empty" data-wm-empty{% if open_message %} hidden{% endif %}>
       {# a closed envelope #}
       <svg class="wm-empty-art" viewBox="0 0 96 80" aria-hidden="true">
@@ -121,16 +118,69 @@
       </svg>
       <p>No mail selected</p>
     </div>
+    {# two or more ticked: what can be done to them all, as PrivateEmail's #}
+    <div class="wm-choose" data-wm-choose hidden>
+      <div class="wm-choose-tools" role="toolbar" aria-label="The messages ticked">
+        {%- if not actions.drafts %}
+        <button type="button" class="wm-icon" data-act="read" data-when="unread" aria-label="Mark as read" data-tip="Mark as read">{{ icon("read") }}</button>
+        <button type="button" class="wm-icon" data-act="unread" data-when="read" aria-label="Mark as unread" data-tip="Mark as unread">{{ icon("unread") }}</button>
+        <button type="button" class="wm-icon" data-act="flag" data-when="unflagged" aria-label="Mark as favorite" data-tip="Mark as favorite">{{ icon("star") }}</button>
+        <button type="button" class="wm-icon is-favorite" data-act="unflag" data-when="flagged" aria-label="Unmark as favorite" data-tip="Unmark as favorite">{{ icon("star-filled") }}</button>
+        <button type="button" class="wm-icon" data-act="move" aria-label="Move to folder" data-tip="Move to folder">{{ icon("move") }}</button>
+        {%- endif %}
+        {%- if actions.archive %}<button type="button" class="wm-icon" data-act="archive" aria-label="Move to Archive" data-tip="Move to Archive">{{ icon("archive") }}</button>{% endif %}
+        {%- if actions.inbox %}<button type="button" class="wm-icon" data-act="inbox" aria-label="Move to Inbox" data-tip="Move to Inbox">{{ icon("inbox") }}</button>{% endif %}
+        <button type="button" class="wm-icon" data-act="delete" aria-label="Delete message" data-tip="Delete message">{{ icon("trash") }}</button>
+        {%- if actions.not_spam %}<button type="button" class="wm-icon" data-act="notspam" aria-label="Not spam" data-tip="Not spam">{{ icon("not-spam") }}</button>
+        {%- elif actions.spam %}<button type="button" class="wm-icon" data-act="spam" aria-label="Mark as spam" data-tip="Mark as spam. Our algorithms tailor your inbox to you and your selections.">{{ icon("spam") }}</button>{% endif %}
+      </div>
+      <div class="wm-choose-card">
+        <i class="wm-choose-lines" aria-hidden="true"></i>
+        <p class="wm-choose-selected"><b class="wm-choose-number" data-wm-choose-count>2</b> selected</p>
+      </div>
+      <div class="wm-choose-foot">
+        <button type="button" class="wm-choose-button" data-wm-clear>{{ icon("clear-box") }}<span>Clear selection</span></button>
+        <button type="button" class="wm-choose-button" data-wm-select-all>{{ icon("check-box") }}<span>Select all <span data-wm-choose-total>{{ total }}</span></span></button>
+      </div>
+    </div>
     <div class="wm-view" data-wm-view{% if open_message %} data-open="{{ open_message.id }}"{% else %} hidden{% endif %}>
       {%- if open_message %}{{ message_view(open_message, email, body_doc) }}{% endif -%}
     </div>
   </section>
 </div>
+
+{# the messages being written, in windows at the bottom right (webmail-compose.js) #}
+<div class="wm-composers" data-wm-composers data-start-url="{{ url_for('compose.start') }}" data-upload-url="{{ url_for('compose.upload') }}"
+     data-save-url="{{ url_for('compose.save') }}" data-send-url="{{ url_for('compose.send') }}" data-discard-url="{{ url_for('compose.discard') }}"
+     data-suggest-url="{{ url_for('compose.suggest') }}" data-settings-url="/settings/signatures"></div>
+<div class="wm-cm-overlay" data-wm-compose-overlay hidden></div>
+{{ composer_template() }}
+
+{# the toasts, as PrivateEmail says what was done (webmail-core.js); the board is for errors #}
+<div class="wm-toasts" data-wm-toasts role="status" aria-live="polite"></div>
+
+{# icons the scripts draw menus with (webmail-core.js: wm.icon(name)) #}
+<template id="wm-icons">
+  {%- for name in ["inbox", "drafts", "sent", "archive", "spam", "trash", "folder", "folder-plus", "edit", "read", "unread", "star", "star-filled",
+                   "move", "not-spam", "sort", "chevron-right", "reply", "reply-all", "forward", "print", "download", "source", "clear-box",
+                   "close", "check", "warning", "copy", "search", "eye", "image", "pdf", "file", "refresh", "clock", "maximize",
+                   "restore", "minimize", "align-left", "align-center", "align-right", "signature", "attachment", "plus"] %}
+  <span data-icon="{{ name }}">{{ icon(name) }}</span>
+  {%- endfor %}
+</template>
+
 <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 <script src="{{ url_for('static', filename='js/copy-button.js') }}"></script>
 <script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/webmail-core.js') }}"></script>
 <script src="{{ url_for('static', filename='js/webmail-app.js') }}"></script>
 <script src="{{ url_for('static', filename='js/webmail-list.js') }}"></script>
 <script src="{{ url_for('static', filename='js/webmail-read.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-actions.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-folders.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-search.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-nav.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-live.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-compose.js') }}"></script>
 <script src="{{ url_for('static', filename='js/webmail-resize.js') }}"></script>
 {% endblock %}

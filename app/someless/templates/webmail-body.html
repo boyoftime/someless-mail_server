@@ -1,12 +1,13 @@
 <!doctype html>
-{# What a message says, as a page of its own inside the reading pane (webmail-read.html): it
-   runs no scripts (the frame's sandbox) and loads nothing from other sites, so a message can't
-   track who opens it or reach into the webmail. Its colours follow the webmail's theme
-   (is-dark), or a message's own light colours on white (is-paper, webmail-read.js). #}
+{# What a message says, as a page of its own inside the reading pane (webmail-read.html): it runs
+   no scripts (the frame's sandbox) and loads nothing but pictures, so a message can't reach into
+   the webmail. Its HTML was cleaned first (content.py). In the dark theme the webmail turns its
+   light colours dark (webmail-read.js, is-dark); the sun shows it in its own colours on white
+   (is-paper). kind: html, or text (a message in plain text, its lines as they came). #}
 <html lang="en" class="{{ 'is-dark' if theme == 'dark' else 'is-light' }}">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; img-src data:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: http:">
 <meta name="referrer" content="no-referrer">
 <base target="_blank">
 <style>
@@ -18,24 +19,23 @@
 }
 html { color-scheme: light; }
 html.is-dark { color-scheme: dark; }
-body { margin: 0; color: #1c1f24; font: 0.9rem/1.65 "Google Sans", system-ui, -apple-system, "Segoe UI", sans-serif; overflow-wrap: anywhere; }
+body { margin: 0; color: #1c1f24; font: 0.875rem/1.6 "Google Sans", system-ui, -apple-system, "Segoe UI", sans-serif; overflow-wrap: anywhere; }
 html.is-dark body { color: #e3e7f4; }
 html.is-paper { color-scheme: light; background: #fff; }
 html.is-paper body { padding: 1.1rem 1.3rem; color: #1c1f24; }
-p { margin: 0 0 1.15em; white-space: pre-line; }
-ul, ol { margin: 0 0 1.15em; padding-left: 1.6em; }
-li { margin: 0.25em 0; padding-left: 0.2em; }
-body > :last-child { margin-bottom: 0; }
+img { max-width: 100%; height: auto; }
+table { max-width: 100%; }
+pre { white-space: pre-wrap; }
+blockquote { margin: 0.6em 0 0.6em 0.4em; padding-left: 0.9em; border-left: 2px solid #c9ced8; }
+html.is-dark:not(.is-paper) blockquote { border-left-color: #3b4777; }
 a { color: #3b63e6; }
 html.is-dark:not(.is-paper) a { color: #8cb4ff; }
+.is-text { white-space: pre-wrap; }
+body > :first-child { margin-top: 0; }
+body > :last-child { margin-bottom: 0; }
 </style>
 </head>
 <body>
-{% for kind, content in blocks %}
-{%- if kind == "p" %}<p>{{ content }}</p>
-{% elif kind == "ul" %}<ul>{% for item in content %}<li>{{ item }}</li>{% endfor %}</ul>
-{% elif kind == "ol" %}<ol>{% for item in content %}<li>{{ item }}</li>{% endfor %}</ol>
-{% endif %}
-{%- endfor %}
+{{ body | safe }}
 </body>
 </html>

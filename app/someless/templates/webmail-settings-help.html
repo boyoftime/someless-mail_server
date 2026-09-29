@@ -1,0 +1,47 @@
+{% extends "webmail-settings-base.html" %}
+{% from "webmail-icons.html" import icon %}
+{% block page_title %}Help center{% endblock %}
+{% block crumbs %}<span aria-current="page">Help center</span>{% endblock %}
+{# The Help center (the bar's Help button), as PrivateEmail's: the usual questions, each opening its
+   answer, with the way to the part of Settings it's about. #}
+{% macro question(title, open=false) -%}
+<details class="wm-faq"{% if open %} open{% endif %}>
+  <summary class="wm-faq-question"><span>{{ title }}</span>{{ icon("chevron") }}</summary>
+  <div class="wm-faq-answer">{{ caller() }}</div>
+</details>
+{%- endmacro %}
+{% block settings %}
+<header class="wm-settings-head is-stacked">
+  <h1 class="wm-settings-title">Help center</h1>
+  <p class="wm-settings-sub">Answers to the questions people ask most. Something else? Ask the person who looks after your mail server.</p>
+</header>
+<div class="wm-panel wm-faqs">
+  {% call question("I cannot send or receive emails, what should I do?", open=true) %}
+  <p>First look in the <a href="{{ url_for('mail.folder', folder='spam') }}">Spam</a> folder: mail from someone new can land there. Mark it as <b>Not spam</b> and mail from them comes to your Inbox after that.</p>
+  <p>If your storage is full (the bar under your folders says so), nothing new comes in until you delete some mail, or your admin gives you more.</p>
+  <p>Still nothing? Ask your admin to check the domain's records (MX, SPF, DKIM and DMARC) in the Someless Mail panel: it shows which ones are missing.</p>
+  {% endcall %}
+  {% call question("How can I connect my mailbox to a mail app?") %}
+  <p>Go to <a href="{{ url_for('settings.apps_page') }}">Settings → Connect third-party apps</a> and click <b>View configuration</b>. Your username is your email address, and the password is your mailbox password.</p>
+  <p>In short: IMAP on <b>{{ server }}</b>, port {{ ports.imap }} (SSL/TLS), or POP3 on port {{ ports.pop3 }}; sending with SMTP on port {{ ports.smtp_ssl }} (SSL/TLS) or {{ ports.smtp_starttls }} (STARTTLS). On an iPhone, iPad or Mac, <b>Download profile</b> there sets it all up for you.</p>
+  {% endcall %}
+  {% call question("How can I add my calendar and contacts to my phone?") %}
+  <p>Add a CalDAV and a CardDAV account (on Android, with the free DAVx⁵ app) with the server <b>{{ dav }}</b>, your email address and your mailbox password. Most apps find your calendars and address books by themselves; the exact addresses are in <a href="{{ url_for('settings.apps_page') }}">Settings → Connect third-party apps</a>.</p>
+  {% endcall %}
+  {% call question("How can I change my password?") %}
+  <p>Go to <a href="{{ url_for('settings.security_page') }}">Settings → Security Center</a> and click <b>Change my password</b>. Type your current password and the new one twice, then <b>Save &amp; log out</b>: the webmail logs you out, and you log in again with the new password. Your mail apps ask for it too.</p>
+  {% endcall %}
+  {% call question("How can I set up email forwarding?") %}
+  <p>Go to <a href="{{ url_for('settings.index') }}">Settings</a>, find <b>Forwarding</b>, and click <b>Add a forwarding address</b>. Turn <b>Keep an email copy</b> on to keep your mail here as well.</p>
+  {% endcall %}
+  {% call question("How can I let people know I'm away?") %}
+  <p>Go to <a href="{{ url_for('settings.auto_reply_page') }}">Settings → Auto-reply</a>, switch it on, choose when it starts and ends, and write your message. Each sender gets it once a day while you're away, even with the webmail closed.</p>
+  {% endcall %}
+  {% call question("How can I sort my mail into folders by itself?") %}
+  <p>Go to <a href="{{ url_for('settings.filters_page') }}">Settings → Filters</a> and click <b>Create a new filter</b>: choose what the mail has (who it's from, words in its subject, and more) and what happens to it (moved to a folder, marked as read, forwarded…). Filters work on new mail as it arrives, in the order of the list.</p>
+  {% endcall %}
+  {% call question("Are there keyboard shortcuts?") %}
+  <p>Yes: in <a href="{{ url_for('settings.index') }}">Settings</a>, under <b>Profile</b>, click <b>See keyboard shortcuts</b>. In the calendar, the arrow keys go back and forward, <b>T</b> goes to today and <b>C</b> creates an event.</p>
+  {% endcall %}
+</div>
+{% endblock %}

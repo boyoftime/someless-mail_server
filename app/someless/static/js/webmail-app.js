@@ -35,5 +35,7 @@
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape" && side.classList.contains("is-open")) setSide(false);
     });
+    // (a page's own script closes it when something in it was chosen: a contact book, a day)
+    document.addEventListener("wm:side-close", function () { setSide(false); });
   }
 })();

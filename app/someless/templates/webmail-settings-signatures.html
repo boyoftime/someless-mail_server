@@ -1,0 +1,58 @@
+{% extends "webmail-settings-base.html" %}
+{% from "webmail-icons.html" import icon %}
+{% from "webmail-editor-bar.html" import editor_bar %}
+{% block page_title %}Signatures{% endblock %}
+{% block crumbs %}<a href="{{ url_for('settings.index') }}">Settings</a><span aria-current="page">Signatures</span>{% endblock %}
+{# The mailbox's signatures, as PrivateEmail's (settings.py, webmail-signatures.js): the list, the
+   default one marked; New signature, or one picked, opens it on the right: its name, what it
+   says (formatted), whether it's the default, and Save. A signature can be made the default or
+   deleted from its menu. #}
+{% block settings %}
+<header class="wm-settings-head">
+  <h1 class="wm-settings-title">Signatures</h1>
+  <button type="button" class="wm-button" data-wm-new-signature>{{ icon("plus") }}New signature</button>
+</header>
+<div class="wm-signatures" data-wm-signatures data-url="{{ url_for('settings.signature_create') }}">
+  <section class="wm-signature-list-card" aria-label="Your signatures">
+    <ul class="wm-signature-list" data-wm-signature-list>
+      {%- for signature in signatures %}
+      <li class="wm-signature-item" data-id="{{ signature.id }}" data-name="{{ signature.name }}" data-default="{{ 1 if signature.is_default else 0 }}">
+        <button type="button" class="wm-signature-open" data-wm-open-signature>
+          <span class="wm-signature-name">{{ signature.name }}</span>
+          {%- if signature.is_default %}<span class="wm-badge">Default</span>{% endif %}
+        </button>
+        <button type="button" class="wm-icon wm-mini" data-wm-signature-menu aria-label="More options" data-tip="More options">{{ icon("more") }}</button>
+        <template data-html>{{ signature.html | safe }}</template>
+      </li>
+      {%- endfor %}
+    </ul>
+    <div class="wm-empty-state" data-wm-signatures-empty{% if signatures %} hidden{% endif %}>
+      {{ icon("signature") }}
+      <p class="wm-empty-state-title">No signatures yet</p>
+      <p class="wm-empty-state-text">Signatures you create will show here.</p>
+      <button type="button" class="wm-button is-ghost" data-wm-new-signature>New signature</button>
+    </div>
+  </section>
+  <section class="wm-signature-editor" data-wm-signature-editor aria-label="Signature" hidden>
+    <form class="wm-signature-form" data-wm-signature-form novalidate>
+      <label class="wm-label" for="signature-name">Signature name</label>
+      <input id="signature-name" class="wm-input" name="name" type="text" maxlength="50" placeholder="New signature" autocomplete="off">
+      <div class="wm-editor" data-wm-signature-body>
+        {{ editor_bar() }}
+        <iframe class="wm-editor-frame" data-editor-frame title="Start typing your email signature" sandbox="allow-same-origin"></iframe>
+      </div>
+      <label class="wm-check-line"><input type="checkbox" name="default"><span>Default signature</span></label>
+      <p class="wm-field-problem" data-wm-problem hidden></p>
+      <div class="wm-form-actions">
+        <button type="button" class="wm-button is-ghost" data-wm-cancel>Cancel</button>
+        <button type="submit" class="wm-button">Save</button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/webmail-editor.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-signatures.js') }}"></script>
+{% endblock %}

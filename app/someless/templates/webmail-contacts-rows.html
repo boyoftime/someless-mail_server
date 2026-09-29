@@ -1,0 +1,24 @@
+{% from "webmail-icons.html" import icon %}
+{# The contacts on one page of the list (webmail-contacts.html; drawn again by webmail-contacts.js
+   for another page or a search), as PrivateEmail's table: the tick, the photo or initials and the
+   name (with the address under it on a phone), the first email, phone and job, and the options. #}
+{%- for person in people %}
+<tr class="wm-contact" data-id="{{ person.id }}" style="--i: {{ loop.index0 }}">
+  <td class="is-narrow"><label class="wm-check"><input type="checkbox" data-wm-contact-tick aria-label="Select {{ person.display_name }}"></label></td>
+  <td class="wm-contact-who">
+    <button type="button" class="wm-contact-open" data-wm-contact-open>
+      <span class="wm-contact-avatar" aria-hidden="true">
+        {%- if person.photo %}<img src="{{ person.photo }}" alt="">{% else %}{{ person.initials }}{% endif -%}
+      </span>
+      <span class="wm-contact-text">
+        <span class="wm-contact-name">{{ person.display_name }}</span>
+        <span class="wm-contact-sub">{{ person.emails[0].value if person.emails else (person.phones[0].value if person.phones else "") }}</span>
+      </span>
+    </button>
+  </td>
+  <td class="wm-contact-cell is-email">{{ person.emails[0].value if person.emails else "-" }}</td>
+  <td class="wm-contact-cell is-phone">{{ person.phones[0].value if person.phones else "-" }}</td>
+  <td class="wm-contact-cell is-job">{{ (person.job_title ~ (", " if person.job_title and person.company else "") ~ person.company) or "-" }}</td>
+  <td class="is-narrow"><button type="button" class="wm-icon wm-mini" data-wm-contact-menu aria-label="Options" data-tip="Options">{{ icon("more") }}</button></td>
+</tr>
+{%- endfor %}

@@ -141,6 +141,30 @@ def test_the_panel_has_its_own_account(app, engine):
     assert allowed(engine) == ["no-reply@pineloop.online"]
 
 
+def test_the_webmail_has_its_own_account_that_opens_the_mailboxes(app, engine):
+    sync_now(app)
+
+    account = engine.named("Account", "someless-webmail")
+    assert account["domainId"] == "d0"
+    # it may act for any mailbox (user%someless-webmail), and only from inside the container
+    assert account["permissions"] == {"@type": "Merge", "enabledPermissions": {"impersonate": True}}
+    credential = account["credentials"]["0"]
+    assert credential["allowedIps"] == {"127.0.0.1": True}
+    with app.app_context():
+        password = engine_module.secret("webmail_password")
+    assert credential["secret"] == sync.sha256_secret(hashlib.sha256(password.encode()).hexdigest())
+
+
+def test_the_webmail_account_is_put_right_when_it_isnt(app, engine):
+    sync_now(app)
+    account_id = next(id_ for id_, obj in engine.objects["Account"].items() if obj["name"] == "someless-webmail")
+    engine.objects["Account"][account_id]["permissions"] = {"@type": "Inherit"}   # (an older install's)
+
+    sync_now(app)
+
+    assert engine.named("Account", "someless-webmail")["permissions"]["enabledPermissions"] == {"impersonate": True}
+
+
 def test_stalwarts_own_admin_and_domain_are_left_alone(app, engine):
     sync_now(app)
 

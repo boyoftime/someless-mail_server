@@ -1,0 +1,118 @@
+{% extends "webmail-settings-base.html" %}
+{% from "webmail-icons.html" import icon %}
+{% block page_title %}Third-party apps{% endblock %}
+{% block crumbs %}<a href="{{ url_for('settings.index') }}">Settings</a><span aria-current="page">Connect third-party apps</span>{% endblock %}
+{# Connect third-party apps, as PrivateEmail's (settings.py): the account's details, and the way
+   in for mail apps (IMAP, SMTP, POP3: View configuration shows the servers and ports), for
+   calendar and contacts apps (CalDAV, CardDAV) and, as a file, for an iPhone, iPad or Mac. #}
+{% macro copy_line(value, copied, label) -%}
+<span class="wm-copy-line"><span>{{ value }}</span>
+  <button type="button" class="wm-icon wm-mini" data-wm-copy="{{ value }}" data-copied="{{ copied }}" aria-label="Copy {{ label }}" data-tip="Copy">{{ icon("copy") }}</button></span>
+{%- endmacro %}
+{% block settings %}
+<header class="wm-settings-head is-stacked">
+  <h1 class="wm-settings-title">Connect third-party apps</h1>
+  <p class="wm-settings-sub">Set up how your email, calendar, and contacts connect to other third-party apps.</p>
+</header>
+
+<div class="wm-cards is-apps">
+  <section class="wm-card is-wide" aria-labelledby="card-account">
+    <h2 class="wm-card-title" id="card-account">Account information</h2>
+    <div class="wm-card-body">
+      <p class="wm-card-text">Use these details to connect third-party apps and devices to your account.</p>
+      <dl class="wm-details">
+        <div class="wm-detail"><dt>Username</dt><dd>{{ copy_line(email, "Email copied", "your email address") }}</dd></div>
+        <div class="wm-detail"><dt>Password</dt><dd>Your mailbox password.</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="wm-card" aria-labelledby="card-mail-apps">
+    <h2 class="wm-card-title" id="card-mail-apps">IMAP/SMTP/POP3</h2>
+    <div class="wm-card-body">
+      <p class="wm-card-text">Use IMAP, SMTP, or POP3 to connect your email to third-party apps.</p>
+      <p class="wm-status is-on">{{ icon("check") }}On</p>
+    </div>
+    <div class="wm-card-foot"><button type="button" class="wm-button is-ghost" data-wm-open="mail-apps">View configuration</button></div>
+  </section>
+
+  <section class="wm-card" aria-labelledby="card-dav">
+    <h2 class="wm-card-title" id="card-dav">Calendar and contacts</h2>
+    <div class="wm-card-body">
+      <p class="wm-card-text">Use CalDAV and CardDAV to connect your calendar and contacts to third-party apps.</p>
+      <p class="wm-status is-on">{{ icon("check") }}On</p>
+    </div>
+    <div class="wm-card-foot"><button type="button" class="wm-button is-ghost" data-wm-open="dav">View configuration</button></div>
+  </section>
+
+  <section class="wm-card" aria-labelledby="card-apple">
+    <h2 class="wm-card-title" id="card-apple">iPhone, iPad and Mac</h2>
+    <div class="wm-card-body">
+      <p class="wm-card-text">Download a profile that adds your mailbox to the Mail app. Open it on the device, then install it in Settings; it asks for your password.</p>
+    </div>
+    <div class="wm-card-foot"><a class="wm-button is-ghost" href="{{ url_for('settings.apps_profile') }}" download>{{ icon("download") }}Download profile</a></div>
+  </section>
+</div>
+
+{# IMAP/SMTP/POP3: the servers and ports #}
+<dialog class="wm-dialog wm-sheet" data-wm-dialog="mail-apps" aria-labelledby="mail-apps-title">
+  <div class="wm-sheet-card">
+    <header class="wm-sheet-head"><h2 class="wm-sheet-title" id="mail-apps-title">Configuration details</h2>
+      <button type="button" class="wm-icon wm-sheet-close" data-wm-close aria-label="Close">{{ icon("close") }}</button></header>
+    <div class="wm-sheet-body">
+      <div class="wm-toggle-group" role="radiogroup" aria-label="Incoming mail" data-wm-protocols>
+        <button type="button" class="wm-toggle" role="radio" aria-checked="true" data-value="imap">IMAP</button>
+        <button type="button" class="wm-toggle" role="radio" aria-checked="false" data-value="pop3">POP3</button>
+      </div>
+      <p class="wm-panel-label">Account information</p>
+      <dl class="wm-details">
+        <div class="wm-detail"><dt>Username</dt><dd>{{ copy_line(email, "Username copied", "the username") }}</dd></div>
+        <div class="wm-detail"><dt>Password</dt><dd>use your password for this email account</dd></div>
+      </dl>
+      {%- for protocol, port in [("imap", ports.imap), ("pop3", ports.pop3)] %}
+      <div data-protocol="{{ protocol }}"{% if protocol != "imap" %} hidden{% endif %}>
+        <p class="wm-panel-label">Incoming mail ({{ protocol | upper }})</p>
+        <dl class="wm-details">
+          <div class="wm-detail"><dt>Incoming server name</dt><dd>{{ copy_line(server, "Server copied", "the incoming server name") }}</dd></div>
+          <div class="wm-detail"><dt>Incoming port</dt><dd>{{ copy_line(port, "Port copied", "the incoming port") }}</dd></div>
+          <div class="wm-detail"><dt>Type of Security (Encryption) for Incoming emails</dt><dd>SSL/TLS</dd></div>
+        </dl>
+      </div>
+      {%- endfor %}
+      <p class="wm-panel-label">Outgoing mail (SMTP)</p>
+      <dl class="wm-details">
+        <div class="wm-detail"><dt>Outgoing server name</dt><dd>{{ copy_line(server, "Server copied", "the outgoing server name") }}</dd></div>
+        <div class="wm-detail"><dt>Outgoing port</dt><dd>{{ copy_line(ports.smtp_ssl, "Port copied", "the outgoing port") }}
+          <span class="wm-detail-note">or {{ ports.smtp_starttls }} with STARTTLS</span></dd></div>
+        <div class="wm-detail"><dt>Type of Security (Encryption) for Outgoing emails</dt><dd>SSL/TLS</dd></div>
+      </dl>
+    </div>
+  </div>
+</dialog>
+
+{# CalDAV, CardDAV #}
+<dialog class="wm-dialog wm-sheet" data-wm-dialog="dav" aria-labelledby="dav-title">
+  <div class="wm-sheet-card">
+    <header class="wm-sheet-head"><h2 class="wm-sheet-title" id="dav-title">Configuration details</h2>
+      <button type="button" class="wm-icon wm-sheet-close" data-wm-close aria-label="Close">{{ icon("close") }}</button></header>
+    <div class="wm-sheet-body">
+      <p class="wm-panel-label">Account information</p>
+      <dl class="wm-details">
+        <div class="wm-detail"><dt>Username</dt><dd>{{ copy_line(email, "Username copied", "the username") }}</dd></div>
+        <div class="wm-detail"><dt>Password</dt><dd>use your password for this email account</dd></div>
+      </dl>
+      <p class="wm-panel-label">Servers</p>
+      <dl class="wm-details">
+        <div class="wm-detail"><dt>Calendar server</dt><dd>{{ copy_line(calendar_server, "Server copied", "the calendar server") }}</dd></div>
+        <div class="wm-detail"><dt>Address book server</dt><dd>{{ copy_line(contacts_server, "Server copied", "the address book server") }}</dd></div>
+      </dl>
+      <p class="wm-card-text wm-detail-note">Most apps need only <strong>{{ dav }}</strong> and find your calendars and address books there.
+        For Thunderbird integration, use the calendar server above for each calendar, and the address book server for your contacts.</p>
+    </div>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/webmail-settings.js') }}"></script>
+{% endblock %}

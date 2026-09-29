@@ -98,6 +98,7 @@ CREATE TABLE IF NOT EXISTS engine (
     admin_password TEXT,
     webhook_secret TEXT,        -- signs Stalwart's delivery reports to the panel
     panel_password TEXT,        -- the panel's own sending account (test emails)
+    webmail_password TEXT,      -- the webmail's account, which opens the mailboxes for their owners
     server_name TEXT,           -- chosen by the admin; empty: the default (engine/names.py)
     setup_step TEXT NOT NULL DEFAULT 'new',   -- new, bootstrapped, provisioned, ready
     synced_at REAL,
@@ -160,6 +161,59 @@ CREATE TABLE IF NOT EXISTS webmail_tries (
     failures INTEGER NOT NULL DEFAULT 0,
     locked_until REAL
 );
+-- How each mailbox's webmail shows its mail (webmail/views.py): per folder (its key: inbox,
+-- f-<id>...), the list's sort and filters, and whether the folders inside it are folded away
+CREATE TABLE IF NOT EXISTS webmail_views (
+    mailbox_id INTEGER NOT NULL,
+    folder TEXT NOT NULL,
+    sort TEXT NOT NULL DEFAULT 'newest',
+    filters TEXT NOT NULL DEFAULT '',     -- unread, favorites, important: comma-separated
+    collapsed INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (mailbox_id, folder)
+);
+-- Each mailbox's webmail settings (webmail/views.py, webmail/settings.py)
+CREATE TABLE IF NOT EXISTS webmail_settings (
+    mailbox_id INTEGER PRIMARY KEY,
+    folders_by_name INTEGER NOT NULL DEFAULT 0,  -- "Sort alphabetically", in a folder's menu
+    display_name TEXT,                           -- the name its mail goes out with (Settings > Profile)
+    new_mail_sound INTEGER NOT NULL DEFAULT 1,   -- a sound as new mail comes (Settings > System preferences)
+    notifications INTEGER NOT NULL DEFAULT 0,    -- the computer's own notification too
+    forward_to TEXT,                             -- forwarding (Settings > Forwarding): where to
+    forward_on INTEGER NOT NULL DEFAULT 0,
+    forward_keep INTEGER NOT NULL DEFAULT 1,     -- "Keep an email copy"
+    reply_on INTEGER NOT NULL DEFAULT 0,         -- the auto-reply (Settings > Auto-reply)
+    reply_start TEXT,                            -- from and until (ISO, UTC)
+    reply_end TEXT,
+    reply_subject TEXT,
+    reply_html TEXT
+);
+-- A mailbox's filters (Settings > Filters), in their order: each written into its Sieve script
+-- (webmail/sieve.py), with its conditions and actions as JSON
+CREATE TABLE IF NOT EXISTS webmail_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mailbox_id INTEGER NOT NULL,
+    position INTEGER NOT NULL DEFAULT 0,
+    name TEXT NOT NULL,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    rule TEXT NOT NULL
+);
+-- When a mailbox logged in to the webmail, and from where (Settings > Security)
+CREATE TABLE IF NOT EXISTS webmail_logins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mailbox_id INTEGER NOT NULL,
+    at REAL NOT NULL,
+    address TEXT,
+    agent TEXT
+);
+-- A mailbox's signatures (Settings > Signatures): one may be its default, added to new mail
+CREATE TABLE IF NOT EXISTS webmail_signatures (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mailbox_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    html TEXT NOT NULL,
+    is_default INTEGER NOT NULL DEFAULT 0,
+    created_at REAL NOT NULL
+);
 -- More addresses for a mailbox: mail to them lands in it, and it can send as them
 CREATE TABLE IF NOT EXISTS mailbox_aliases (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -196,7 +250,15 @@ CREATE TABLE IF NOT EXISTS deliveries (
 LATER_COLUMNS = [("domains", "provider", "TEXT"), ("domain_keys", "mail_host", "TEXT"), ("domain_keys", "found", "TEXT"),
                  ("smtp_keys", "login", "TEXT"), ("engine", "certificate_asked_at", "REAL"),
                  ("domain_checks", "every_minutes", "INTEGER"), ("help_links", "shown", "TEXT"),
-                 ("help_links", "url", "TEXT")]
+                 ("help_links", "url", "TEXT"), ("engine", "webmail_password", "TEXT"),
+                 ("webmail_settings", "display_name", "TEXT"),
+                 ("webmail_settings", "new_mail_sound", "INTEGER NOT NULL DEFAULT 1"),
+                 ("webmail_settings", "notifications", "INTEGER NOT NULL DEFAULT 0"),
+                 ("webmail_settings", "forward_to", "TEXT"), ("webmail_settings", "forward_on", "INTEGER NOT NULL DEFAULT 0"),
+                 ("webmail_settings", "forward_keep", "INTEGER NOT NULL DEFAULT 1"),
+                 ("webmail_settings", "reply_on", "INTEGER NOT NULL DEFAULT 0"), ("webmail_settings", "reply_start", "TEXT"),
+                 ("webmail_settings", "reply_end", "TEXT"), ("webmail_settings", "reply_subject", "TEXT"),
+                 ("webmail_settings", "reply_html", "TEXT")]
 
 
 def _add_later_columns(db):

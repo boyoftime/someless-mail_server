@@ -1,0 +1,37 @@
+{% from "webmail-icons.html" import icon %}
+{# The folders in the webmail's side column (webmail-mail.html), as PrivateEmail lists them:
+   Inbox, Drafts, Sent, Archive, Spam and Trash with their icons, each with the folders made in
+   it below it, then the mailbox's own. A folder with folders in it has an arrow that folds them
+   away. Each has its menu (the three dots, or a right-click) and takes messages dropped on it
+   (webmail-folders.js, webmail-actions.js). Sent again whenever the folders change (mail.py).
+   The row's link covers the whole row; its buttons sit above it. #}
+{% macro folder_list(tree, current) %}
+{%- for folder in tree %}{{ folder_item(folder, current) }}{% endfor %}
+{% endmacro %}
+
+{% macro folder_item(folder, current) %}
+{%- set here = current and folder.key == current %}
+<div class="wm-folder-item{% if folder.kids %} has-kids{% endif %}{% if folder.collapsed %} is-collapsed{% endif %}">
+  <div class="wm-folder{% if here %} is-current{% endif %}{% if folder.own %} is-own{% endif %}" style="--depth: {{ folder.depth }}"
+       data-folder="{{ folder.key }}" data-role="{{ folder.role or '' }}" data-root="{{ folder.root or '' }}"
+       data-name="{{ folder.label }}" data-depth="{{ folder.depth }}" data-menu="{{ folder.menu | join(' ') }}"
+       {%- if folder.own %} draggable="true"{% endif %}>
+    {%- if folder.kids %}
+    <button type="button" class="wm-folder-opener" data-wm-fold aria-expanded="{{ 'false' if folder.collapsed else 'true' }}"
+            aria-label="Folders in {{ folder.label }}">{{ icon("chevron-right") }}</button>
+    {%- endif %}
+    <a class="wm-folder-link" href="{{ url_for('mail.folder', folder=folder.key) }}"{% if here %} aria-current="page"{% endif %} draggable="false">
+      {%- if folder.icon %}{{ icon(folder.icon) }}{% endif %}<span class="wm-folder-name">{{ folder.label }}</span>
+    </a>
+    <span class="wm-count"{% if folder.key == 'inbox' %} data-wm-unread{% endif %}{% if not folder.count %} hidden{% endif %}>
+      {{- "999+" if folder.count > 999 else folder.count -}}
+    </span>
+    <button type="button" class="wm-folder-menu" data-wm-folder-menu aria-label="Show folder options" title="Show folder options">{{ icon("more") }}</button>
+  </div>
+  {%- if folder.kids %}
+  <div class="wm-subfolders"><div class="wm-subfolders-clip">
+    {%- for kid in folder.kids %}{{ folder_item(kid, current) }}{% endfor %}
+  </div></div>
+  {%- endif %}
+</div>
+{% endmacro %}

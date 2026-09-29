@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}Contacts | Someless Webmail{% endblock %}
+{% block head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-app.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-settings.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-contacts.css') }}">
+<script src="{{ url_for('static', filename='js/webmail-zone.js') }}"></script>
+{% endblock %}
+{% block body_class %}webmail-app is-contacts{% endblock %}
+{% from "webmail-icons.html" import icon %}
+{% from "webmail-top.html" import top_bar %}
+
+{% macro type_select(name, types, chosen="") -%}
+<select class="wm-input" data-field="type" aria-label="{{ name }} type">
+  {%- for kind in types %}<option value="{{ kind }}"{% if kind == chosen %} selected{% endif %}>{{ type_labels[kind] }}</option>{% endfor %}
+</select>
+{%- endmacro %}
+
+{% block body %}
+{# Contacts (contacts.py, webmail-contacts.js), as PrivateEmail's: the webmail's bar (its search
+   finds contacts here), "Add new contact" and the contact books down the side, and the contacts
+   in a table, a page at a time. One opens in Contact details; its form adds or changes it. #}
+{{ top_bar("contacts", email, name, initial, theme, query=query) }}
+<div class="wm-contacts-shell">
+  <aside class="wm-side wm-contacts-side" id="wm-side" aria-label="Contact books">
+    <button type="button" class="wm-compose wm-add-contact" data-wm-new-contact>{{ icon("plus") }}<span>Add new contact</span></button>
+    <p class="wm-side-label">Contact Books</p>
+    <nav class="wm-books" aria-label="Contact Books">
+      {%- for one in books %}
+      <a class="wm-book{% if one.id == book %} is-current{% endif %}" href="{{ url_for('contacts.index', book=one.id) }}" data-book="{{ one.id }}"
+         {% if one.id == book %}aria-current="page"{% endif %}>{{ icon("book") }}<span>{{ one.name }}</span></a>
+      {%- endfor %}
+    </nav>
+  </aside>
+  <div class="wm-scrim" data-wm-scrim hidden></div>
+
+  <main class="wm-contacts-page" data-wm-contacts data-url="{{ url_for('contacts.index') }}" data-delete-url="{{ url_for('contacts.delete') }}"
+        data-book="{{ book }}" data-q="{{ query }}" data-page="{{ page }}" data-pages="{{ pages }}" data-size="{{ size }}" data-total="{{ total }}">
+    <header class="wm-contacts-head">
+      <h1 class="wm-settings-title">Contacts</h1>
+      {# ticked: how many, all of them across the pages, and Delete #}
+      <div class="wm-bulk" data-wm-bulk hidden>
+        <p class="wm-bulk-label" data-wm-bulk-label></p>
+        <button type="button" class="wm-button is-ghost is-small" data-wm-select-every hidden></button>
+        <button type="button" class="wm-button is-ghost is-small" data-wm-clear-ticks>Clear selection</button>
+        <button type="button" class="wm-button is-danger is-small" data-wm-delete-ticked>{{ icon("trash") }}Delete</button>
+      </div>
+    </header>
+
+    <div class="wm-contacts-card" data-wm-contacts-card{% if not total and not query %} hidden{% endif %}>
+      <table class="wm-table wm-contacts-table">
+        <thead>
+          <tr>
+            <th scope="col" class="is-narrow"><label class="wm-check"><input type="checkbox" data-wm-contacts-all aria-label="Select all contacts"></label></th>
+            <th scope="col">Name</th>
+            <th scope="col" class="is-email">Email</th>
+            <th scope="col" class="is-phone">Phone</th>
+            <th scope="col" class="is-job">Job</th>
+            <th scope="col" class="is-narrow"><span class="visually-hidden">Options</span></th>
+          </tr>
+        </thead>
+        <tbody data-wm-contacts-body>{% include "webmail-contacts-rows.html" %}</tbody>
+      </table>
+      <div class="wm-empty-state wm-contacts-none" data-wm-contacts-none{% if total or not query %} hidden{% endif %}>
+        {{ icon("search") }}
+        <p class="wm-empty-state-title">No Results Found</p>
+        <p class="wm-empty-state-text">Try adjusting your search</p>
+      </div>
+    </div>
+
+    {# no contacts at all #}
+    <div class="wm-empty-state wm-contacts-empty" data-wm-contacts-empty{% if total or query %} hidden{% endif %}>
+      <svg class="wm-contacts-art" viewBox="0 0 96 80" aria-hidden="true">
+        <rect x="14" y="6" width="68" height="68" rx="14"/><circle cx="48" cy="32" r="11"/><path d="M29 60a19 19 0 0 1 38 0"/>
+        <path d="M8 22h10M8 40h10M8 58h10"/>
+      </svg>
+      <p class="wm-empty-state-title">No contacts yet</p>
+      <p class="wm-empty-state-text">Add a contact to view it here.</p>
+      <button type="button" class="wm-button" data-wm-new-contact>{{ icon("plus") }}Add new contact</button>
+    </div>
+
+    {# pages: how many on each, which one, and which of them all #}
+    <nav class="wm-pages" aria-label="Pages" data-wm-pages{% if not total %} hidden{% endif %}>
+      <label class="wm-pages-size"><span>Items per page</span>
+        <select class="wm-input" data-wm-page-size>
+          {%- for one in sizes %}<option value="{{ one }}"{% if one == size %} selected{% endif %}>{{ one }}</option>{% endfor %}
+        </select>
+      </label>
+      <div class="wm-pages-list" data-wm-page-list></div>
+      <p class="wm-pages-where" data-wm-page-where></p>
+    </nav>
+  </main>
+</div>
+
+{# Contact details #}
+<dialog class="wm-dialog wm-sheet wm-contact-sheet" data-wm-contact-view aria-labelledby="contact-view-title">
+  <div class="wm-sheet-card">
+    <header class="wm-sheet-head">
+      <h2 class="wm-sheet-title" id="contact-view-title">Contact details</h2>
+      <div class="wm-sheet-tools">
+        <button type="button" class="wm-icon wm-mini" data-wm-view-edit aria-label="Edit contact" data-tip="Edit contact">{{ icon("edit") }}</button>
+        <button type="button" class="wm-icon wm-mini" data-wm-view-delete aria-label="Delete contact" data-tip="Delete contact">{{ icon("trash") }}</button>
+        <button type="button" class="wm-icon wm-sheet-close" data-wm-close aria-label="Close">{{ icon("close") }}</button>
+      </div>
+    </header>
+    <div class="wm-sheet-body" data-wm-view-body></div>
+  </div>
+</dialog>
+
+{# a contact: added or changed #}
+<dialog class="wm-dialog wm-sheet wm-contact-sheet is-form" data-wm-contact-form-dialog aria-labelledby="contact-form-title">
+  <form class="wm-sheet-card" data-wm-contact-form novalidate>
+    <header class="wm-sheet-head">
+      <h2 class="wm-sheet-title" id="contact-form-title" data-wm-form-title>Add new contact</h2>
+      <button type="button" class="wm-icon wm-sheet-close" data-wm-form-cancel aria-label="Close">{{ icon("close") }}</button>
+    </header>
+    <div class="wm-sheet-body">
+      <div class="wm-contact-photo">
+        <span class="wm-contact-avatar is-big" data-wm-form-avatar aria-hidden="true">{{ icon("user") }}</span>
+        <div class="wm-contact-photo-tools">
+          <label class="wm-button is-ghost is-small">{{ icon("camera") }}<span data-wm-photo-label>Add photo</span>
+            <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-wm-photo-input hidden></label>
+          <button type="button" class="wm-button is-ghost is-small is-danger-text" data-wm-photo-remove hidden>Remove</button>
+        </div>
+      </div>
+      <label class="wm-label" for="contact-display-name">Display name</label>
+      <input id="contact-display-name" class="wm-input" name="display_name" maxlength="255" placeholder="Enter display name" autocomplete="off">
+      <div class="wm-contact-names">
+        <div><label class="wm-label" for="contact-first-name">First name</label>
+          <input id="contact-first-name" class="wm-input" name="first_name" maxlength="127" placeholder="Enter first name" autocomplete="off"></div>
+        <div><label class="wm-label" for="contact-last-name">Last name</label>
+          <input id="contact-last-name" class="wm-input" name="last_name" maxlength="127" placeholder="Enter last name" autocomplete="off"></div>
+      </div>
+
+      <section class="wm-contact-section" data-wm-list-of="emails">
+        <h3 class="wm-contact-section-title">Email</h3>
+        <div class="wm-contact-rows" data-wm-rows></div>
+        <button type="button" class="wm-button is-ghost is-small wm-contact-add" data-wm-add>{{ icon("plus") }}Add</button>
+      </section>
+      <section class="wm-contact-section" data-wm-list-of="phones">
+        <h3 class="wm-contact-section-title">Phone</h3>
+        <div class="wm-contact-rows" data-wm-rows></div>
+        <button type="button" class="wm-button is-ghost is-small wm-contact-add" data-wm-add>{{ icon("plus") }}Add</button>
+      </section>
+      <section class="wm-contact-section">
+        <h3 class="wm-contact-section-title">Job</h3>
+        <label class="wm-label" for="contact-job-title">Job title</label>
+        <input id="contact-job-title" class="wm-input" name="job_title" maxlength="255" placeholder="Enter job title" autocomplete="off">
+        <div class="wm-contact-names">
+          <div><label class="wm-label" for="contact-company">Company</label>
+            <input id="contact-company" class="wm-input" name="company" maxlength="255" placeholder="Enter company" autocomplete="off"></div>
+          <div><label class="wm-label" for="contact-department">Department</label>
+            <input id="contact-department" class="wm-input" name="department" maxlength="255" placeholder="Enter department" autocomplete="off"></div>
+        </div>
+      </section>
+      <section class="wm-contact-section" data-wm-list-of="addresses">
+        <h3 class="wm-contact-section-title">Address</h3>
+        <div class="wm-contact-rows" data-wm-rows></div>
+        <button type="button" class="wm-button is-ghost is-small wm-contact-add" data-wm-add>{{ icon("plus") }}Add</button>
+      </section>
+      <section class="wm-contact-section">
+        <h3 class="wm-contact-section-title">Birthday</h3>
+        <input class="wm-input wm-contact-birthday" name="birthday" type="date" aria-label="Birthday" placeholder="Select date">
+      </section>
+      <section class="wm-contact-section">
+        <h3 class="wm-contact-section-title">Notes</h3>
+        <textarea class="wm-input wm-contact-notes" name="notes" rows="3" maxlength="5000" placeholder="Add a note" aria-label="Notes"></textarea>
+      </section>
+      <p class="wm-field-problem" data-wm-problem hidden></p>
+    </div>
+    <footer class="wm-sheet-foot">
+      <button type="button" class="wm-button is-ghost" data-wm-form-cancel>Cancel</button>
+      <button type="submit" class="wm-button">Save</button>
+    </footer>
+  </form>
+</dialog>
+
+{# a row of the form's lists, drawn by webmail-contacts.js #}
+<template data-wm-row="emails">
+  <div class="wm-contact-row">{{ type_select("Email", email_types, "work") }}
+    <input class="wm-input" data-field="value" type="email" maxlength="254" placeholder="Enter email address" autocomplete="off" aria-label="Email address">
+    <button type="button" class="wm-icon wm-mini" data-wm-remove aria-label="Remove email" data-tip="Remove email">{{ icon("close") }}</button></div>
+</template>
+<template data-wm-row="phones">
+  <div class="wm-contact-row">{{ type_select("Phone", phone_types, "mobile") }}
+    <input class="wm-input" data-field="value" type="tel" maxlength="64" placeholder="Enter phone number" autocomplete="off" aria-label="Phone number">
+    <button type="button" class="wm-icon wm-mini" data-wm-remove aria-label="Remove phone" data-tip="Remove phone">{{ icon("close") }}</button></div>
+</template>
+<template data-wm-row="addresses">
+  <div class="wm-contact-row is-address">{{ type_select("Address", address_types, "home") }}
+    <div class="wm-contact-address">
+      <input class="wm-input" data-field="street" maxlength="255" placeholder="Street address" autocomplete="off" aria-label="Street address">
+      <div class="wm-contact-names">
+        <input class="wm-input" data-field="city" maxlength="127" placeholder="City" autocomplete="off" aria-label="City">
+        <input class="wm-input" data-field="state" maxlength="127" placeholder="State/Province" autocomplete="off" aria-label="State or province">
+      </div>
+      <div class="wm-contact-names">
+        <input class="wm-input" data-field="postcode" maxlength="32" placeholder="ZIP/Postal code" autocomplete="off" aria-label="ZIP or postal code">
+        <input class="wm-input" data-field="country" maxlength="127" placeholder="Country" autocomplete="off" aria-label="Country">
+      </div>
+    </div>
+    <button type="button" class="wm-icon wm-mini" data-wm-remove aria-label="Remove address" data-tip="Remove address">{{ icon("close") }}</button></div>
+</template>
+
+<div class="wm-toasts" data-wm-toasts role="status" aria-live="polite"></div>
+<template id="wm-icons">
+  {%- for symbol in ["close", "check", "warning", "copy", "edit", "trash", "plus", "eye", "mail", "phone", "briefcase", "pin", "cake",
+                     "note", "user", "chevron", "chevron-left", "chevron-right", "more", "search", "book"] %}
+  <span data-icon="{{ symbol }}">{{ icon(symbol) }}</span>
+  {%- endfor %}
+</template>
+<script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+<script src="{{ url_for('static', filename='js/copy-button.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/webmail-core.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-app.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-contacts.js') }}" data-mail-url="{{ url_for('mail.folder', folder='inbox') }}"></script>
+{% endblock %}

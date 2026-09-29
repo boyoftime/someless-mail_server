@@ -1,0 +1,145 @@
+/* Contacts (webmail-contacts.html), as PrivateEmail's address book: "Add new contact" and the
+   contact books down the side, the contacts in a white table with 8px corners on the sunken grey,
+   the pages under it (how many on each, the numbers, which of them all), and Contact details and
+   the form as sheets: rows of a label (160px) and its value; the form's lists as a type (150px),
+   the value and a remove button. */
+.wm-contacts-shell { display: grid; grid-template-columns: 250px minmax(0, 1fr); min-height: 0; }
+.wm-add-contact { display: flex; align-items: center; justify-content: center; gap: 0.45rem; }
+.wm-add-contact svg { width: 18px; height: 18px; }
+.wm-books { display: grid; align-content: start; }
+.wm-book { display: flex; align-items: center; gap: 0.7rem; height: 36px; padding: 0 1rem 0 1.25rem; color: var(--wm-ink); font-size: 0.875rem; text-decoration: none; transition: background-color 0.12s ease; }
+.wm-book:hover { background: var(--wm-hover); }
+.wm-book.is-current { background: var(--wm-current); font-weight: 700; }
+.wm-book svg { flex: none; width: 17px; height: 17px; }
+.wm-book:hover svg, .wm-book.is-current svg { color: var(--wm-blue); }
+.wm-book span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wm-book:focus-visible { outline: 2px solid var(--wm-blue); outline-offset: -2px; }
+
+.wm-contacts-page { min-width: 0; min-height: 0; padding: 1.25rem 2rem 2.5rem; overflow-y: auto; background: var(--wm-reader); scrollbar-width: thin; }
+.wm-contacts-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1rem; min-height: 44px; margin-bottom: 1rem; }
+.wm-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; padding: 4px 4px 4px 1rem; border-radius: 999px; background: var(--wm-card); box-shadow: 0 0 0 1px var(--wm-card-line); animation: wm-card-in 0.2s var(--wm-ease) backwards; }
+.wm-bulk[hidden] { display: none; }
+.wm-bulk-label { margin: 0 0.4rem 0 0; font-size: 0.86rem; font-weight: 600; }
+
+/* the table */
+.wm-contacts-card { overflow: hidden; border-radius: 8px; background: var(--wm-card); box-shadow: 0 0 0 1px var(--wm-card-line); transition: opacity 0.15s ease; }
+.wm-contacts-card[hidden] { display: none; }
+.wm-contacts-card.is-loading { opacity: 0.55; pointer-events: none; }
+.wm-contacts-table { table-layout: fixed; }
+.wm-contacts-table th { padding: 0.8rem 0.75rem; }
+.wm-contacts-table th:first-child, .wm-contacts-table td:first-child { width: 48px; padding-left: 1.1rem; }
+.wm-contacts-table th:last-child, .wm-contacts-table td:last-child { width: 52px; }
+.wm-contacts-table th.is-email { width: 28%; }
+.wm-contacts-table th.is-phone { width: 17%; }
+.wm-contacts-table th.is-job { width: 20%; }
+.wm-contact td { padding: 0.45rem 0.75rem; }
+.wm-contact.is-ticked, .wm-contact.is-ticked:hover { background: var(--wm-current); }
+.wm-contact-open { display: flex; align-items: center; gap: 0.75rem; width: 100%; min-width: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.wm-contact-open:focus-visible { outline: 2px solid var(--wm-blue); outline-offset: 4px; border-radius: 6px; }
+.wm-contact-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--wm-avatar);
+  color: var(--wm-avatar-ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.wm-contact-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.wm-contact-avatar svg { width: 55%; height: 55%; }
+.wm-contact-avatar.is-big { width: 72px; height: 72px; font-size: 1.5rem; }
+.wm-contact-text { display: grid; min-width: 0; }
+.wm-contact-name, .wm-contact-sub, .wm-contact-cell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wm-contact-name { font-weight: 600; }
+.wm-contact-sub { display: none; color: var(--wm-soft); font-size: 0.8rem; }
+.wm-contact-cell { color: var(--wm-soft); cursor: pointer; }
+.wm-contact .wm-icon.wm-mini { color: var(--wm-soft); }
+@media (prefers-reduced-motion: no-preference) {
+  .wm-contact { animation: wm-in-fade 0.25s ease backwards; animation-delay: calc(min(var(--i, 0), 12) * 0.015s); }
+}
+.wm-contacts-none { padding: 3.5rem 1rem; }
+
+/* no contacts yet */
+.wm-contacts-empty { min-height: 520px; align-content: center; border-radius: 8px; background: var(--wm-card); box-shadow: 0 0 0 1px var(--wm-card-line); }
+.wm-contacts-art { width: 96px; height: 80px; margin-bottom: 0.8rem; color: var(--wm-faint); stroke-width: 2.2; }
+.wm-contacts-empty .wm-button svg { width: 16px; height: 16px; }
+
+/* the pages */
+.wm-pages { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 0.75rem 1rem; margin-top: 1rem; }
+.wm-pages[hidden] { display: none; }
+.wm-pages-size { display: flex; align-items: center; gap: 0.6rem; color: var(--wm-soft); font-size: 0.82rem; white-space: nowrap; }
+body.webmail-app .wm-pages-size select.wm-input { width: 5.2rem; height: 34px; }
+.wm-pages-list { display: flex; align-items: center; gap: 4px; }
+.wm-page { display: grid; place-items: center; min-width: 34px; height: 34px; padding: 0 0.55rem; border: 0; border-radius: 999px; background: transparent; color: var(--wm-ink); font: inherit; font-size: 0.86rem; cursor: pointer; transition: background-color 0.12s ease; }
+.wm-page:hover:not(:disabled) { background: var(--wm-icon-hover); }
+.wm-page.is-current, .wm-page.is-current:hover { background: var(--wm-blue); color: #fff; font-weight: 700; }
+.wm-page:disabled { opacity: 0.35; cursor: default; }
+.wm-page svg { width: 16px; height: 16px; }
+.wm-page-gap { min-width: 20px; color: var(--wm-faint); text-align: center; }
+.wm-pages-where { justify-self: end; margin: 0; color: var(--wm-soft); font-size: 0.82rem; white-space: nowrap; }
+
+/* Contact details */
+.wm-contact-sheet .wm-sheet-card { width: 36rem; }
+.wm-contact-sheet.is-form .wm-sheet-card { width: 40rem; }
+.wm-contact-identity { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.wm-contact-who-text { min-width: 0; }
+.wm-contact-big-name { display: -webkit-box; margin: 0; overflow: hidden; font-size: 1.25rem; font-weight: 700; line-height: 1.3; word-break: break-word; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.wm-contact-job { margin: 0.2rem 0 0; color: var(--wm-soft); font-size: 0.86rem; }
+.wm-contact-group { padding: 0.9rem 0; border-top: 1px solid var(--wm-line); font-size: 0.875rem; }
+.wm-contact-group-title { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.35rem; color: var(--wm-faint); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.wm-contact-group-title svg { width: 15px; height: 15px; }
+.wm-contact-line { display: grid; grid-template-columns: 160px minmax(0, 1fr); align-items: start; gap: 1rem; padding: 6px 0; }
+.wm-contact-label { color: var(--wm-soft); }
+.wm-contact-value-wrap { display: flex; align-items: flex-start; gap: 0.25rem; min-width: 0; }
+.wm-contact-value { min-width: 0; color: var(--wm-ink); white-space: pre-line; word-break: break-word; }
+a.wm-contact-value { color: var(--wm-link); text-decoration: none; }
+a.wm-contact-value:hover { text-decoration: underline; }
+.wm-contact-value-wrap .wm-icon.wm-mini { width: 28px; height: 28px; margin: -5px 0 -5px 0.15rem; color: var(--wm-soft); opacity: 0; transition: opacity 0.12s ease; }
+.wm-contact-value-wrap .wm-icon.wm-mini svg { width: 15px; height: 15px; }
+.wm-contact-line:hover .wm-icon.wm-mini, .wm-contact-value-wrap .wm-icon.wm-mini:focus-visible { opacity: 1; }
+@media (hover: none) { .wm-contact-value-wrap .wm-icon.wm-mini { opacity: 1; } }
+
+/* the form */
+.wm-contact-photo { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.4rem; }
+.wm-contact-photo-tools { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.wm-contact-photo-tools label.wm-button { cursor: pointer; }
+.wm-contact-names { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.75rem; }
+.wm-contact-section { margin-top: 1.6rem; }
+.wm-contact-section-title { margin: 0 0 0.6rem; color: var(--wm-soft); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+.wm-contact-section .wm-label:first-of-type { margin-top: 0; }
+.wm-contact-rows { display: grid; gap: 0.5rem; }
+.wm-contact-rows:empty { display: none; }
+.wm-contact-row { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; align-items: start; gap: 0.5rem; animation: wm-card-in 0.2s var(--wm-ease) backwards; }
+.wm-contact-row > .wm-icon.wm-mini { margin-top: 4px; color: var(--wm-soft); }
+.wm-contact-address { display: grid; gap: 0.5rem; min-width: 0; }
+.wm-contact-add { margin-top: 0.55rem; }
+.wm-contact-add[hidden] { display: none; }
+body.webmail-app textarea.wm-input.wm-contact-notes { height: auto; min-height: 5.5rem; padding: 0.6rem 0.8rem; line-height: 1.5; resize: vertical; }
+body.webmail-app .wm-contact-birthday { max-width: 14rem; }
+
+@media (max-width: 1199px) {
+  .wm-contacts-shell { grid-template-columns: 13.75rem minmax(0, 1fr); }
+  .wm-contacts-page { padding: 1.1rem 1.5rem 2rem; }
+  .wm-contacts-table th.is-job, .wm-contacts-table td.is-job { display: none; }
+}
+@media (max-width: 860px) {
+  .wm-contacts-shell { grid-template-columns: minmax(0, 1fr); }
+  .wm-contacts-table th.is-email, .wm-contacts-table td.is-email, .wm-contacts-table th.is-phone, .wm-contacts-table td.is-phone { display: none; }
+  .wm-contact-sub { display: block; }
+  .wm-pages { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+  .wm-pages-where { justify-self: center; }
+}
+@media (max-width: 600px) {
+  .wm-contacts-page { padding: 0.9rem 0.75rem 1.5rem; }
+  .wm-contacts-table th:first-child, .wm-contacts-table td:first-child { width: 40px; padding-left: 0.75rem; }
+  .wm-contact-line { grid-template-columns: minmax(0, 1fr); gap: 0.1rem; }
+  .wm-contact-row { grid-template-columns: minmax(0, 6.5rem) minmax(0, 1fr) auto; }
+  .wm-contact-names { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .wm-contact-names .wm-input + .wm-input { margin-top: 0.5rem; }
+  .wm-contacts-empty { min-height: 380px; }
+}

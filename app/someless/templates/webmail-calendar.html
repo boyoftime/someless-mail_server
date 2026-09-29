@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}Calendar | Someless Webmail{% endblock %}
+{% block head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-app.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-settings.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-calendar.css') }}">
+<script src="{{ url_for('static', filename='js/webmail-zone.js') }}"></script>
+{% endblock %}
+{% block body_class %}webmail-app is-calendar{% endblock %}
+{% from "webmail-icons.html" import icon %}
+{% from "webmail-top.html" import top_bar %}
+
+{% block body %}
+{# The calendar (calendar.py, webmail-calendar.js), as PrivateEmail's: "Create event", a month to
+   pick a date from and the calendars down the side; Today, the arrows, the dates in view and
+   Daily, Workdays, Weekly or Monthly across the top; and the days, their hours and events. #}
+{{ top_bar("calendar", email, name, initial, theme) }}
+<div class="wm-cal-shell">
+  <aside class="wm-side wm-cal-side" id="wm-side" aria-label="Calendars">
+    <button type="button" class="wm-compose wm-cal-create" data-wm-create-event>{{ icon("plus") }}<span>Create event</span></button>
+    <section class="wm-mini" data-wm-mini aria-label="Pick a date">
+      <header class="wm-mini-head">
+        <p class="wm-mini-title" data-wm-mini-title></p>
+        <button type="button" class="wm-icon wm-mini-arrow" data-wm-mini-step="-1" aria-label="Previous month">{{ icon("chevron-left") }}</button>
+        <button type="button" class="wm-icon wm-mini-arrow" data-wm-mini-step="1" aria-label="Next month">{{ icon("chevron-right") }}</button>
+      </header>
+      <div class="wm-mini-grid" data-wm-mini-grid></div>
+    </section>
+    <p class="wm-side-label">Calendars</p>
+    <ul class="wm-calendars" data-wm-calendars></ul>
+  </aside>
+  <div class="wm-scrim" data-wm-scrim hidden></div>
+
+  <main class="wm-cal" data-wm-calendar data-view="{{ view }}" data-date="{{ date }}" data-today="{{ today }}"
+        data-url="{{ url_for('calendar.index') }}" data-events-url="{{ url_for('calendar.events') }}"
+        data-event-url="{{ url_for('calendar.create') }}" data-calendar-url="{{ url_for('calendar.index') }}/calendars"
+        data-zone="{{ zone_name }}" data-own="{{ own | tojson | forceescape }}" data-calendars="{{ calendars | tojson | forceescape }}"
+        data-colors="{{ colors | list | tojson | forceescape }}">
+    <header class="wm-cal-nav">
+      <button type="button" class="wm-button is-ghost wm-cal-today" data-wm-today>Today</button>
+      <div class="wm-cal-arrows">
+        <button type="button" class="wm-icon" data-wm-step="-1" aria-label="Previous" data-tip="Previous">{{ icon("chevron-left") }}</button>
+        <button type="button" class="wm-icon" data-wm-step="1" aria-label="Next" data-tip="Next">{{ icon("chevron-right") }}</button>
+      </div>
+      <h1 class="wm-cal-title" data-wm-cal-title aria-live="polite"></h1>
+      <div class="wm-toggle-group wm-cal-views" role="radiogroup" aria-label="View">
+        {%- for key, label in [("day", "Daily"), ("workweek", "Workdays"), ("week", "Weekly"), ("month", "Monthly")] %}
+        <button type="button" class="wm-toggle" role="radio" aria-checked="{{ 'true' if key == view else 'false' }}" data-view="{{ key }}">{{ label }}</button>
+        {%- endfor %}
+      </div>
+    </header>
+    <div class="wm-cal-view" data-wm-cal-view aria-busy="true"></div>
+  </main>
+</div>
+<button type="button" class="wm-cal-fab" data-wm-create-event aria-label="Create event">{{ icon("plus") }}</button>
+
+{# an event: its time, place, people and answer #}
+<dialog class="wm-dialog wm-event-view" data-wm-event-view aria-labelledby="event-view-title">
+  <div class="wm-event-card">
+    <header class="wm-event-tools">
+      <button type="button" class="wm-icon wm-mini" data-wm-event-edit aria-label="Edit event" data-tip="Edit event">{{ icon("edit") }}</button>
+      <button type="button" class="wm-icon wm-mini" data-wm-event-delete aria-label="Delete event" data-tip="Delete event">{{ icon("trash") }}</button>
+      <button type="button" class="wm-icon wm-mini" data-wm-close aria-label="Close">{{ icon("close") }}</button>
+    </header>
+    <div class="wm-event-body" data-wm-event-body>
+      <h2 class="wm-event-title" id="event-view-title" data-wm-event-title></h2>
+    </div>
+    <footer class="wm-event-answer" data-wm-event-answer hidden>
+      <div class="wm-toggle-group" role="radiogroup" aria-label="Your answer">
+        <button type="button" class="wm-toggle" role="radio" aria-checked="false" data-answer="accepted">Accept</button>
+        <button type="button" class="wm-toggle" role="radio" aria-checked="false" data-answer="tentative">Maybe</button>
+        <button type="button" class="wm-toggle" role="radio" aria-checked="false" data-answer="declined">Decline</button>
+      </div>
+    </footer>
+  </div>
+</dialog>
+
+{# an event: made or changed #}
+<dialog class="wm-dialog wm-sheet wm-event-sheet" data-wm-event-form-dialog aria-labelledby="event-form-title">
+  <form class="wm-sheet-card" data-wm-event-form novalidate>
+    <header class="wm-sheet-head">
+      <h2 class="wm-sheet-title" id="event-form-title" data-wm-event-form-title>Create event</h2>
+      <button type="button" class="wm-icon wm-sheet-close" data-wm-event-cancel aria-label="Close">{{ icon("close") }}</button>
+    </header>
+    <div class="wm-sheet-body">
+      <label class="wm-label" for="event-title">Event title</label>
+      <input id="event-title" class="wm-input wm-event-title-input" name="title" maxlength="255" placeholder="Add event title" autocomplete="off">
+      <label class="wm-check-line wm-event-all-day"><input type="checkbox" name="all_day"><span>All day</span></label>
+      <div class="wm-event-when">
+        <p class="wm-label">Event starts</p>
+        <div class="wm-event-when-row">
+          <input class="wm-input" type="date" name="start_date" aria-label="Start date" required>
+          <input class="wm-input" type="time" name="start_time" step="300" aria-label="Start time" required>
+        </div>
+        <p class="wm-label">Event ends</p>
+        <div class="wm-event-when-row">
+          <input class="wm-input" type="date" name="end_date" aria-label="End date" required>
+          <input class="wm-input" type="time" name="end_time" step="300" aria-label="End time" required>
+        </div>
+      </div>
+      <div class="wm-event-pair">
+        <div>
+          <label class="wm-label" for="event-repeats">Event repeats</label>
+          <select id="event-repeats" class="wm-input" name="repeats" data-wm-repeats>
+            <option value="never">Never</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="yearly">Yearly</option>
+            <option value="set" data-wm-repeat-set hidden></option>
+            <option value="custom">Custom...</option>
+          </select>
+        </div>
+        <div>
+          <label class="wm-label" for="event-calendar">Calendar</label>
+          <select id="event-calendar" class="wm-input" name="calendar" data-wm-event-calendar></select>
+        </div>
+      </div>
+      <label class="wm-label" for="event-people">Participants <span class="wm-optional">Optional</span></label>
+      <div class="wm-people-field" data-wm-people>
+        <input id="event-people" class="wm-people-input" type="email" placeholder="email@email.com" autocomplete="off" data-wm-people-input>
+      </div>
+      <label class="wm-label" for="event-location">Location <span class="wm-optional">Optional</span></label>
+      <input id="event-location" class="wm-input" name="location" maxlength="255" placeholder="Link or address" autocomplete="off">
+      <label class="wm-label" for="event-description">Description <span class="wm-optional">Optional</span></label>
+      <textarea id="event-description" class="wm-input wm-event-description" name="description" rows="5" maxlength="10000" placeholder="Add description"></textarea>
+      <p class="wm-field-problem" data-wm-problem hidden></p>
+    </div>
+    <footer class="wm-sheet-foot">
+      <button type="button" class="wm-button is-ghost" data-wm-event-cancel>Cancel</button>
+      <button type="submit" class="wm-button" data-wm-event-save>Create event</button>
+    </footer>
+  </form>
+</dialog>
+
+{# Custom recurrence #}
+<dialog class="wm-dialog" data-wm-repeat-dialog aria-labelledby="repeat-title">
+  <form class="wm-dialog-card wm-repeat-card" data-wm-repeat-form novalidate>
+    <h2 class="wm-dialog-title" id="repeat-title">Custom recurrence</h2>
+    <p class="wm-label">Repeats every</p>
+    <div class="wm-repeat-every">
+      <input class="wm-input" type="number" name="interval" min="1" max="999" value="1" aria-label="Repeats every">
+      <select class="wm-input" name="frequency" aria-label="Period">
+        <option value="daily">Day</option><option value="weekly">Week</option><option value="monthly">Month</option><option value="yearly">Year</option>
+      </select>
+    </div>
+    <div class="wm-repeat-days" data-wm-repeat-days role="group" aria-label="On">
+      {%- for key, short, long in [("su", "S", "Sunday"), ("mo", "M", "Monday"), ("tu", "T", "Tuesday"), ("we", "W", "Wednesday"),
+                                   ("th", "T", "Thursday"), ("fr", "F", "Friday"), ("sa", "S", "Saturday")] %}
+      <button type="button" class="wm-repeat-day" aria-pressed="false" data-day="{{ key }}" aria-label="{{ long }}" title="{{ long }}">{{ short }}</button>
+      {%- endfor %}
+    </div>
+    <div class="wm-repeat-monthly" data-wm-repeat-monthly>
+      <label class="wm-radio-line"><input type="radio" name="monthly" value="day" checked><span data-wm-repeat-on-day></span></label>
+      <label class="wm-radio-line"><input type="radio" name="monthly" value="ordinal"><span data-wm-repeat-on-ordinal></span></label>
+    </div>
+    <p class="wm-label">Ends on</p>
+    <div class="wm-repeat-ends">
+      <label class="wm-radio-line"><input type="radio" name="ends" value="never" checked><span>Never</span></label>
+      <label class="wm-radio-line"><input type="radio" name="ends" value="on"><span>On</span>
+        <input class="wm-input" type="date" name="until" aria-label="Ends on date"></label>
+      <label class="wm-radio-line"><input type="radio" name="ends" value="after"><span>After</span>
+        <input class="wm-input" type="number" name="count" min="1" max="999" value="10" aria-label="Number of events"><span>events</span></label>
+    </div>
+    <p class="wm-field-problem" data-wm-problem hidden></p>
+    <div class="wm-dialog-actions">
+      <button type="button" class="wm-button is-ghost" data-wm-repeat-cancel>Cancel</button>
+      <button type="submit" class="wm-button">Apply</button>
+    </div>
+  </form>
+</dialog>
+
+{# a calendar's settings: its name and colour #}
+<dialog class="wm-dialog" data-wm-calendar-dialog aria-labelledby="calendar-settings-title">
+  <form class="wm-dialog-card" data-wm-calendar-form novalidate>
+    <h2 class="wm-dialog-title" id="calendar-settings-title">Calendar settings</h2>
+    <label class="wm-label" for="calendar-name">Name</label>
+    <input id="calendar-name" class="wm-input" name="name" maxlength="100" autocomplete="off">
+    <p class="wm-label">Color</p>
+    <div class="wm-swatches" role="radiogroup" aria-label="Color" data-wm-swatches>
+      {%- for color in colors %}
+      <button type="button" class="wm-swatch" role="radio" aria-checked="false" data-color="{{ color }}" style="--swatch: {{ color }}" aria-label="{{ color }}"></button>
+      {%- endfor %}
+    </div>
+    <p class="wm-field-problem" data-wm-problem hidden></p>
+    <div class="wm-dialog-actions">
+      <button type="button" class="wm-button is-ghost" data-wm-close>Cancel</button>
+      <button type="submit" class="wm-button">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="wm-toasts" data-wm-toasts role="status" aria-live="polite"></div>
+<template id="wm-icons">
+  {%- for symbol in ["close", "check", "warning", "edit", "trash", "plus", "more", "clock", "pin", "calendar", "user", "note",
+                     "refresh", "settings", "chevron-left", "chevron-right", "link", "mail", "eye"] %}
+  <span data-icon="{{ symbol }}">{{ icon(symbol) }}</span>
+  {%- endfor %}
+</template>
+<script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+<script src="{{ url_for('static', filename='js/copy-button.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/webmail-core.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-app.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-calendar.js') }}"></script>
+{% endblock %}

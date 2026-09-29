@@ -1,0 +1,204 @@
+{% extends "webmail-settings-base.html" %}
+{% from "webmail-icons.html" import icon %}
+{# Settings' cards, as PrivateEmail's (settings.py, webmail-settings.js): Profile, System
+   preferences, Signature, Forwarding, Filters, Auto-reply, Spam management, Connect third-party
+   apps and Security Center, a filter above them for the kind. #}
+{% block settings %}
+<header class="wm-settings-head">
+  <h1 class="wm-settings-title">Settings</h1>
+  <div class="wm-settings-kinds" role="tablist" aria-label="Show">
+    {%- for key, label in [("all", "All"), ("basic", "Basic"), ("email", "Email"), ("security", "Security")] %}
+    <button type="button" class="wm-kind{% if key == 'all' %} is-on{% endif %}" role="tab" aria-selected="{{ 'true' if key == 'all' else 'false' }}" data-kind="{{ key }}">{{ label }}</button>
+    {%- endfor %}
+  </div>
+</header>
+
+<div class="wm-cards" data-wm-cards>
+  {# Profile: the name mail goes out with, the address, the keys #}
+  <section class="wm-card" data-kind="basic" aria-labelledby="card-profile">
+    <h2 class="wm-card-title" id="card-profile">Profile</h2>
+    <div class="wm-card-body">
+      <div class="wm-profile-head">
+        <span class="wm-profile-avatar" aria-hidden="true">{{ initial }}</span>
+        <div class="wm-profile-who">
+          <p class="wm-profile-name" data-wm-profile-name>{{ display_name or name }}</p>
+          <p class="wm-profile-email">{{ email }}</p>
+        </div>
+      </div>
+      <form class="wm-field-form" data-wm-profile-form novalidate>
+        <label class="wm-label" for="display-name">Display name</label>
+        <div class="wm-field-row">
+          <input id="display-name" class="wm-input" name="display_name" type="text" maxlength="127" placeholder="Enter new name"
+                 value="{{ display_name }}" autocomplete="name">
+          <button type="submit" class="wm-button is-small">Save</button>
+        </div>
+        <p class="wm-field-problem" data-wm-problem hidden></p>
+      </form>
+      <p class="wm-label">Email address</p>
+      <p class="wm-copy-line"><span>{{ email }}</span>
+        <button type="button" class="wm-icon wm-mini" data-wm-copy="{{ email }}" data-copied="Email copied!" aria-label="Copy your email address" data-tip="Copy">{{ icon("copy") }}</button></p>
+    </div>
+    <div class="wm-card-foot"><button type="button" class="wm-button is-ghost" data-wm-shortcuts>See keyboard shortcuts</button></div>
+  </section>
+
+  {# System preferences: light or dark, the new-mail sound, the computer's notifications #}
+  <section class="wm-card" data-kind="basic" aria-labelledby="card-system">
+    <h2 class="wm-card-title" id="card-system">System preferences</h2>
+    <div class="wm-card-body">
+      <p class="wm-label">Appearance</p>
+      <div class="wm-toggle-group" role="radiogroup" aria-label="Appearance" data-wm-appearance>
+        <button type="button" class="wm-toggle" role="radio" aria-checked="{{ 'true' if theme == 'light' else 'false' }}" data-theme-value="light">{{ icon("sun") }}<span>Light</span></button>
+        <button type="button" class="wm-toggle" role="radio" aria-checked="{{ 'true' if theme == 'dark' else 'false' }}" data-theme-value="dark">{{ icon("moon") }}<span>Dark</span></button>
+      </div>
+      <div class="wm-setting-row">
+        <div class="wm-setting-text">
+          <p class="wm-setting-name">New mail sound</p>
+          <p class="wm-setting-hint">A short tone when mail comes to your Inbox.</p>
+        </div>
+        <button type="button" class="wm-icon wm-mini" data-wm-hear aria-label="Play the sound" data-tip="Play the sound">{{ icon("refresh") }}</button>
+        <button type="button" class="wm-switch-button" role="switch" aria-checked="{{ 'true' if preferences.new_mail_sound else 'false' }}"
+                data-wm-preference="new_mail_sound" aria-label="New mail sound"><span class="wm-switch"><span></span></span></button>
+      </div>
+      <div class="wm-setting-row">
+        <div class="wm-setting-text">
+          <p class="wm-setting-name">Desktop notifications</p>
+          <p class="wm-setting-hint">Your computer shows new mail while the webmail is out of sight.</p>
+        </div>
+        <button type="button" class="wm-switch-button" role="switch" aria-checked="{{ 'true' if preferences.notifications else 'false' }}"
+                data-wm-preference="notifications" aria-label="Desktop notifications"><span class="wm-switch"><span></span></span></button>
+      </div>
+      <audio data-wm-sound src="{{ url_for('static', filename='sounds/new-mail.mp3') }}" preload="none"></audio>
+    </div>
+  </section>
+
+  {# Signature: the default one #}
+  <section class="wm-card" data-kind="email" aria-labelledby="card-signature">
+    <h2 class="wm-card-title" id="card-signature">Signature</h2>
+    <div class="wm-card-body is-centred">
+      {%- if default_signature %}
+      <p class="wm-label">Default signature</p>
+      <p class="wm-card-strong">{{ default_signature.name }}</p>
+      <div class="wm-signature-peek">{{ default_signature.html | safe }}</div>
+      {%- elif signature_count %}
+      <p>You have {{ signature_count }} signature{{ "s" if signature_count > 1 }}, none of them the default.</p>
+      {%- else %}
+      <p>You have no signatures associated to your account</p>
+      {%- endif %}
+    </div>
+    <div class="wm-card-foot"><a class="wm-button is-ghost" href="{{ url_for('settings.signatures_page') }}">Manage signatures</a></div>
+  </section>
+
+  {# Forwarding: one address, on or off, a copy kept or not #}
+  <section class="wm-card{% if rules.forward_to %} has-forwarding{% endif %}" data-kind="email" aria-labelledby="card-forwarding" data-wm-forwarding
+           data-address="{{ rules.forward_to or '' }}">
+    <h2 class="wm-card-title" id="card-forwarding">Forwarding</h2>
+    <div class="wm-card-body" data-wm-forwarding-on{% if not rules.forward_to %} hidden{% endif %}>
+      <div class="wm-setting-row">
+        <p class="wm-setting-name">Email forwarding</p>
+        <button type="button" class="wm-switch-button" role="switch" aria-checked="{{ 'true' if rules.forward_on else 'false' }}"
+                data-wm-forward-switch="on" aria-label="Email forwarding"><span class="wm-switch"><span></span></span></button>
+      </div>
+      <p class="wm-label">Forwarding to</p>
+      <p class="wm-copy-line"><span data-wm-forward-address>{{ rules.forward_to or "" }}</span>
+        <button type="button" class="wm-icon wm-mini" data-wm-forward-edit aria-label="Edit" data-tip="Edit">{{ icon("edit") }}</button>
+        <button type="button" class="wm-icon wm-mini" data-wm-forward-delete aria-label="Delete forward address" data-tip="Delete forward address">{{ icon("trash") }}</button></p>
+      <div class="wm-setting-row">
+        <p class="wm-setting-name">Keep an email copy</p>
+        <button type="button" class="wm-switch-button" role="switch" aria-checked="{{ 'true' if rules.forward_keep else 'false' }}"
+                data-wm-forward-switch="keep" aria-label="Keep an email copy"><span class="wm-switch"><span></span></span></button>
+      </div>
+    </div>
+    <div class="wm-card-body is-centred" data-wm-forwarding-off{% if rules.forward_to %} hidden{% endif %}>
+      <p>You don't have any forwarding rules set up yet</p>
+    </div>
+    <div class="wm-card-foot" data-wm-forwarding-add{% if rules.forward_to %} hidden{% endif %}>
+      <button type="button" class="wm-button is-ghost" data-wm-forward-edit>Add a forwarding address</button>
+    </div>
+  </section>
+
+  {# Filters: how many #}
+  <section class="wm-card" data-kind="email" aria-labelledby="card-filters">
+    <h2 class="wm-card-title" id="card-filters">Filters</h2>
+    <div class="wm-card-body is-centred">
+      {%- if filter_count %}
+      <p>You have currently <strong>{{ filter_count }} {{ "filter" if filter_count == 1 else "filters" }}</strong> active in your account</p>
+      {%- else %}
+      <p>There are currently no filters set for your account</p>
+      {%- endif %}
+    </div>
+    <div class="wm-card-foot"><a class="wm-button is-ghost" href="{{ url_for('settings.filters_page') }}">Manage filters</a></div>
+  </section>
+
+  {# Auto-reply #}
+  <section class="wm-card" data-kind="email" aria-labelledby="card-reply">
+    <h2 class="wm-card-title" id="card-reply">Auto-reply</h2>
+    <div class="wm-card-body is-centred">
+      <p>Automatically let people know when you're unavailable.</p>
+      {%- if rules.reply_on %}<p class="wm-status is-on">{{ icon("check") }}On</p>{% endif %}
+    </div>
+    <div class="wm-card-foot"><a class="wm-button is-ghost" href="{{ url_for('settings.auto_reply_page') }}">Manage auto-reply</a></div>
+  </section>
+
+  {# Spam management #}
+  <section class="wm-card" data-kind="email" aria-labelledby="card-spam">
+    <h2 class="wm-card-title" id="card-spam">Spam management</h2>
+    <div class="wm-card-body is-centred">
+      <p>Spam is filtered by your mail server. Mark as spam and Not spam teach it; for more, contact your admin to make adjustments.</p>
+    </div>
+  </section>
+
+  {# Connect third-party apps #}
+  <section class="wm-card" data-kind="email" aria-labelledby="card-apps">
+    <h2 class="wm-card-title" id="card-apps">Connect third-party apps</h2>
+    <div class="wm-card-body is-centred">
+      <p>Connect your email, calendars, and contacts with third-party apps.</p>
+      <p class="wm-status is-on">{{ icon("check") }}IMAP, SMTP and POP3 are on</p>
+    </div>
+    <div class="wm-card-foot"><a class="wm-button is-ghost" href="{{ url_for('settings.apps_page') }}">Manage configurations</a></div>
+  </section>
+
+  {# Security Center #}
+  <section class="wm-card" data-kind="security" aria-labelledby="card-security">
+    <h2 class="wm-card-title" id="card-security">Security Center</h2>
+    <div class="wm-card-body is-centred">
+      <p>Update your password, and check your account's activity logs.</p>
+    </div>
+    <div class="wm-card-foot"><a class="wm-button is-ghost" href="{{ url_for('settings.security_page') }}">Launch Security Center</a></div>
+  </section>
+</div>
+
+{# the keyboard shortcuts #}
+<dialog class="wm-dialog wm-sheet" data-wm-shortcuts-dialog aria-labelledby="shortcuts-title">
+  <div class="wm-sheet-card">
+    <header class="wm-sheet-head"><h2 class="wm-sheet-title" id="shortcuts-title">Keyboard shortcuts</h2>
+      <button type="button" class="wm-icon wm-sheet-close" data-wm-close aria-label="Close">{{ icon("close") }}</button></header>
+    <div class="wm-sheet-body">
+      {%- for section, keys in shortcuts %}
+      <table class="wm-keys">
+        <thead><tr><th scope="col">{{ section }}</th><th scope="col"><span class="visually-hidden">Keys</span></th></tr></thead>
+        <tbody>
+          {%- for action, key in keys %}<tr><td>{{ action }}</td><td><kbd>{{ key }}</kbd></td></tr>{% endfor %}
+        </tbody>
+      </table>
+      {%- endfor %}
+    </div>
+  </div>
+</dialog>
+
+{# the forwarding address: added or changed #}
+<dialog class="wm-dialog" data-wm-forward-dialog aria-labelledby="forward-title">
+  <form class="wm-dialog-card" data-wm-forward-form novalidate>
+    <h2 class="wm-dialog-title" id="forward-title" data-wm-forward-title>Add a forwarding address</h2>
+    <input class="wm-input" name="address" type="email" placeholder="Enter your forwarding address" autocomplete="email" maxlength="254">
+    <p class="wm-field-problem" data-wm-problem hidden></p>
+    <div class="wm-dialog-actions">
+      <button type="button" class="wm-button is-ghost" data-wm-close>Cancel</button>
+      <button type="submit" class="wm-button">Save</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/webmail-settings.js') }}"></script>
+{% endblock %}

@@ -1,8 +1,8 @@
-/* The webmail (webmail-mail.html), laid out like the webmails people know: a white bar across
-   the top (the apps, search, the tools, the account), then the folders on soft grey, the mail
-   on white, and the reading pane. Light, and dark in the panel's navy (the theme switch is in
-   the account card). The page itself doesn't scroll: each column does. Sized like the
-   webmails too: 14px text, a 250px folder column. */
+/* The webmail (webmail-mail.html), laid out and working like PrivateEmail: a bar across the top
+   (the apps, search, the tools, the account), then the folders on soft grey, the mail on white,
+   and the reading pane. Light, and dark in the panel's navy (the theme switch is in the account
+   card). The page itself doesn't scroll: each column does. Sized like PrivateEmail too: 14px
+   text, a 250px folder column. */
 body.webmail-app {
   --wm-top: #ffffff;
   --wm-side: #f7f8fa;
@@ -17,6 +17,7 @@ body.webmail-app {
   --wm-current: #e8ebf0;
   --wm-blue: #3b63e6;
   --wm-blue-hover: #2f55d6;
+  --wm-blue-soft: #e9eefc;
   --wm-icon-hover: #eceef2;
   --wm-check: #b7bcc6;
   --wm-bar: #e3e6eb;
@@ -24,6 +25,7 @@ body.webmail-app {
   --wm-tip-ink: #ffffff;
   --wm-card: #ffffff;
   --wm-card-shadow: 0 10px 30px rgba(24, 32, 56, 0.16), 0 0 0 1px rgba(24, 32, 56, 0.05);
+  --wm-menu-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.16), 0 4px 5px rgba(0, 0, 0, 0.05), 0 1px 10px rgba(0, 0, 0, 0.08);
   --wm-avatar: #e9ecfb;
   --wm-avatar-ink: #3b63e6;
   --wm-camera: #2b2d31;
@@ -35,6 +37,14 @@ body.webmail-app {
   --wm-read-card: #ffffff;
   --wm-card-line: #e6e8ed;
   --wm-shield: #e6ecfb;
+  --wm-star: #f2a60c;
+  --wm-danger: #d93a3a;
+  --wm-danger-hover: #c22f2f;
+  --wm-danger-soft: #fdecec;
+  --wm-warning-soft: #fff4dd;
+  --wm-sunken: #eef0f4;
+  --wm-skeleton: #eceef2;
+  --wm-scrim: rgba(12, 16, 32, 0.45);
   --wm-top-height: 64px;
   --wm-ease: cubic-bezier(0.22, 1, 0.36, 1);
   display: grid;
@@ -59,6 +69,7 @@ body.webmail-app {
   --wm-current: rgba(1, 149, 251, 0.15);
   --wm-blue: #2f7df6;
   --wm-blue-hover: #4a8ff8;
+  --wm-blue-soft: rgba(47, 125, 246, 0.16);
   --wm-icon-hover: rgba(123, 150, 255, 0.12);
   --wm-check: #3b4777;
   --wm-bar: #1f2a55;
@@ -66,6 +77,7 @@ body.webmail-app {
   --wm-tip-ink: #0f1a3d;
   --wm-card: #111a40;
   --wm-card-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(123, 150, 255, 0.16);
+  --wm-menu-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(123, 150, 255, 0.14);
   --wm-avatar: rgba(1, 149, 251, 0.18);
   --wm-avatar-ink: #8cc8ff;
   --wm-camera: #2f7df6;
@@ -77,6 +89,14 @@ body.webmail-app {
   --wm-read-card: #111a40;
   --wm-card-line: rgba(123, 150, 255, 0.1);
   --wm-shield: rgba(47, 125, 246, 0.22);
+  --wm-star: #ffc233;
+  --wm-danger: #f25c5c;
+  --wm-danger-hover: #ff7070;
+  --wm-danger-soft: rgba(242, 92, 92, 0.14);
+  --wm-warning-soft: rgba(255, 194, 51, 0.14);
+  --wm-sunken: #0a1130;
+  --wm-skeleton: rgba(123, 150, 255, 0.1);
+  --wm-scrim: rgba(3, 6, 18, 0.62);
 }
 body.webmail-app svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 body.webmail-app svg.is-filled { fill: currentColor; stroke: none; }
@@ -93,6 +113,7 @@ body.webmail-app svg.is-filled { fill: currentColor; stroke: none; }
   padding: 0 1rem 0 0.55rem;
   border-bottom: 1px solid var(--wm-line);
   background: var(--wm-top);
+  view-transition-name: wm-top;
 }
 .wm-logo {
   display: flex;
@@ -122,13 +143,18 @@ body.webmail-app svg.is-filled { fill: currentColor; stroke: none; }
   background: transparent;
   color: var(--wm-ink);
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
-.wm-app:hover, .wm-icon:hover, .wm-app.is-current { background: var(--wm-icon-hover); }
+.wm-app:hover, .wm-icon:hover, .wm-app.is-current, .wm-icon.is-active { background: var(--wm-icon-hover); }
 .wm-app svg, .wm-icon svg { width: 20px; height: 20px; }
+.wm-icon[hidden] { display: none; }
+.wm-icon.is-favorite { color: var(--wm-star); }
+.wm-icon.is-turning svg { animation: spin 0.7s var(--wm-ease); }
+
+/* Search: the field, and the panel under it (webmail-search.js) */
 .wm-search { position: relative; flex: 0 1 29rem; min-width: 0; margin-left: 1.9rem; }
-.wm-search svg { position: absolute; top: 50%; left: 0.95rem; width: 17px; height: 17px; color: var(--wm-ink); transform: translateY(-50%); pointer-events: none; }
-body.webmail-app .wm-search input {
+.wm-search > svg { position: absolute; top: 20px; left: 0.95rem; width: 17px; height: 17px; color: var(--wm-ink); transform: translateY(-50%); pointer-events: none; }
+body.webmail-app .wm-search input[type="search"] {
   width: 100%;
   height: 40px;
   padding: 0 1rem 0 2.65rem;
@@ -139,10 +165,92 @@ body.webmail-app .wm-search input {
   color: var(--wm-ink);
   font: inherit;
   font-size: 0.88rem;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, border-radius 0.15s ease;
 }
 .wm-search input::placeholder { color: var(--wm-soft); }
-body.webmail-app .wm-search input:focus { border-color: var(--wm-blue); box-shadow: 0 0 0 1px var(--wm-blue); }
+body.webmail-app .wm-search input[type="search"]:focus { border-color: var(--wm-blue); box-shadow: 0 0 0 1px var(--wm-blue); }
+.wm-search-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  z-index: 40;
+  max-height: min(34rem, calc(100vh - var(--wm-top-height) - 1.5rem));
+  overflow-y: auto;
+  border-radius: 12px;
+  background: var(--wm-card);
+  box-shadow: var(--wm-card-shadow);
+  animation: wm-drop 0.18s var(--wm-ease) both;
+  scrollbar-width: thin;
+}
+.wm-search-panel[hidden] { display: none; }
+.wm-search-filters { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.7rem 0.75rem 0.35rem; }
+.wm-search-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 26px;
+  padding: 0 0.65rem;
+  border-radius: 999px;
+  background: var(--wm-icon-hover);
+  color: var(--wm-soft);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+.wm-search-chip[hidden] { display: none; }
+.wm-search-chip.is-on { background: var(--wm-blue-soft); color: var(--wm-blue); }
+.wm-search-chip.is-folder { padding-right: 0.25rem; }
+.wm-search-chip-x { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: none; color: inherit; cursor: pointer; }
+.wm-search-chip-x:hover { background: rgba(0, 0, 0, 0.08); }
+.wm-search-chip-x svg { width: 13px; height: 13px; stroke-width: 2.2; }
+.wm-search-recent[hidden] { display: none; }
+.wm-search-recent-label { margin: 0; padding: 0.5rem 0.75rem 0.2rem; color: var(--wm-faint); font-size: 0.75rem; }
+.wm-search-recent-list { margin: 0; padding: 0.2rem 0 0.4rem; list-style: none; }
+.wm-search-recent-item { display: flex; align-items: center; padding-right: 0.4rem; }
+.wm-search-recent-item:hover { background: var(--wm-hover); }
+.wm-search-recent-go { display: flex; flex: 1; align-items: center; gap: 0.7rem; min-width: 0; padding: 0.55rem 0.75rem; border: 0; background: none; color: var(--wm-ink); font: inherit; font-size: 0.86rem; text-align: left; cursor: pointer; }
+.wm-search-recent-go span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wm-search-recent-go svg { flex: none; width: 16px; height: 16px; color: var(--wm-soft); }
+.wm-search-recent-x { display: grid; flex: none; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--wm-soft); cursor: pointer; opacity: 0; }
+.wm-search-recent-item:hover .wm-search-recent-x, .wm-search-recent-x:focus-visible { opacity: 1; }
+.wm-search-recent-x:hover { background: var(--wm-icon-hover); }
+.wm-search-recent-x svg { width: 14px; height: 14px; }
+.wm-search-results { margin: 0; padding: 0.3rem 0; list-style: none; }
+.wm-search-result { display: grid; gap: 0.15rem; padding: 0.5rem 0.75rem; color: inherit; text-decoration: none; }
+.wm-search-result:hover, .wm-search-result.is-active { background: var(--wm-hover); }
+.wm-search-row { display: flex; align-items: center; gap: 0.25rem; min-width: 0; color: var(--wm-faint); font-size: 0.84rem; line-height: 1.25rem; }
+.wm-search-row b { color: var(--wm-ink); }
+.wm-search-dot { flex: none; width: 7px; height: 7px; margin-right: 0.2rem; border-radius: 50%; background: var(--wm-blue); }
+.wm-search-sender { flex: none; max-width: 40%; overflow: hidden; color: var(--wm-ink); text-overflow: ellipsis; white-space: nowrap; }
+.wm-search-sep { flex: none; }
+.wm-search-subject, .wm-search-preview { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wm-search-date, .wm-search-folder { flex: none; margin-left: auto; font-size: 0.75rem; }
+.wm-search-folder { color: var(--wm-blue); }
+.wm-search-all {
+  display: block;
+  margin: 0.4rem 0.75rem 0.75rem;
+  padding: 0.55rem;
+  border-radius: 8px;
+  background: var(--wm-icon-hover);
+  color: var(--wm-blue);
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+.wm-search-all:hover, .wm-search-all.is-active { background: var(--wm-blue-soft); }
+.wm-search-empty { display: grid; justify-items: center; gap: 0.35rem; padding: 1.5rem 1rem 1.6rem; text-align: center; }
+.wm-search-empty-art { width: 44px; height: 44px; margin-bottom: 0.4rem; color: var(--wm-faint); stroke-width: 2.6 !important; }
+.wm-search-empty-title { margin: 0; font-size: 0.92rem; font-weight: 700; overflow-wrap: anywhere; }
+.wm-search-empty-text, .wm-search-failed { margin: 0; color: var(--wm-soft); font-size: 0.82rem; }
+.wm-search-failed { padding: 1rem 0.75rem; }
+.wm-search-skeleton { display: grid; grid-template-columns: 6rem minmax(0, 1fr) 3.5rem; gap: 0.35rem 0.6rem; padding: 0.6rem 0.75rem; }
+.wm-search-skeleton span { height: 12px; border-radius: 6px; background: var(--wm-skeleton); animation: wm-shimmer 1.2s ease-in-out infinite; }
+.wm-search-skeleton span:last-child { grid-column: 1 / -1; }
+@keyframes wm-shimmer { 50% { opacity: 0.45; } }
+
 .wm-tools { display: flex; flex: none; align-items: center; gap: 0.45rem; margin-left: auto; }
 .wm-divider { width: 1px; height: 24px; margin: 0 0.2rem; background: var(--wm-line); }
 
@@ -194,22 +302,6 @@ body.webmail-app .wm-search input:focus { border-color: var(--wm-blue); box-shad
   font-size: 2.5rem;
   font-weight: 500;
 }
-.wm-account-camera {
-  position: absolute;
-  right: -3px;
-  bottom: -3px;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: 2.5px solid var(--wm-card);
-  border-radius: 50%;
-  background: var(--wm-camera);
-  color: #fff;
-  cursor: pointer;
-}
-.wm-account-camera svg { width: 14px; height: 14px; }
 .wm-account-name { margin: 0; font-size: 1.08rem; font-weight: 700; letter-spacing: -0.01em; overflow-wrap: anywhere; }
 .wm-account-email { display: flex; align-items: center; gap: 0.25rem; max-width: 100%; margin: 0; font-size: 0.85rem; }
 .wm-account-email > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -235,8 +327,8 @@ body.webmail-app .wm-copy { position: relative; flex: none; width: 26px; height:
 :root[data-theme="dark"] .wm-theme-sun, :root:not([data-theme="dark"]) .wm-theme-moon { display: none; }
 .wm-switch { position: relative; flex: none; width: 36px; height: 20px; margin-left: auto; border-radius: 999px; background: var(--wm-bar); transition: background-color 0.2s ease; }
 .wm-switch span { position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); transition: transform 0.22s var(--menu-ease); }
-.wm-theme[aria-checked="true"] .wm-switch { background: var(--wm-blue); }
-.wm-theme[aria-checked="true"] .wm-switch span { transform: translateX(16px); }
+.wm-theme[aria-checked="true"] .wm-switch, [aria-checked="true"] > .wm-menu-switch { background: var(--wm-blue); }
+.wm-theme[aria-checked="true"] .wm-switch span, [aria-checked="true"] > .wm-menu-switch span { transform: translateX(16px); }
 
 /* Below the bar: the folders, the mail, the reading pane. On wide screens their widths are
    dragged by the dividers between them (webmail-resize.js), as far as PrivateEmail lets them go:
@@ -260,7 +352,9 @@ body.webmail-app .wm-copy { position: relative; flex: none; width: 26px; height:
 body.is-resizing, body.is-resizing * { cursor: col-resize !important; user-select: none !important; }
 body.is-resizing iframe { pointer-events: none; }
 
-.wm-side { display: flex; flex-direction: column; min-height: 0; padding-top: 1.05rem; overflow-y: auto; background: var(--wm-side); scrollbar-width: thin; }
+.wm-side { display: flex; flex-direction: column; min-height: 0; padding-top: 1.05rem; overflow-x: hidden; overflow-y: auto; background: var(--wm-side); scrollbar-width: thin; view-transition-name: wm-side; }
+/* a heading in the side column (Contact Books, Calendars) */
+.wm-side-label { margin: 0.35rem 1.25rem 0.4rem; color: var(--wm-faint); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 .wm-compose {
   flex: none;
   height: 40px;
@@ -277,44 +371,221 @@ body.is-resizing iframe { pointer-events: none; }
   transition: background-color 0.15s ease;
 }
 .wm-compose:hover { background: var(--wm-blue-hover); }
-.wm-folders { display: grid; }
+
+/* The folders, as PrivateEmail lists them (webmail-folders.html): each row 32px, its count at
+   the right; the pointer on it shows its three dots instead. The one being looked at is bold,
+   picked out to the column's edge. Folders in a folder sit 20px further in, a little smaller,
+   below an arrow that folds them away. */
+.wm-folders { display: grid; align-content: start; padding: 0 0 0.6rem; }
+.wm-folder-item { position: relative; }
 .wm-folder {
+  --indent: calc(var(--depth, 0) * 20px);
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.6rem;
   height: 32px;
-  padding: 0 1.15rem 0 1.25rem;
+  padding: 0 2.6rem 0 calc(1.25rem + var(--indent));
   color: var(--wm-ink);
-  font-size: 0.86rem;
-  text-decoration: none;
+  font-size: 0.875rem;
   transition: background-color 0.12s ease;
 }
-.wm-folder:hover { background: var(--wm-hover); }
-.wm-folder.is-current { background: var(--wm-current); }
-.wm-folder svg { flex: none; width: 17px; height: 17px; }
-.wm-folder.is-current svg { color: var(--wm-blue); }
-.wm-count { margin-left: auto; color: var(--wm-blue); font-size: 0.74rem; font-weight: 700; }
+.wm-folder-item .wm-folder-item .wm-folder { font-size: 0.8125rem; }
+.wm-folder:hover, .wm-folder.is-menu { background: var(--wm-hover); }
+.wm-folder.is-current { background: var(--wm-current); font-weight: 700; }
+.wm-folder-link { position: static; display: flex; flex: 1; align-items: center; gap: 0.6rem; min-width: 0; color: inherit; text-decoration: none; }
+.wm-folder-link::after { content: ""; position: absolute; inset: 0; }   /* the whole row opens it */
+.wm-folder-link:focus-visible { outline: none; }
+.wm-folder-link:focus-visible::after { outline: 2px solid var(--wm-blue); outline-offset: -2px; }
+.wm-folder-link svg { flex: none; width: 17px; height: 17px; }
+.wm-folder:hover .wm-folder-link svg, .wm-folder.is-current .wm-folder-link svg, .wm-folder.is-drop .wm-folder-link svg { color: var(--wm-blue); }
+.wm-folder-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wm-count { position: absolute; top: 50%; right: 1rem; min-width: 24px; color: var(--wm-blue); font-size: 0.74rem; font-weight: 700; text-align: right; transform: translateY(-50%); transition: opacity 0.12s ease; }
+.wm-count[hidden] { display: none; }
+.wm-folder-menu {
+  position: absolute;
+  top: 50%;
+  right: 0.55rem;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--wm-soft);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-50%);
+  transition: opacity 0.12s ease, background-color 0.12s ease;
+}
+.wm-folder-menu svg { width: 18px; height: 18px; }
+.wm-folder-menu:hover { background: var(--wm-icon-hover); color: var(--wm-ink); }
+.wm-folder:hover .wm-folder-menu, .wm-folder.is-menu .wm-folder-menu, .wm-folder-menu:focus-visible { opacity: 1; }
+.wm-folder:hover .wm-count, .wm-folder.is-menu .wm-count { opacity: 0; }
+.wm-folder-opener {
+  position: absolute;
+  top: 50%;
+  left: calc(0.2rem + var(--indent));
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--wm-soft);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+.wm-folder-opener svg { width: 14px; height: 14px; transition: transform 0.25s var(--wm-ease); }
+.wm-folder-opener[aria-expanded="true"] svg { transform: rotate(90deg); }
+.wm-folder-opener:hover { color: var(--wm-ink); }
+.wm-subfolders { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.28s var(--wm-ease); }
+.wm-folder-item.is-collapsed > .wm-subfolders { grid-template-rows: 0fr; }
+.wm-subfolders-clip { min-height: 0; overflow: hidden; }
+.wm-folder.is-busy { opacity: 0.55; pointer-events: none; }
+.wm-folder.is-drop { background: var(--wm-blue-soft); box-shadow: inset 0 0 0 1.5px var(--wm-blue); }
+.wm-folder.is-dragged { opacity: 0.45; }
+/* a name typed right in the list (webmail-folders.js) */
+.wm-folder-form { position: relative; display: flex; align-items: center; height: 32px; margin: 0; padding: 0 1rem 0 calc(1.25rem + var(--depth, 0) * 20px); }
+.wm-folder.is-renaming { padding-right: 0.8rem; }
+.wm-folder.is-renaming .wm-folder-link, .wm-folder.is-renaming .wm-count, .wm-folder.is-renaming .wm-folder-menu { display: none; }
+.wm-folder.is-renaming .wm-folder-form { flex: 1; padding: 0; }
+body.webmail-app .wm-folder-form input {
+  width: 100%;
+  height: 26px;
+  padding: 0 0.5rem;
+  border: 1px solid var(--wm-blue);
+  border-radius: 6px;
+  outline: none;
+  background: var(--wm-list);
+  color: var(--wm-ink);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 400;
+}
+.wm-folder-form input::placeholder { color: var(--wm-faint); }
+.wm-folder-problem {
+  position: absolute;
+  bottom: calc(100% - 2px);
+  left: calc(1.25rem + var(--depth, 0) * 20px);
+  z-index: 5;
+  max-width: 15rem;
+  margin: 0;
+  padding: 0.38rem 0.62rem;
+  border-radius: 7px;
+  background: var(--wm-tip);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.2);
+  color: var(--wm-tip-ink);
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.wm-folder.is-renaming .wm-folder-problem { left: 0; }
+.wm-folder-problem[hidden] { display: none; }
+
 .wm-storage { margin-top: auto; padding: 1.1rem 1rem 1.05rem; }
 .wm-storage-title { margin: 0 0 0.75rem; font-size: 0.92rem; font-weight: 700; }
 .wm-storage-bar { height: 6px; overflow: hidden; border-radius: 999px; background: var(--wm-bar); }
 .wm-storage-bar span { display: block; height: 100%; border-radius: inherit; background: var(--wm-blue); }
+.wm-storage.is-full .wm-storage-bar span { background: var(--wm-danger); }
 .wm-storage-text { display: flex; justify-content: space-between; gap: 0.5rem; margin: 0.4rem 0 0; font-size: 0.76rem; }
+.wm-storage-alert { margin: 0.6rem 0 0; padding: 0.5rem 0.6rem; border-radius: 8px; background: var(--wm-danger-soft); color: var(--wm-danger); font-size: 0.74rem; line-height: 1.4; }
 
 /* The mail */
 .wm-list { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid var(--wm-line); background: var(--wm-list); }
-.wm-list-head { display: flex; flex: none; align-items: center; justify-content: flex-end; height: 56px; padding: 0 1.5rem; border-bottom: 1px solid var(--wm-line); }
+.wm-list-head { position: relative; z-index: 3; display: flex; flex: none; align-items: center; justify-content: flex-end; gap: 0.75rem; height: 56px; padding: 0 1.5rem; border-bottom: 1px solid var(--wm-line); }
+.wm-list-head.has-results { justify-content: space-between; }
+.wm-results { min-width: 0; margin: 0; overflow: hidden; font-size: 1rem; text-overflow: ellipsis; white-space: nowrap; }
+.wm-sort-wrap { position: relative; display: inline-flex; flex: none; }
 .wm-filter { width: 32px; height: 32px; background: var(--wm-icon-hover); }
 .wm-filter svg { width: 17px; height: 17px; }
+.wm-sort-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--wm-blue);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 700;
+  pointer-events: none;
+}
+.wm-sort-badge[hidden] { display: none; }
+/* "Sort and filter": 240px wide, as PrivateEmail's */
+.wm-sort {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  width: 240px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--wm-card);
+  box-shadow: var(--wm-card-shadow);
+  animation: wm-drop 0.18s var(--wm-ease) both;
+}
+.wm-sort[hidden] { display: none; }
+.wm-sort-title { margin: 0; padding: 0.85rem 1rem 0.35rem; font-size: 0.9rem; font-weight: 700; }
+.wm-sort-section + .wm-sort-section { border-top: 1px solid var(--wm-line); }
+.wm-sort-label { margin: 0; padding: 0.75rem 1rem 0.35rem; color: var(--wm-faint); font-size: 0.7rem; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; }
+.wm-sort-option {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 1rem;
+  border: 0;
+  background: none;
+  color: var(--wm-ink);
+  font: inherit;
+  font-size: 0.86rem;
+  text-align: left;
+  cursor: pointer;
+}
+.wm-sort-option:hover, .wm-sort-option:focus-visible { outline: none; background: var(--wm-hover); }
+.wm-sort-option > svg { flex: none; width: 16px; height: 16px; color: var(--wm-soft); }
+.wm-sort-option[role="menuitemradio"] > span { flex: 1; }
+.wm-sort-option[role="menuitemradio"] > svg { color: var(--wm-blue); opacity: 0; }
+.wm-sort-option[role="menuitemradio"][aria-checked="true"] { color: var(--wm-blue); font-weight: 600; }
+.wm-sort-option[role="menuitemradio"][aria-checked="true"] > svg { opacity: 1; }
+.wm-sort-box { position: relative; flex: none; width: 16px; height: 16px; border: 1.5px solid var(--wm-check); border-radius: 4px; transition: background-color 0.12s ease, border-color 0.12s ease; }
+[aria-checked="true"] > .wm-sort-box { border-color: var(--wm-blue); background: var(--wm-blue); }
+[aria-checked="true"] > .wm-sort-box::after { content: ""; position: absolute; top: 3px; left: 3px; width: 7px; height: 3.5px; border-bottom: 2px solid #fff; border-left: 2px solid #fff; transform: rotate(-45deg); }
+.wm-sort-foot { padding: 0.5rem 0.75rem; border-top: 1px solid var(--wm-line); }
+.wm-sort-reset { width: 100%; height: 32px; border: 0; border-radius: 8px; background: none; color: var(--wm-blue); font: inherit; font-size: 0.84rem; font-weight: 700; cursor: pointer; }
+.wm-sort-reset:hover:not(:disabled) { background: var(--wm-blue-soft); }
+.wm-sort-reset:disabled { color: var(--wm-faint); cursor: default; }
+.wm-list.is-loading .wm-scroll { opacity: 0.55; transition: opacity 0.15s ease; }
+
 .wm-scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--wm-check) transparent; }
 .wm-messages { margin: 0; padding: 0; list-style: none; }
 /* the end of the list, while the next mail is on its way (webmail-list.js) */
 .wm-more { display: flex; align-items: center; justify-content: center; gap: 0.55rem; margin: 0; padding: 1rem 0 1.3rem; color: var(--wm-soft); font-size: 0.8rem; }
 .wm-more[hidden] { display: none; }
 .wm-more-spin { width: 16px; height: 16px; border: 2px solid var(--wm-bar); border-top-color: var(--wm-blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
-.wm-message { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0.9rem; padding: 0 1.5rem 0 1.45rem; transition: background-color 0.12s ease; }
-.wm-message:hover { background: var(--wm-hover); }
+.wm-list-empty { display: grid; justify-items: center; gap: 0.8rem; padding: 3.5rem 1.5rem; color: var(--wm-soft); text-align: center; }
+.wm-list-empty[hidden] { display: none; }
+.wm-list-empty-art { width: 52px; height: 52px; color: var(--wm-faint); stroke-width: 2 !important; }
+.wm-list-empty p { margin: 0; max-width: 16rem; font-size: 0.92rem; font-weight: 600; }
+.wm-message { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0.9rem; padding: 0 1.5rem 0 1.45rem; transition: background-color 0.12s ease; }
+.wm-message:hover, .wm-message.is-menu { background: var(--wm-hover); }
 .wm-message.is-open, .wm-message.is-open:hover { margin: 0 0.5rem; padding-inline: 0.95rem 1rem; border-radius: 8px; background: var(--wm-open); }
-.wm-check { display: grid; }
+.wm-message.is-cursor { box-shadow: inset 2px 0 0 var(--wm-blue); }
+.wm-message.is-dragged { opacity: 0.5; }
+.wm-message.is-leaving { overflow: hidden; opacity: 0; transition: height 0.25s var(--wm-ease), opacity 0.2s ease; }
+.wm-check { display: grid; margin: -0.6rem; padding: 0.6rem; cursor: pointer; }
 body.webmail-app .wm-check input {
   display: grid;
   place-items: center;
@@ -331,22 +602,47 @@ body.webmail-app .wm-check input {
 body.webmail-app .wm-check input:checked { border-color: var(--wm-blue); background: var(--wm-blue); }
 body.webmail-app .wm-check input:checked::after { content: ""; width: 8px; height: 4px; border-bottom: 2px solid #fff; border-left: 2px solid #fff; transform: translateY(-1px) rotate(-45deg); }
 .wm-message-link { display: grid; gap: 0.06rem; min-width: 0; padding: 0.72rem 0; color: inherit; text-decoration: none; }
-.wm-from-line { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; }
-.wm-from { overflow: hidden; color: var(--wm-soft); font-size: 0.86rem; text-overflow: ellipsis; white-space: nowrap; }
-.wm-time { flex: none; color: var(--wm-ink); font-size: 0.78rem; }
+.wm-message-link:focus-visible { outline: none; }
+.wm-message:has(.wm-message-link:focus-visible) { box-shadow: inset 0 0 0 2px var(--wm-blue); }
+.wm-from-line { display: flex; align-items: baseline; gap: 0.35rem; }
+.wm-from { flex: 1; min-width: 0; overflow: hidden; color: var(--wm-soft); font-size: 0.86rem; text-overflow: ellipsis; white-space: nowrap; }
+.wm-priority { display: grid; flex: none; align-self: center; color: var(--wm-danger); }
+.wm-priority svg { width: 14px; height: 14px; stroke-width: 2.6; }
+.wm-time { flex: none; margin-left: 0.25rem; color: var(--wm-ink); font-size: 0.78rem; }
 .wm-subject { overflow: hidden; color: var(--wm-ink); font-size: 0.88rem; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .wm-preview-line { display: flex; align-items: center; gap: 0.45rem; min-width: 0; }
 .wm-preview { flex: 1; min-width: 0; overflow: hidden; color: var(--wm-soft); font-size: 0.8rem; text-overflow: ellipsis; white-space: nowrap; }
+.wm-located { flex: none; max-width: 40%; overflow: hidden; color: var(--wm-blue); font-size: 0.72rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .wm-mark { display: grid; flex: none; color: var(--wm-soft); }
 .wm-mark svg { width: 15px; height: 15px; }
+.wm-mark.is-star { color: var(--wm-star); }
 .wm-message.is-unread .wm-from, .wm-message.is-unread .wm-subject { color: var(--wm-ink); font-weight: 700; }
 .wm-message.is-unread .wm-time { color: var(--wm-blue); font-weight: 700; }
+/* dragged: how many, beside the pointer ("3 message(s)", as PrivateEmail says it) */
+.wm-drag-label {
+  position: fixed;
+  top: -100px;
+  left: -100px;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  background: var(--wm-blue);
+  box-shadow: 0 6px 16px rgba(24, 32, 56, 0.25);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
 
-/* The reading pane: the envelope while nothing is open, or the message (webmail-read.html): its
-   buttons along the top, then the subject and the card, which scroll under them */
-.wm-reader { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; background: var(--wm-reader); }
+/* The reading pane: the envelope while nothing is open, two or more ticked (the cards), or the
+   message (webmail-read.html): its buttons along the top, then the subject and the card, which
+   scroll under them */
+.wm-reader { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; background: var(--wm-reader); }
+.wm-reader.is-loading::after { content: ""; position: absolute; top: 0; right: 0; left: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--wm-blue), transparent); animation: wm-slide 1s linear infinite; }
+@keyframes wm-slide { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.wm-reader.is-busy { cursor: progress; }
 .wm-empty { display: grid; justify-items: center; gap: 1.35rem; margin: auto; transform: translateY(-0.8rem); }
-.wm-empty[hidden], .wm-view[hidden] { display: none; }
+.wm-empty[hidden], .wm-view[hidden], .wm-choose[hidden] { display: none; }
 .wm-view, .wm-read { display: flex; flex: 1; flex-direction: column; min-height: 0; }
 .wm-read-tools {
   display: flex;
@@ -363,7 +659,10 @@ body.webmail-app .wm-check input:checked::after { content: ""; width: 8px; heigh
 .wm-read-tools .wm-icon svg { width: 19px; height: 19px; }
 .wm-read-back { display: none; }
 .wm-read-scroll { flex: 1; min-height: 0; padding: 1.15rem 1rem 1.5rem; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--wm-check) transparent; }
-.wm-read-subject { margin: 0 0.4rem 1.15rem; font-size: 1.5rem; font-weight: 700; line-height: 1.3; letter-spacing: -0.015em; overflow-wrap: anywhere; }
+.wm-read-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin: 0 0.4rem 1.15rem; }
+.wm-read-subject { margin: 0; font-size: 1.5rem; font-weight: 700; line-height: 1.3; letter-spacing: -0.015em; overflow-wrap: anywhere; }
+.wm-read-priority { display: inline-flex; align-items: center; gap: 0.15rem; padding: 0.15rem 0.55rem 0.15rem 0.3rem; border-radius: 999px; background: var(--wm-danger-soft); color: var(--wm-danger); font-size: 0.74rem; font-weight: 700; }
+.wm-read-priority svg { width: 14px; height: 14px; stroke-width: 2.6; }
 .wm-read-card { padding: 1.3rem 1.55rem 1.1rem; border: 1px solid var(--wm-card-line); border-radius: 14px; background: var(--wm-read-card); }
 .wm-read-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 0.5rem 0.9rem; }
 .wm-read-avatar {
@@ -381,7 +680,13 @@ body.webmail-app .wm-check input:checked::after { content: ""; width: 8px; heigh
 .wm-read-name { margin: 0; font-size: 0.92rem; font-weight: 700; overflow-wrap: anywhere; }
 .wm-read-address { color: var(--wm-link); font-size: 0.92rem; text-decoration: none; overflow-wrap: anywhere; }
 .wm-read-address:hover { text-decoration: underline; text-underline-offset: 3px; }
-.wm-read-to { margin: 0.15rem 0 0; color: var(--wm-soft); font-size: 0.78rem; overflow-wrap: anywhere; }
+.wm-read-people { display: grid; gap: 0.1rem; margin-top: 0.15rem; }
+.wm-people { margin: 0; color: var(--wm-soft); font-size: 0.78rem; line-height: 1.45; overflow-wrap: anywhere; }
+.wm-people-label { margin-right: 0.3rem; color: var(--wm-faint); }
+.wm-person-name { color: var(--wm-ink); }
+.wm-person[hidden] { display: none; }
+.wm-people-more { margin-left: 0.3rem; padding: 0; border: 0; background: none; color: var(--wm-link); font: inherit; font-weight: 600; cursor: pointer; }
+.wm-people-more:hover { text-decoration: underline; text-underline-offset: 3px; }
 .wm-read-meta { display: flex; align-items: center; gap: 0.2rem; color: var(--wm-soft); font-size: 0.82rem; white-space: nowrap; }
 .wm-read-date { margin-right: 0.3rem; }
 .wm-icon.wm-mini { width: 30px; height: 30px; }
@@ -394,13 +699,16 @@ body.webmail-app .wm-check input:checked::after { content: ""; width: 8px; heigh
   gap: 0.25rem;
   margin-left: 0.25rem;
   padding: 0.2rem 0.55rem 0.2rem 0.45rem;
+  border: 0;
   border-radius: 999px;
   background: var(--wm-shield);
   color: var(--wm-blue);
+  font: inherit;
   font-size: 0.78rem;
   font-weight: 700;
-  cursor: default;
+  cursor: pointer;
 }
+.wm-read-shield.is-none { cursor: default; }
 .wm-read-shield svg { width: 14px; height: 14px; }
 
 /* Its attachments: how many, then the files, opened out with the arrow */
@@ -421,8 +729,10 @@ body.webmail-app .wm-check input:checked::after { content: ""; width: 8px; heigh
   font: inherit;
   font-size: 0.8rem;
   font-weight: 700;
+  text-decoration: none;
   cursor: pointer;
 }
+.wm-save-all:hover { background: var(--wm-blue-soft); }
 .wm-save-all svg { width: 15px; height: 15px; }
 .wm-files-toggle svg { transition: transform 0.3s var(--wm-ease); }
 .wm-files.is-open .wm-files-toggle svg { transform: rotate(180deg); }
@@ -438,8 +748,10 @@ body.webmail-app .wm-check input:checked::after { content: ""; width: 8px; heigh
   border-top: 1px solid var(--wm-line);
   list-style: none;
 }
-.wm-file { display: flex; align-items: center; gap: 0.6rem; min-width: 0; padding: 0.5rem 0.45rem 0.5rem 0.7rem; border: 1px solid var(--wm-line); border-radius: 8px; }
-.wm-file > svg { flex: none; width: 17px; height: 17px; color: var(--wm-soft); }
+.wm-file { display: flex; align-items: center; gap: 0.3rem; min-width: 0; padding: 0.35rem 0.35rem 0.35rem 0.3rem; border: 1px solid var(--wm-line); border-radius: 8px; transition: border-color 0.12s ease; }
+.wm-file:hover { border-color: var(--wm-check); }
+.wm-file-open { display: flex; flex: 1; align-items: center; gap: 0.6rem; min-width: 0; padding: 0.15rem 0.35rem; border: 0; border-radius: 6px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.wm-file-open > svg { flex: none; width: 17px; height: 17px; color: var(--wm-soft); }
 .wm-file-text { display: grid; flex: 1; min-width: 0; }
 .wm-file-name { display: flex; min-width: 0; font-size: 0.8rem; font-weight: 700; }
 .wm-file-base { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -469,7 +781,206 @@ body.webmail-app .wm-check input:checked::after { content: ""; width: 8px; heigh
 .wm-empty-art { width: 74px; height: auto; stroke: none !important; }
 .wm-empty p { margin: 0; font-size: 1.3rem; font-weight: 700; letter-spacing: -0.01em; }
 
-/* Tips as the webmails show them: small and dark (light in the dark theme) */
+/* Two or more ticked, as PrivateEmail shows it: what can be done to them all, how many on a
+   card with two more under it, and a way to clear them or reach the whole folder */
+.wm-choose { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; background: var(--wm-reader); text-align: center; animation: wm-read-in 0.25s var(--wm-ease) backwards; }
+.wm-choose-tools { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.35rem; margin-bottom: 2.4rem; }
+.wm-choose-tools .wm-icon { width: 38px; height: 38px; }
+.wm-choose-card { position: relative; z-index: 0; width: 320px; max-width: 100%; height: 380px; max-height: 46vh; margin: 0 auto 3.6rem; padding: 0; }
+.wm-choose-card, .wm-choose-card::before, .wm-choose-card::after { border-radius: 8px; background: var(--wm-read-card); box-shadow: 0 1px 3px rgba(24, 32, 56, 0.08); }
+.wm-choose-card::before, .wm-choose-card::after { content: ""; position: absolute; inset: 0; z-index: -1; }
+.wm-choose-card::before { transform: rotate(3deg); }
+.wm-choose-card::after { transform: rotate(-3deg); }
+.wm-choose-lines, .wm-choose-lines::before, .wm-choose-lines::after { display: block; height: 23px; border-radius: 4px; background: var(--wm-skeleton); }
+.wm-choose-lines { position: absolute; top: 24px; left: 24px; width: 170px; }
+.wm-choose-lines::before, .wm-choose-lines::after { content: ""; width: 245px; max-width: calc(320px - 48px); margin: 16px 0; }
+.wm-choose-lines::before { margin-top: 39px; }
+.wm-choose-selected { position: absolute; right: 0; bottom: 24px; left: 0; margin: 0; color: var(--wm-blue); font-size: 1.25rem; font-weight: 700; }
+.wm-choose-number { display: block; font-size: 3rem; line-height: 3.25rem; }
+.wm-choose-foot { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem 1rem; }
+.wm-choose-button { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.45rem 0.8rem; border: 0; border-radius: 8px; background: none; color: var(--wm-ink); font: inherit; font-size: 0.86rem; font-weight: 600; cursor: pointer; }
+.wm-choose-button:hover { background: var(--wm-icon-hover); }
+.wm-choose-button[hidden] { display: none; }
+.wm-choose-button svg { width: 18px; height: 18px; }
+
+/* Menus (the three dots, a right-click) and the folder picker, as PrivateEmail's: white cards,
+   8px round, a soft shadow, rows of an icon and a word */
+.wm-menu-mask { position: fixed; inset: 0; z-index: 1000; }
+.wm-menu-pop {
+  position: fixed;
+  z-index: 1001;
+  min-width: 13.5rem;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  padding: 0.5rem 0;
+  overflow-y: auto;
+  border-radius: 8px;
+  background: var(--wm-card);
+  box-shadow: var(--wm-menu-shadow);
+  color: var(--wm-ink);
+  animation: wm-pop 0.14s var(--wm-ease) both;
+  scrollbar-width: thin;
+}
+.wm-menu-pop.is-leaving { animation: wm-pop-out 0.12s ease both; }
+@keyframes wm-pop { from { opacity: 0; transform: scale(0.97); } }
+@keyframes wm-pop-out { to { opacity: 0; transform: scale(0.98); } }
+.wm-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 2rem 0 1rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.86rem;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.wm-menu-item:hover, .wm-menu-item:focus-visible, .wm-menu-item[aria-expanded="true"] { outline: none; background: var(--wm-hover); }
+.wm-menu-item > svg { flex: none; width: 18px; height: 18px; color: var(--wm-soft); }
+.wm-menu-item.is-danger, .wm-menu-item.is-danger > svg { color: var(--wm-danger); }
+.wm-menu-label { flex: 1; }
+.wm-menu-item > .wm-menu-trail { width: 16px; height: 16px; margin-right: -1.2rem; }
+.wm-menu-switch { margin-right: -1.1rem; }
+.wm-menu-line { height: 1px; margin: 0.4rem 0; border: 0; background: var(--wm-line); }
+.wm-picker { width: 17.5rem; padding: 0; }
+.wm-picker-title { margin: 0; padding: 0.8rem 1rem 0.2rem; font-size: 0.9rem; font-weight: 700; }
+.wm-picker-search { position: relative; display: block; margin: 0.5rem; }
+.wm-picker-search svg { position: absolute; top: 50%; left: 0.7rem; width: 15px; height: 15px; color: var(--wm-soft); transform: translateY(-50%); }
+body.webmail-app .wm-picker-search input {
+  width: 100%;
+  height: 34px;
+  padding: 0 0.7rem 0 2.1rem;
+  border: 1px solid var(--wm-search-line);
+  border-radius: 8px;
+  outline: none;
+  background: var(--wm-list);
+  color: var(--wm-ink);
+  font: inherit;
+  font-size: 0.84rem;
+}
+body.webmail-app .wm-picker-search input:focus { border-color: var(--wm-blue); }
+.wm-picker-list { max-height: 21rem; margin: 0; padding: 0 0 0.5rem; overflow-y: auto; list-style: none; scrollbar-width: thin; }
+.wm-picker-item { display: flex; align-items: center; min-height: 34px; padding: 0 0.4rem 0 0.6rem; font-size: 0.86rem; cursor: pointer; }
+.wm-picker-item:hover, .wm-picker-item:focus { outline: none; background: var(--wm-hover); }
+.wm-picker-item.is-current { background: var(--wm-blue-soft); color: var(--wm-blue); font-weight: 600; }
+.wm-picker-label { display: flex; flex: 1; align-items: center; gap: 0.45rem; min-width: 0; }
+.wm-picker-label > svg { flex: none; width: 16px; height: 16px; color: var(--wm-soft); }
+.wm-picker-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wm-picker-opener, .wm-picker-spacer { display: grid; flex: none; place-items: center; width: 18px; height: 18px; padding: 0; border: 0; background: none; color: var(--wm-soft); cursor: pointer; }
+.wm-picker-opener svg { width: 13px; height: 13px; transition: transform 0.2s var(--wm-ease); }
+.wm-picker-opener.is-open svg { transform: rotate(90deg); }
+.wm-picker-create { display: grid; flex: none; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--wm-soft); cursor: pointer; opacity: 0; }
+.wm-picker-item:hover .wm-picker-create, .wm-picker-create:focus-visible { opacity: 1; }
+.wm-picker-create:hover { background: var(--wm-icon-hover); color: var(--wm-ink); }
+.wm-picker-create svg { width: 16px; height: 16px; }
+.wm-picker-none { padding: 0.7rem 1rem; color: var(--wm-soft); font-size: 0.84rem; }
+.wm-picker-new { padding: 0.25rem 0.6rem 0.4rem 2.2rem; }
+.wm-picker-new form { margin: 0; }
+body.webmail-app .wm-picker-new input { width: 100%; height: 30px; padding: 0 0.5rem; border: 1px solid var(--wm-blue); border-radius: 6px; outline: none; background: var(--wm-list); color: var(--wm-ink); font: inherit; font-size: 0.84rem; }
+.wm-picker-problem { margin: 0.35rem 0 0; color: var(--wm-danger); font-size: 0.74rem; line-height: 1.35; }
+.wm-picker-problem[hidden] { display: none; }
+
+/* Toasts: what was done, at the bottom (errors hang on the board instead) */
+.wm-toasts { position: fixed; bottom: 1.25rem; left: 50%; z-index: 1100; display: grid; justify-items: center; gap: 0.5rem; width: max-content; max-width: calc(100vw - 2rem); transform: translateX(-50%); pointer-events: none; }
+.wm-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  max-width: 34rem;
+  padding: 0.6rem 0.5rem 0.6rem 0.85rem;
+  border-radius: 10px;
+  background: #1f2430;
+  box-shadow: 0 12px 30px rgba(10, 14, 30, 0.3);
+  color: #fff;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  pointer-events: auto;
+  animation: wm-toast-in 0.28s var(--wm-ease) both;
+}
+:root[data-theme="dark"] .wm-toast { background: #e9edf8; color: #0f1a3d; }
+.wm-toast > svg { flex: none; width: 18px; height: 18px; color: #3ecf8e; stroke-width: 2.4; }
+.wm-toast.is-warning > svg { color: #f5b400; }
+.wm-toast span { overflow-wrap: anywhere; }
+.wm-toast-close { display: grid; flex: none; place-items: center; width: 26px; height: 26px; margin-left: 0.2rem; padding: 0; border: 0; border-radius: 50%; background: none; color: inherit; opacity: 0.7; cursor: pointer; }
+.wm-toast-close:hover { opacity: 1; background: rgba(255, 255, 255, 0.12); }
+:root[data-theme="dark"] .wm-toast-close:hover { background: rgba(15, 26, 61, 0.1); }
+.wm-toast-close svg { width: 14px; height: 14px; }
+.wm-toast.is-leaving { animation: wm-toast-out 0.2s ease both; }
+@keyframes wm-toast-in { from { opacity: 0; transform: translateY(12px) scale(0.98); } }
+@keyframes wm-toast-out { to { opacity: 0; transform: translateY(8px); } }
+
+/* Dialogs: asking first (Delete folder...), and the reading pane's own (a preview, the
+   trackers, the source) */
+.wm-dialog { max-width: calc(100vw - 2rem); padding: 0; border: 0; border-radius: 14px; background: var(--wm-card); box-shadow: var(--wm-card-shadow); color: var(--wm-ink); animation: wm-dialog-in 0.22s var(--wm-ease) both; }
+.wm-dialog::backdrop { background: var(--wm-scrim); animation: wm-fade-in 0.2s ease both; }
+.wm-dialog.is-leaving { animation: wm-dialog-out 0.16s ease both; }
+.wm-dialog.is-leaving::backdrop { animation: wm-fade-out 0.16s ease both; }
+@keyframes wm-dialog-in { from { opacity: 0; transform: translateY(10px) scale(0.98); } }
+@keyframes wm-dialog-out { to { opacity: 0; transform: scale(0.98); } }
+@keyframes wm-fade-in { from { opacity: 0; } }
+@keyframes wm-fade-out { to { opacity: 0; } }
+.wm-dialog-card { width: 26rem; max-width: 100%; margin: 0; padding: 1.4rem 1.5rem 1.2rem; }
+.wm-dialog-title { margin: 0 0 0.5rem; font-size: 1.15rem; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
+.wm-dialog-text { margin: 0; color: var(--wm-soft); font-size: 0.88rem; line-height: 1.55; }
+.wm-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; margin-top: 1.4rem; }
+.wm-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  height: 38px;
+  padding: 0 1.1rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--wm-blue);
+  color: #fff;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.wm-button:hover { background: var(--wm-blue-hover); }
+.wm-button.is-danger { background: var(--wm-danger); }
+.wm-button.is-danger:hover { background: var(--wm-danger-hover); }
+.wm-button.is-ghost { background: var(--wm-icon-hover); color: var(--wm-ink); }
+.wm-button.is-ghost:hover { background: var(--wm-current); }
+.wm-button.is-small { height: 32px; padding: 0 0.85rem; font-size: 0.8rem; }
+.wm-button:disabled { opacity: 0.5; cursor: default; }
+.wm-button svg { width: 16px; height: 16px; }
+.wm-sheet-card { display: flex; flex-direction: column; width: 44rem; max-width: 100%; max-height: calc(100vh - 3rem); }
+.wm-sheet-head { display: flex; flex: none; align-items: center; gap: 0.75rem; padding: 0.85rem 0.8rem 0.85rem 1.4rem; border-bottom: 1px solid var(--wm-line); }
+.wm-sheet-title { flex: 1; min-width: 0; margin: 0; overflow: hidden; font-size: 1rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.wm-sheet-tools { display: flex; flex: none; align-items: center; gap: 0.6rem; }
+.wm-sheet-body { flex: 1; min-height: 0; padding: 1.2rem 1.4rem 1.4rem; overflow: auto; scrollbar-width: thin; }
+.wm-preview .wm-sheet-card { width: min(62rem, calc(100vw - 2rem)); height: min(48rem, calc(100vh - 3rem)); }
+.wm-preview .wm-sheet-body { display: grid; place-items: center; padding: 1rem; background: var(--wm-sunken); }
+.wm-preview-meta { color: var(--wm-soft); font-size: 0.8rem; }
+.wm-preview-image { max-width: 100%; max-height: 100%; border-radius: 6px; object-fit: contain; }
+.wm-preview-pdf { width: 100%; height: 100%; border: 0; border-radius: 6px; background: #fff; }
+.wm-preview-loading { display: flex; align-items: center; gap: 0.6rem; margin: 0; color: var(--wm-soft); font-size: 0.86rem; }
+.wm-preview-note { display: grid; justify-items: center; gap: 0.4rem; max-width: 22rem; text-align: center; }
+.wm-preview-note-title { margin: 0; font-size: 1rem; font-weight: 700; }
+.wm-preview-note-text { margin: 0; color: var(--wm-soft); font-size: 0.86rem; line-height: 1.5; }
+.wm-trackers-text { margin: 0 0 0.8rem; color: var(--wm-soft); font-size: 0.86rem; line-height: 1.55; }
+.wm-tracker-list { display: grid; gap: 0.75rem; margin: 1.1rem 0 0; padding: 0; list-style: none; }
+.wm-tracker { display: grid; gap: 0.35rem; padding: 0.8rem 0.9rem; border: 1px solid var(--wm-line); border-radius: 10px; }
+.wm-tracker-line { display: flex; align-items: center; gap: 0.6rem; min-width: 0; margin: 0; font-size: 0.8rem; }
+.wm-tracker-url { flex: 1; min-width: 0; overflow: hidden; color: var(--wm-soft); text-overflow: ellipsis; white-space: nowrap; }
+.wm-tag { flex: none; min-width: 4.4rem; padding: 0.12rem 0.5rem; border-radius: 999px; background: var(--wm-icon-hover); color: var(--wm-soft); font-size: 0.7rem; font-weight: 700; text-align: center; }
+.wm-tag.is-cleaned { background: var(--wm-blue-soft); color: var(--wm-blue); }
+.wm-tag.is-removed { background: var(--wm-danger-soft); color: var(--wm-danger); }
+.wm-source .wm-sheet-card { width: min(60rem, calc(100vw - 2rem)); height: min(46rem, calc(100vh - 3rem)); }
+.wm-source .wm-sheet-body { padding: 0; }
+.wm-source-text { min-height: 100%; margin: 0; padding: 1rem 1.3rem; background: var(--wm-sunken); color: var(--wm-ink); font: 0.76rem/1.55 ui-monospace, "Cascadia Code", Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Tips as PrivateEmail shows them: small and dark (light in the dark theme) */
 body.webmail-app .tip {
   padding: 0.38rem 0.62rem;
   border: 0;
@@ -482,14 +993,15 @@ body.webmail-app .tip {
 }
 body.webmail-app .tip::after { border-color: transparent; background: var(--wm-tip); }
 
-/* Coming in, each time the inbox opens (body.is-arriving), after logging in or on a refresh: the
-   page cross-fades from the one before, the bar settles from above, Compose and the folders
-   follow one after another, the mail comes in row by row, the storage bar fills, and the reading
-   pane's envelope rises last. With less motion asked for, it's all simply there. (Held only
-   before each one starts: a transform left behind would pin the folders' drawer open on a phone.
-   And nothing in a column that scrolls moves past its bottom on the way in: that would bring a
-   scrollbar for a moment. So the storage grows from its own bottom edge, and the mail settles
-   from just above its place.) */
+/* Coming in, after logging in or on a refresh (body.is-arriving): the page cross-fades from the
+   one before, the bar settles from above, Compose and the folders follow one after another, the
+   mail comes in row by row, the storage bar fills, and the reading pane's envelope rises last.
+   Another folder or a message's link comes in quietly (html.wm-been, webmail-first.js): only the
+   mail settles. With less motion asked for, it's all simply there. (Held only before each one
+   starts: a transform left behind would pin the folders' drawer open on a phone. And nothing in
+   a column that scrolls moves past its bottom on the way in: that would bring a scrollbar for a
+   moment. So the storage grows from its own bottom edge, and the mail settles from just above
+   its place.) */
 @keyframes wm-in-down { from { opacity: 0; transform: translateY(-10px); } }
 @keyframes wm-in-left { from { opacity: 0; transform: translateX(-14px); } }
 @keyframes wm-in-up { from { opacity: 0; transform: translateY(14px); } }
@@ -498,22 +1010,36 @@ body.webmail-app .tip::after { border-color: transparent; background: var(--wm-t
 @keyframes wm-in-fade { from { opacity: 0; } }
 @keyframes wm-fill { from { width: 0; } }
 @keyframes wm-read-in { from { opacity: 0; transform: translateY(6px); } }
+@keyframes wm-new { from { background-color: var(--wm-blue-soft); } }
 @media (prefers-reduced-motion: no-preference) {
   @view-transition { navigation: auto; }
-  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.35s; }
-  body.is-arriving .wm-top { animation: wm-in-down 0.5s var(--wm-ease) backwards; }
-  body.is-arriving .wm-compose { animation: wm-in-pop 0.5s var(--wm-ease) 0.12s backwards; }
-  body.is-arriving .wm-folder { animation: wm-in-left 0.45s var(--wm-ease) backwards; animation-delay: calc(0.18s + var(--i, 0) * 0.045s); }
-  body.is-arriving .wm-storage { transform-origin: 50% 100%; animation: wm-in-pop 0.5s var(--wm-ease) 0.42s backwards; }
-  body.is-arriving .wm-storage-bar span { animation: wm-fill 1.1s var(--wm-ease) 0.6s backwards; }
-  body.is-arriving .wm-list-head { animation: wm-in-fade 0.45s ease 0.15s backwards; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.3s; }
+  ::view-transition-group(wm-top), ::view-transition-group(wm-side) { animation-duration: 0s; }
+  html:not(.wm-been) body.is-arriving .wm-top { animation: wm-in-down 0.5s var(--wm-ease) backwards; }
+  html:not(.wm-been) body.is-arriving .wm-compose { animation: wm-in-pop 0.5s var(--wm-ease) 0.12s backwards; }
+  html:not(.wm-been) body.is-arriving .wm-folders > .wm-folder-item { animation: wm-in-left 0.45s var(--wm-ease) backwards; }
+  html:not(.wm-been) body.is-arriving .wm-folders > .wm-folder-item:nth-child(1) { animation-delay: 0.18s; }
+  html:not(.wm-been) body.is-arriving .wm-folders > .wm-folder-item:nth-child(2) { animation-delay: 0.225s; }
+  html:not(.wm-been) body.is-arriving .wm-folders > .wm-folder-item:nth-child(3) { animation-delay: 0.27s; }
+  html:not(.wm-been) body.is-arriving .wm-folders > .wm-folder-item:nth-child(4) { animation-delay: 0.315s; }
+  html:not(.wm-been) body.is-arriving .wm-folders > .wm-folder-item:nth-child(5) { animation-delay: 0.36s; }
+  html:not(.wm-been) body.is-arriving .wm-folders > .wm-folder-item:nth-child(6) { animation-delay: 0.405s; }
+  html:not(.wm-been) body.is-arriving .wm-folders > .wm-folder-item:nth-child(n+7) { animation-delay: 0.45s; }
+  html:not(.wm-been) body.is-arriving .wm-storage { transform-origin: 50% 100%; animation: wm-in-pop 0.5s var(--wm-ease) 0.42s backwards; }
+  html:not(.wm-been) body.is-arriving .wm-storage-bar span { animation: wm-fill 1.1s var(--wm-ease) 0.6s backwards; }
+  html:not(.wm-been) body.is-arriving .wm-list-head { animation: wm-in-fade 0.45s ease 0.15s backwards; }
   body.is-arriving .wm-message:not(.is-more) { animation: wm-in-settle 0.5s var(--wm-ease) backwards; animation-delay: calc(0.22s + min(var(--i, 0), 10) * 0.055s); }
+  html.wm-been body.is-arriving .wm-message:not(.is-more) { animation-duration: 0.35s; animation-delay: calc(min(var(--i, 0), 10) * 0.03s); }
+  html:not(.wm-been) body.is-arriving .wm-empty-art { animation: wm-in-pop 0.6s var(--wm-ease) 0.45s backwards; }
+  html:not(.wm-been) body.is-arriving .wm-empty p { animation: wm-in-up 0.55s var(--wm-ease) 0.58s backwards; }
   /* a message, as it opens in the reading pane */
   .wm-read { animation: wm-read-in 0.3s var(--wm-ease) backwards; }
   /* the next mail, as it comes in at the end of the list: quicker, one after another */
   .wm-message.is-more { animation: wm-in-settle 0.35s var(--wm-ease) backwards; animation-delay: calc(min(var(--i, 0), 12) * 0.025s); }
-  body.is-arriving .wm-empty-art { animation: wm-in-pop 0.6s var(--wm-ease) 0.45s backwards; }
-  body.is-arriving .wm-empty p { animation: wm-in-up 0.55s var(--wm-ease) 0.58s backwards; }
+  /* the list drawn again (sorted, filtered), and new mail arriving at the top */
+  .wm-messages.is-redrawn .wm-message { animation: wm-in-settle 0.3s var(--wm-ease) backwards; animation-delay: calc(min(var(--i, 0), 12) * 0.02s); }
+  .wm-message.is-new { animation: wm-in-settle 0.4s var(--wm-ease) backwards, wm-new 2.4s ease 0.4s backwards; }
+  .wm-folders.is-redrawn .wm-folder { animation: wm-in-fade 0.2s ease backwards; }
 }
 
 /* Narrower screens: the reading pane waits for a message, the folders slide in from the left */
@@ -539,12 +1065,25 @@ body.webmail-app .tip::after { border-color: transparent; background: var(--wm-t
     width: min(15.6rem, 86vw);
     transform: translateX(-102%);
     transition: transform 0.3s var(--menu-ease), box-shadow 0.3s ease;
+    view-transition-name: none;
   }
   .wm-side.is-open { box-shadow: 16px 0 36px -16px rgba(0, 0, 0, 0.35); transform: none; }   /* (closed: no shadow at the edge) */
   .wm-list { border-right: 0; }
   body.is-reading .wm-list { display: none; }   /* a message open: it takes the list's place */
   body.is-reading .wm-reader { display: flex; }
+  /* two or more ticked: what can be done to them, in a bar along the bottom, the list above it */
+  body.is-choosing .wm-list { display: flex; padding-bottom: 7.5rem; }
+  body.is-choosing .wm-reader { position: fixed; right: 0; bottom: 0; left: 0; z-index: 12; display: flex; overflow: visible; background: none; }
+  .wm-choose { position: static; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 0.3rem 0.75rem; padding: 0.6rem 0.75rem 0.7rem; border-top: 1px solid var(--wm-line); background: var(--wm-card); box-shadow: 0 -10px 24px rgba(10, 14, 30, 0.14); }
+  .wm-choose-card { order: -1; width: 100%; height: auto; max-height: none; margin: 0; background: none; box-shadow: none; }
+  .wm-choose-card::before, .wm-choose-card::after, .wm-choose-lines { display: none; }
+  .wm-choose-selected { position: static; font-size: 0.9rem; }
+  .wm-choose-number { display: inline; font-size: 1rem; line-height: inherit; }
+  .wm-choose-tools { margin: 0; }
   .wm-read-back { display: grid; }
+  .wm-folder-menu { opacity: 1; }
+  .wm-folder .wm-count { right: 2.6rem; }
+  .wm-folder:hover .wm-count { opacity: 1; }
 }
 @media (max-width: 600px) {
   body.webmail-app { --wm-top-height: 56px; }
@@ -552,8 +1091,9 @@ body.webmail-app .tip::after { border-color: transparent; background: var(--wm-t
   .wm-logo { margin-right: 0; padding: 0; }
   .wm-logo span, .wm-help, .wm-settings, .wm-divider { display: none; }
   .wm-search { flex: 1 1 auto; margin-left: 0.2rem; }
-  body.webmail-app .wm-search input { height: 38px; padding-left: 2.35rem; }
-  .wm-search svg { left: 0.8rem; }
+  body.webmail-app .wm-search input[type="search"] { height: 38px; padding-left: 2.35rem; }
+  .wm-search > svg { top: 19px; left: 0.8rem; }
+  .wm-search-panel { position: fixed; top: calc(var(--wm-top-height) + 4px); right: 0.5rem; left: 0.5rem; }
   .wm-app, .wm-icon { width: 38px; height: 38px; }
   .wm-avatar { width: 35px; height: 35px; font-size: 1.15rem; }
   .wm-list-head { height: 50px; padding: 0 1rem; }
@@ -562,14 +1102,17 @@ body.webmail-app .tip::after { border-color: transparent; background: var(--wm-t
   .wm-account { right: -0.4rem; }
   .wm-read-tools { margin: 0 0.5rem; }
   .wm-read-scroll { padding: 0.9rem 0.5rem 1.2rem; }
-  .wm-read-subject { margin: 0 0.35rem 0.9rem; font-size: 1.25rem; }
+  .wm-read-subject { font-size: 1.25rem; }
+  .wm-read-heading { margin: 0 0.35rem 0.9rem; }
   .wm-read-card { padding: 1rem 1rem 0.9rem; }
   .wm-read-head { grid-template-columns: auto minmax(0, 1fr); }
   .wm-read-meta { grid-column: 1 / -1; flex-wrap: wrap; }
   .wm-read-action.is-spam { margin-left: 0; }
+  .wm-toasts { bottom: 0.75rem; }
+  .wm-dialog-card { padding: 1.2rem 1.1rem 1rem; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .wm-account { animation: none; }
-  .wm-side { transition: none; }
+  .wm-account, .wm-search-panel, .wm-sort, .wm-menu-pop, .wm-toast, .wm-dialog, .wm-choose { animation: none; }
+  .wm-side, .wm-subfolders, .wm-files-body { transition: none; }
   .wm-more-spin { animation-duration: 2.4s; }
 }

@@ -1,0 +1,57 @@
+{% extends "webmail-settings-base.html" %}
+{% from "webmail-icons.html" import icon %}
+{% from "webmail-editor-bar.html" import editor_bar %}
+{% block page_title %}Auto-reply{% endblock %}
+{% block crumbs %}<a href="{{ url_for('settings.index') }}">Settings</a><span aria-current="page">Auto-reply</span>{% endblock %}
+{# The auto-reply, as PrivateEmail's (settings.py, webmail-autoreply.js): STATUS (on or off),
+   TIME (when it starts and ends, in the reader's own time), REPLY MESSAGE (its subject and what
+   it says), Discard changes and Save. The engine sends it once a day to each sender, written
+   into the mailbox's Sieve script (sieve.py). #}
+{% block settings %}
+<header class="wm-settings-head is-stacked">
+  <h1 class="wm-settings-title">Auto-reply</h1>
+  <p class="wm-settings-sub">Set up automatic replies to notice senders that you are out of the office or unable to respond.</p>
+</header>
+<form class="wm-panel wm-autoreply" data-wm-autoreply data-url="{{ url_for('settings.auto_reply') }}" novalidate>
+  <section class="wm-panel-section">
+    <h2 class="wm-panel-label">Status</h2>
+    <div class="wm-setting-row">
+      <p class="wm-setting-name">Activate auto-reply</p>
+      <button type="button" class="wm-switch-button" role="switch" aria-checked="{{ 'true' if kept.reply_on else 'false' }}"
+              data-wm-reply-on aria-label="Activate auto-reply"><span class="wm-switch"><span></span></span></button>
+    </div>
+  </section>
+  <section class="wm-panel-section" data-wm-reply-time>
+    <h2 class="wm-panel-label">Time</h2>
+    <div class="wm-when">
+      <p class="wm-when-label">Starts</p>
+      <input class="wm-input" type="date" name="start_date" value="{{ start_date }}" aria-label="Start date">
+      <input class="wm-input" type="time" name="start_time" value="{{ start_time or '09:00' }}" aria-label="Start time">
+      <p class="wm-when-label">Ends</p>
+      <input class="wm-input" type="date" name="end_date" value="{{ end_date }}" aria-label="End date">
+      <input class="wm-input" type="time" name="end_time" value="{{ end_time or '17:00' }}" aria-label="End time">
+    </div>
+  </section>
+  <section class="wm-panel-section">
+    <h2 class="wm-panel-label">Reply message</h2>
+    <label class="wm-label" for="reply-subject">Subject</label>
+    <input id="reply-subject" class="wm-input" type="text" name="subject" maxlength="1000" placeholder="Auto-reply subject" value="{{ kept.reply_subject }}">
+    <p class="wm-label">Message</p>
+    <div class="wm-editor is-tall" data-wm-reply-body>
+      {{ editor_bar() }}
+      <iframe class="wm-editor-frame" data-editor-frame title="Start typing your auto-reply message" sandbox="allow-same-origin"></iframe>
+    </div>
+    <template data-wm-reply-html>{{ kept.reply_html | safe }}</template>
+  </section>
+  <p class="wm-field-problem" data-wm-problem hidden></p>
+  <div class="wm-form-actions">
+    <button type="button" class="wm-button is-ghost" data-wm-discard>Discard changes</button>
+    <button type="submit" class="wm-button">Save</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/webmail-editor.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-autoreply.js') }}"></script>
+{% endblock %}

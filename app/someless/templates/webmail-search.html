@@ -1,0 +1,35 @@
+{# The search panel under the webmail's search field (webmail-mail.html, webmail-search.js): the
+   first messages that say what's typed, as PrivateEmail lists them (an unread one with a dot,
+   who it's from, the subject, when; what it says; the folder it's in when all the mail is
+   searched), the words found in bold, and a way to see all of them in the list. Or, when none
+   do, a word on what to try instead. all_url: the list of all of them. #}
+{% macro search_panel(found, text, total, folder, all_url) %}
+{%- if found %}
+<ul class="wm-search-results" role="listbox" aria-label="Search results">
+  {%- for message in found %}
+  <li role="option" aria-selected="false">
+    <a class="wm-search-result" href="{{ url_for('mail.message', folder=message.located.key if message.located else 'inbox', email_id=message.id) }}" data-wm-result>
+      <span class="wm-search-row">
+        {%- if message.unread %}<span class="wm-search-dot" aria-label="Unread"></span>{% endif %}
+        <span class="wm-search-sender">{{ message.sender | highlight(text) }}</span>
+        <span class="wm-search-sep" aria-hidden="true">-</span>
+        <span class="wm-search-subject">{{ message.subject | highlight(text) }}</span>
+        <span class="wm-search-date">{{ message.time }}</span>
+      </span>
+      <span class="wm-search-row">
+        <span class="wm-search-preview">{{ message.preview | highlight(text) }}</span>
+        {%- if not folder and message.located %}<span class="wm-search-folder">{{ message.located.label }}</span>{% endif %}
+      </span>
+    </a>
+  </li>
+  {%- endfor %}
+</ul>
+<a class="wm-search-all" href="{{ all_url }}" data-wm-all-results>All {{ total }} result{{ "s" if total != 1 }}</a>
+{%- else %}
+<div class="wm-search-empty">
+  <svg class="wm-search-empty-art" viewBox="0 0 48 48" aria-hidden="true"><circle cx="21" cy="21" r="12.5"/><path d="M30.5 30.5L41 41"/></svg>
+  <p class="wm-search-empty-title">No results for “{{ text }}”</p>
+  <p class="wm-search-empty-text">Try checking the spelling or using different keywords</p>
+</div>
+{%- endif %}
+{% endmacro %}

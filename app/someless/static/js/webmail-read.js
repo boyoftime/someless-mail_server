@@ -1,25 +1,26 @@
-// The webmail's reading pane (webmail-mail.html, webmail-read.html): a message in the list opens
-// here without a new page, and the address bar gets its own link (/message/<id>), so a refresh,
-// the Back button or a shared link opens it again. Its row is picked out and ticked, as the
-// webmails do, and loses its bold once it's open: it's read (webmail.py counts the Inbox again).
+// The webmail's reading pane (webmail-mail.html, webmail-read.html). A message in the list opens
+// here without a new page, and the address bar gets its own link (/mail/<folder>/<id>), so a
+// refresh, the Back button or a shared link opens it again. Its row is picked out and ticked, as
+// PrivateEmail does, and loses its bold once it's open: it's read (mail.py counts again).
 // What the message says is a page of its own in a frame, where no script runs: it's made as tall
-// as the message, in the webmail's colours, or in its own light ones on white (the sun, in the
-// dark theme). The arrow opens its attachments out. On narrow screens a message takes the list's
-// place, with a way back to the list.
+// as the message, and in the dark theme its light colours are turned dark (the sun shows its own
+// colours, on white). The arrow opens its attachments out; a file opens in a preview (pictures
+// and PDFs) or downloads. The shield shows the links cleaned of tracking; "View source" shows
+// the message as it came. On narrow screens a message takes the list's place, with a way back.
+// For the other scripts, as wm.reader: open(url, id, remember), close(), current().
 (function () {
   var reader = document.querySelector("[data-wm-reader]");
   var list = document.querySelector("[data-wm-messages]");
-  if (!reader || !list || !window.fetch) return;
+  if (!reader || !list || !window.wm) return;
   var empty = reader.querySelector("[data-wm-empty]");
   var view = reader.querySelector("[data-wm-view]");
-  var unread = document.querySelector("[data-wm-unread]");
+  var choose = reader.querySelector("[data-wm-choose]");
   var openId = view.dataset.open || null;   // opened by its link: the page came with it
   var asking = null;                        // the message on its way
   var watching = null;                      // the frame's size
-
-  function board(type, title, message) {
-    if (window.somelessBoard) window.somelessBoard.show({ type: type, title: title, message: message });
-  }
+  var PREVIEW_LIMIT = 25 * 1024 * 1024;     // bigger files are only downloaded
+  var listTitle = document.title.replace(/^\(\d+\)\s*/, "").replace(/^.* \| /, "");
+  var homeTitle = (document.querySelector("#wm-list-title") || {}).textContent || "Inbox";
 
   function rowFor(id) {
     return id ? list.querySelector('.wm-message[data-id="' + CSS.escape(id) + '"]') : null;
@@ -37,14 +38,16 @@
       }
     });
     var row = rowFor(id);
-    if (!row) return;
-    row.classList.add("is-open");
-    row.querySelector(".wm-message-link").setAttribute("aria-current", "true");
-    var box = row.querySelector("input[type=checkbox]");
-    if (!box.checked) {
-      box.checked = true;
-      box.setAttribute("data-auto", "");
+    if (row) {
+      row.classList.add("is-open");
+      row.querySelector(".wm-message-link").setAttribute("aria-current", "true");
+      var box = row.querySelector("input[type=checkbox]");
+      if (!box.checked) {
+        box.checked = true;
+        box.setAttribute("data-auto", "");
+      }
     }
+    list.dispatchEvent(new CustomEvent("wm:ticks"));
   }
   // The open message's row, brought into sight in the list when it's out of it (opened by its
   // link, or by Back and Forward): in the middle, the way the list scrolls, never the page
@@ -58,12 +61,13 @@
     scroller.scrollTop += place.top - box.top - (box.height - place.height) / 2;
   }
 
-  // ticked or unticked by hand: it stays that way when another message opens
-  list.addEventListener("change", function (event) { event.target.removeAttribute("data-auto"); });
-  // more of the list came in (webmail-list.js): the open message may be in it
-  list.addEventListener("someless:rows", function () { pickOut(openId); });
+  // more of the list came in, or it was drawn again: the open message may be in it
+  list.addEventListener("someless:rows", function () {
+    var row = rowFor(openId);
+    if (row && !row.classList.contains("is-open")) pickOut(openId);
+  });
 
-  // What the message says: in the webmail's colours (or its own on white), as tall as it is
+  // --- what the message says: as tall as it is, in the webmail's colours or its own ---
   function frame() {
     return view.querySelector("[data-wm-body]");
   }
@@ -79,6 +83,77 @@
     if (doc) frame().style.height = Math.ceil(doc.documentElement.getBoundingClientRect().height) + "px";
   }
 
+  // Colours: [r, g, b, a] from the browser's rgb()/rgba()
+  function parse(colour) {
+    var match = /rgba?\(([^)]+)\)/.exec(colour || "");
+    if (!match) return null;
+    var parts = match[1].split(/[\s,/]+/).filter(Boolean).map(Number);
+    return [parts[0], parts[1], parts[2], parts.length > 3 ? parts[3] : 1];
+  }
+  function light(rgb) {   // how light it looks, 0 to 1
+    function channel(value) {
+      value /= 255;
+      return value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+    }
+    return 0.2126 * channel(rgb[0]) + 0.7152 * channel(rgb[1]) + 0.0722 * channel(rgb[2]);
+  }
+  function toHsl(rgb) {
+    var r = rgb[0] / 255, g = rgb[1] / 255, b = rgb[2] / 255;
+    var max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, h = 0, s = 0;
+    if (max !== min) {
+      var d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      h /= 6;
+    }
+    return [h * 360, s * 100, l * 100];
+  }
+  function hsl(h, s, l, a) {
+    return "hsla(" + h.toFixed(0) + ", " + s.toFixed(0) + "%, " + l.toFixed(0) + "%, " + a + ")";
+  }
+
+  // The message's own light colours made dark (and its dark words light), keeping their hues:
+  // what it set on white stays readable on the dark page. What was there before is kept, for
+  // the sun to put back.
+  function darken(doc) {
+    var win = doc.defaultView;
+    var changed = [];
+    var all = [doc.body].concat(Array.prototype.slice.call(doc.body.querySelectorAll("*")));
+    all.forEach(function (element) {
+      if (/^(IMG|svg|VIDEO|PICTURE)$/i.test(element.tagName)) return;
+      var style = win.getComputedStyle(element);
+      var back = parse(style.backgroundColor);
+      var ink = parse(style.color);
+      var edits = [];
+      if (back && back[3] > 0.05 && light(back) > 0.45) {
+        var shade = toHsl(back);
+        // near white: the card's own colour shows through; coloured: a deep shade of it
+        edits.push(["background-color", shade[1] < 12 && shade[2] > 90 ? "transparent" :
+          hsl(shade[0], Math.min(shade[1], 55), 14 + (100 - shade[2]) * 0.12, back[3])]);
+      }
+      if (ink && light(ink) < 0.4) {
+        var parts = toHsl(ink);
+        edits.push(["color", hsl(parts[0], Math.min(parts[1], 80), 92 - parts[2] * 0.25, ink[3])]);
+      }
+      var edge = parse(style.borderTopColor);
+      if (edge && parseFloat(style.borderTopWidth) > 0 && light(edge) > 0.6) {
+        var e = toHsl(edge);
+        edits.push(["border-color", hsl(e[0], Math.min(e[1], 40), 28, edge[3])]);
+      }
+      if (!edits.length) return;
+      changed.push([element, element.getAttribute("style")]);
+      edits.forEach(function (edit) { element.style.setProperty(edit[0], edit[1], "important"); });
+    });
+    doc.wmDarkened = changed;
+  }
+  function undarken(doc) {
+    (doc.wmDarkened || []).forEach(function (pair) {
+      if (pair[1] === null) pair[0].removeAttribute("style");
+      else pair[0].setAttribute("style", pair[1]);
+    });
+    doc.wmDarkened = null;
+  }
+
   function colours() {
     var doc = page();
     if (!doc) return;
@@ -87,6 +162,11 @@
     doc.documentElement.classList.toggle("is-dark", dark);
     doc.documentElement.classList.toggle("is-light", !dark);
     doc.documentElement.classList.toggle("is-paper", paper);
+    if (dark && !paper) {
+      if (!doc.wmDarkened) darken(doc);
+    } else if (doc.wmDarkened) {
+      undarken(doc);
+    }
     fit();
   }
   document.addEventListener("someless:theme", colours);
@@ -96,9 +176,20 @@
     if (!body) return;
     function ready() {
       var doc = page();
-      if (!doc) return;
+      if (!doc || doc.wmReady) return;
+      doc.wmReady = true;
       colours();
       if (doc.fonts) doc.fonts.ready.then(fit);   // its font can make it taller
+      Array.prototype.forEach.call(doc.images, function (picture) {
+        if (!picture.complete) picture.addEventListener("load", fit);
+      });
+      // a link to write to someone: a new message to them, here (webmail-compose.js)
+      doc.addEventListener("click", function (event) {
+        var link = event.target.closest && event.target.closest('a[href^="mailto:"]');
+        if (!link || !window.wm.compose) return;
+        event.preventDefault();
+        wm.compose.mailto(link.getAttribute("href"));
+      });
     }
     body.addEventListener("load", ready);
     ready();   // there already
@@ -109,109 +200,330 @@
     }
   }
 
-  // Opening and closing
-  function setUnread(count) {
-    if (!unread || typeof count !== "number") return;
-    unread.textContent = count;
-    unread.hidden = count === 0;
-  }
-
+  // --- opening and closing ---
   function show(html, id, subject) {
+    document.dispatchEvent(new CustomEvent("wm:leaving"));   // (a reply being written under the last one: kept)
     view.innerHTML = html;
     view.hidden = false;
     empty.hidden = true;
+    if (choose) choose.hidden = true;
     view.dataset.open = id;
     openId = id;
     document.body.classList.add("is-reading");
-    document.title = subject + " | Someless Webmail";
+    wm.setTitle(subject + " | Someless Webmail");
     pickOut(id);
     var row = rowFor(id);
-    if (row) row.classList.remove("is-unread");   // read now
+    if (row && !row.hasAttribute("data-draft")) {   // read now
+      row.classList.remove("is-unread");
+      row.dataset.unread = "0";
+    }
+    var scroller = view.querySelector("[data-wm-read-scroll]");
+    if (scroller) scroller.scrollTop = 0;
     setUp();
+    document.dispatchEvent(new CustomEvent("wm:opened", { detail: { id: id } }));
   }
 
-  function close() {
+  function close(keepTicks) {
     if (asking) asking.abort();
     asking = null;
+    if (view.innerHTML) document.dispatchEvent(new CustomEvent("wm:leaving"));
     view.innerHTML = "";
     view.hidden = true;
-    empty.hidden = false;
+    if (!choose || choose.hidden) empty.hidden = false;
     delete view.dataset.open;
     openId = null;
     document.body.classList.remove("is-reading");
-    document.title = "Inbox | Someless Webmail";
-    pickOut(null);
+    wm.setTitle(homeTitle + " | Someless Webmail");
+    if (!keepTicks) pickOut(null);
+    document.dispatchEvent(new CustomEvent("wm:closed"));
   }
 
   function open(url, id, remember) {
     if (asking) asking.abort();
     var ask = asking = new AbortController();
-    fetch(url, { credentials: "same-origin", headers: { Accept: "application/json" }, signal: ask.signal })
-      .then(function (response) {
-        if (response.redirected) {   // logged out meanwhile: the login page
-          location.href = response.url;
-          return null;
-        }
-        if (!response.ok) throw new Error("refused");
-        return response.json();
-      })
+    reader.classList.add("is-loading");
+    wm.request(url, { signal: ask.signal, quiet: true })
       .then(function (answer) {
-        if (!answer || asking !== ask) return;
+        if (asking !== ask) return;
         asking = null;
+        reader.classList.remove("is-loading");
         show(answer.html, id, answer.subject);
-        setUnread(answer.unread);
+        wm.counts(answer.counts, answer.unread);
         if (remember) history.pushState({ wmMessage: id }, "", url);
         else reveal(id);   // Back or Forward: its row may be out of sight
       })
       .catch(function (error) {
         if (error.name === "AbortError") return;   // another message was picked meanwhile
         asking = null;
+        reader.classList.remove("is-loading");
         pickOut(openId);   // back to the one that's open
-        board("error", "Couldn't open the message", "The webmail didn't answer. Check your connection and try again.");
+        if (error.status === 404) {
+          wm.board("This message isn't there any more", "It was moved or deleted, maybe from another app.");
+          var row = rowFor(id);
+          if (row) wm.list.remove([id]);
+        } else {
+          wm.board("Error occured. Email has not been loaded", error.problem || "The webmail didn't answer. Check your connection and try again.");
+        }
       });
   }
 
   list.addEventListener("click", function (event) {
     var link = event.target.closest(".wm-message-link");
     if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    event.preventDefault();   // (with a key held: a new tab, as links do)
+    event.preventDefault();   // (with a key held: webmail-actions.js ticks it instead)
     var id = link.closest(".wm-message").dataset.id;
-    if (id === openId && !asking) return;   // open already
+    document.dispatchEvent(new CustomEvent("wm:untick-all"));   // opening one: the others' ticks go
+    if (id === openId && !asking) {
+      pickOut(id);
+      return;   // open already
+    }
     pickOut(id);   // at once, while it comes
     open(link.href, id, true);
   });
 
-  // Back and Forward: the message the address bar has, or none
-  window.addEventListener("popstate", function () {
-    var match = location.pathname.match(/\/message\/([^/]+)$/);
-    if (match) open(location.href, decodeURIComponent(match[1]), false);
-    else close();
-  });
+  // (Back and Forward: webmail-nav.js)
 
-  // In the pane: back to the list (narrow screens), the attachments, the message's own colours
+  // --- in the pane ---
+  function flipTip(button, on) {   // its tip says what a click does now; the old one goes (tooltip.js)
+    var tip = on ? button.dataset.tipOn : button.dataset.tipOff;
+    button.dataset.tip = tip;
+    button.setAttribute("aria-label", tip);
+    document.dispatchEvent(new CustomEvent("someless:tips-away", { detail: { element: button } }));
+  }
+
   reader.addEventListener("click", function (event) {
     if (event.target.closest("[data-wm-back]")) {
       close();
       history.pushState(null, "", reader.dataset.home);
       return;
     }
-    var button = event.target.closest("[data-wm-files-toggle], [data-wm-paper]");
-    if (!button) return;
-    var on;
-    if (button.hasAttribute("data-wm-files-toggle")) {
-      on = button.closest("[data-wm-files]").classList.toggle("is-open");
-      button.setAttribute("aria-expanded", String(on));
-    } else {
-      on = button.getAttribute("aria-pressed") !== "true";
-      button.setAttribute("aria-pressed", String(on));
-      colours();
+    var files = event.target.closest("[data-wm-files-toggle]");
+    if (files) {
+      var on = files.closest("[data-wm-files]").classList.toggle("is-open");
+      files.setAttribute("aria-expanded", String(on));
+      flipTip(files, on);
+      return;
     }
-    // its tip says what a click does now; the old one goes (tooltip.js)
-    var tip = on ? button.dataset.tipOn : button.dataset.tipOff;
-    button.dataset.tip = tip;
-    button.setAttribute("aria-label", tip);
-    document.dispatchEvent(new CustomEvent("someless:tips-away", { detail: { element: button } }));
+    var paper = event.target.closest("[data-wm-paper]");
+    if (paper) {
+      var pressed = paper.getAttribute("aria-pressed") !== "true";
+      paper.setAttribute("aria-pressed", String(pressed));
+      colours();
+      flipTip(paper, pressed);
+      return;
+    }
+    var morePeople = event.target.closest("[data-wm-more-people]");
+    if (morePeople) {
+      var line = morePeople.closest("[data-wm-people]");
+      var showing = line.classList.toggle("is-all");
+      line.querySelectorAll("[data-more]").forEach(function (person) { person.hidden = !showing; });
+      morePeople.textContent = showing ? morePeople.dataset.lessText : morePeople.dataset.moreText;
+      return;
+    }
+    var preview = event.target.closest("[data-wm-preview]");
+    if (preview) {
+      showPreview(preview);
+      return;
+    }
+    var shield = event.target.closest("[data-wm-shield]");
+    if (shield) {
+      showTrackers(shield);
+      return;
+    }
+    var writeTo = event.target.closest("[data-wm-write-to]");
+    if (writeTo && window.wm.compose && event.button === 0 && !event.ctrlKey && !event.metaKey) {
+      event.preventDefault();
+      wm.compose.open({ to: [writeTo.dataset.wmWriteTo] });
+    }
   });
+
+  // --- a dialog of the reading pane's own: a preview, the trackers, the source ---
+  function sheet(title, className) {
+    var dialog = document.createElement("dialog");
+    dialog.className = "wm-dialog wm-sheet" + (className ? " " + className : "");
+    dialog.innerHTML = '<div class="wm-sheet-card"><header class="wm-sheet-head"><h2 class="wm-sheet-title"></h2>' +
+      '<div class="wm-sheet-tools"></div><button type="button" class="wm-icon wm-sheet-close" aria-label="Close" data-tip="Close"></button></header>' +
+      '<div class="wm-sheet-body"></div></div>';
+    dialog.querySelector(".wm-sheet-title").textContent = title;
+    dialog.querySelector(".wm-sheet-close").appendChild(wm.icon("close"));
+    function shut() {
+      dialog.classList.add("is-leaving");
+      setTimeout(function () {
+        if (dialog.open) dialog.close();
+        dialog.remove();
+      }, wm.reduceMotion ? 0 : 160);
+    }
+    dialog.querySelector(".wm-sheet-close").addEventListener("click", shut);
+    dialog.addEventListener("cancel", function (event) {
+      event.preventDefault();
+      shut();
+    });
+    dialog.addEventListener("click", function (event) {
+      if (event.target === dialog) shut();
+    });
+    document.body.appendChild(dialog);
+    dialog.showModal();
+    return { dialog: dialog, body: dialog.querySelector(".wm-sheet-body"), tools: dialog.querySelector(".wm-sheet-tools"), close: shut };
+  }
+
+  function note(body, title, text) {
+    body.innerHTML = '<div class="wm-preview-note"><p class="wm-preview-note-title"></p><p class="wm-preview-note-text"></p></div>';
+    body.querySelector(".wm-preview-note-title").textContent = title;
+    body.querySelector(".wm-preview-note-text").textContent = text;
+  }
+
+  // Attachment preview: a picture or a PDF on the page; anything else, or too big, is downloaded
+  function showPreview(button) {
+    var shown = sheet(button.dataset.name, "wm-preview");
+    var meta = document.createElement("span");
+    meta.className = "wm-preview-meta";
+    meta.textContent = button.dataset.size;
+    shown.tools.appendChild(meta);
+    var save = document.createElement("a");
+    save.className = "wm-button is-small";
+    save.href = button.dataset.download;
+    save.setAttribute("download", button.dataset.name);
+    save.appendChild(wm.icon("download"));
+    save.appendChild(document.createTextNode("Download"));
+    shown.tools.appendChild(save);
+    var kind = button.dataset.kind;
+    if (kind === "other" || !button.dataset.view) {
+      note(shown.body, "Preview is not available", "This file type cannot be shown here. Download it to open on your device.");
+      return;
+    }
+    if (Number(button.dataset.bytes) > PREVIEW_LIMIT) {
+      note(shown.body, "This file is too large to preview", "Files over 25 MB can only be downloaded.");
+      return;
+    }
+    shown.body.innerHTML = '<p class="wm-preview-loading"><span class="wm-more-spin" aria-hidden="true"></span><span>Loading the preview</span></p>';
+    var failed = function () {
+      note(shown.body, "The preview could not be loaded", "Something went wrong while opening this file. Download it to open on your device.");
+    };
+    if (kind === "image") {
+      var picture = new Image();
+      picture.className = "wm-preview-image";
+      picture.alt = button.dataset.name;
+      picture.onload = function () {
+        shown.body.innerHTML = "";
+        shown.body.appendChild(picture);
+      };
+      picture.onerror = failed;
+      picture.src = button.dataset.view;
+    } else {
+      var pdf = document.createElement("iframe");
+      pdf.className = "wm-preview-pdf";
+      pdf.title = button.dataset.name;
+      pdf.addEventListener("load", function () {
+        var loading = shown.body.querySelector(".wm-preview-loading");
+        if (loading) loading.remove();
+      });
+      pdf.src = button.dataset.view;
+      shown.body.appendChild(pdf);
+    }
+  }
+
+  // The shield: the links cleaned of tracking, each as it was, as it is, and what came off it
+  function showTrackers(shield) {
+    var holder = view.querySelector("[data-wm-trackers]");
+    if (!holder) return;   // none: its tip says so
+    var count = holder.content.querySelectorAll(".wm-tracker").length;
+    var shown = sheet("Links cleaned from tracking: " + count, "wm-trackers");
+    shown.body.innerHTML = '<p class="wm-trackers-text">This email contained tracking links, designed to send information ' +
+      "(like when you open the email and your location) back to the sender.</p>" +
+      '<p class="wm-trackers-text">We removed the tracking from the links to safeguard your privacy, without any loss of ' +
+      "functionality when you open the email.</p>";
+    var items = document.createElement("ul");
+    items.className = "wm-tracker-list";
+    items.appendChild(holder.content.cloneNode(true));
+    shown.body.appendChild(items);
+    items.addEventListener("click", function (event) {
+      var copy = event.target.closest("[data-wm-copy-link]");
+      if (!copy) return;
+      navigator.clipboard.writeText(copy.dataset.wmCopyLink).then(function () {
+        wm.toast("Link copied");
+      }, function () {
+        wm.board("Couldn't copy", "Select the link and copy it yourself.");
+      });
+    });
+  }
+
+  // View source: the message as it came, headers and all, with its headers to copy
+  function showSource(url) {
+    var shown = sheet("Mail source:", "wm-source");
+    var copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "wm-button is-small is-ghost";
+    copy.appendChild(wm.icon("copy"));
+    copy.appendChild(document.createTextNode("Copy email headers"));
+    copy.disabled = true;
+    shown.tools.appendChild(copy);
+    shown.body.innerHTML = '<p class="wm-preview-loading"><span class="wm-more-spin" aria-hidden="true"></span><span>Loading…</span></p>';
+    fetch(url, { credentials: "same-origin" })
+      .then(function (response) {
+        if (!response.ok) throw new Error("refused");
+        return response.text();
+      })
+      .then(function (text) {
+        var pre = document.createElement("pre");
+        pre.className = "wm-source-text";
+        pre.textContent = text;
+        shown.body.innerHTML = "";
+        shown.body.appendChild(pre);
+        var headers = text.split(/\r?\n\r?\n/)[0];
+        copy.disabled = false;
+        copy.addEventListener("click", function () {
+          navigator.clipboard.writeText(headers).then(function () {
+            wm.toast("Email headers copied");
+          }, function () {
+            wm.board("Couldn't copy", "Select the headers and copy them yourself.");
+          });
+        });
+      })
+      .catch(function () {
+        shown.close();
+        wm.board("Couldn't show the source", "The webmail didn't answer. Check your connection and try again.");
+      });
+  }
+
+  // another folder's page (webmail-nav.js): its reading pane in place of this one
+  function adopt(page) {
+    var nextReader = page.querySelector("[data-wm-reader]");
+    reader.dataset.home = nextReader.dataset.home;
+    homeTitle = (page.querySelector("#wm-list-title") || {}).textContent || homeTitle;
+    var tools = choose && choose.querySelector(".wm-choose-tools");
+    var nextTools = nextReader.querySelector(".wm-choose-tools");
+    if (tools && nextTools) tools.innerHTML = nextTools.innerHTML;
+    if (choose) choose.hidden = true;
+    var nextView = nextReader.querySelector("[data-wm-view]");
+    if (asking) asking.abort();
+    asking = null;
+    if (nextView && nextView.dataset.open) {
+      document.dispatchEvent(new CustomEvent("wm:leaving"));
+      view.innerHTML = nextView.innerHTML;
+      view.hidden = false;
+      empty.hidden = true;
+      view.dataset.open = nextView.dataset.open;
+      openId = nextView.dataset.open;
+      pickOut(openId);
+      setUp();
+      reveal(openId);
+      document.dispatchEvent(new CustomEvent("wm:opened", { detail: { id: openId } }));
+    } else {
+      close(true);
+      pickOut(null);
+    }
+  }
+
+  window.wm.reader = {
+    adopt: adopt, open: open, close: close, pickOut: pickOut, showSource: showSource,
+    current: function () { return openId; },
+    element: function () { return view.querySelector("[data-wm-read]"); },
+    reload: function () {   // (a flag changed elsewhere: the bar shows it)
+      var row = rowFor(openId);
+      var link = row && row.querySelector(".wm-message-link");
+      if (openId) open(link ? link.href : location.href, openId, false);
+    },
+  };
 
   if (openId) {   // the page came with it open (its link, a refresh)
     setUp();

@@ -18,6 +18,7 @@ from .domain_records import HOST_CHOICES
 from .engine import EngineError, EngineUnavailable, client, enabled, names, state
 from .engine import sync as engine_sync
 from .settings import FORCED_KINDS, MIN_LENGTHS, password_checks
+from .webmail import views as webmail_views
 
 bp = Blueprint("mailboxes", __name__, url_prefix="/mailboxes")
 
@@ -373,6 +374,7 @@ def delete(mailbox_id):
     mailbox = db.execute("SELECT email FROM mailboxes WHERE id = ?", (mailbox_id,)).fetchone()
     if mailbox:
         db.execute("DELETE FROM mailbox_aliases WHERE mailbox_id = ?", (mailbox_id,))
+        webmail_views.forget(mailbox_id)
         db.execute("DELETE FROM mailboxes WHERE id = ?", (mailbox_id,))
         db.commit()
         engine_sync.after_change()   # the engine deletes the account, and the mail in it

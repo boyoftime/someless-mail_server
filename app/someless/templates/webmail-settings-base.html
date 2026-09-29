@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{% block page_title %}Settings{% endblock %} | Someless Webmail{% endblock %}
+{% block head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-app.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-settings.css') }}">
+<script src="{{ url_for('static', filename='js/webmail-zone.js') }}"></script>
+{% endblock %}
+{% block body_class %}webmail-app is-settings{% endblock %}
+{% from "webmail-icons.html" import icon %}
+{% from "webmail-top.html" import top_bar %}
+
+{% block body %}
+{# Settings (settings.py), as PrivateEmail's: the webmail's bar across the top, the parts of
+   Settings down the side, and the page: where it is (Mail > Settings > ...), its title, what it
+   holds. #}
+{{ top_bar("settings", email, name, initial, theme) }}
+<div class="wm-settings-shell">
+  <aside class="wm-side wm-settings-side" id="wm-side" aria-label="Settings">
+    <a class="wm-settings-back" href="{{ url_for('mail.home') }}">{{ icon("back") }}<span>Back to mail</span></a>
+    <nav class="wm-settings-nav" aria-label="Settings">
+      {%- set here = request.endpoint %}
+      {%- for endpoint, label, symbol in [("settings.index", "Settings", "settings"), ("settings.signatures_page", "Signatures", "signature"),
+                                        ("settings.auto_reply_page", "Auto-reply", "reply"), ("settings.filters_page", "Filters", "filter"),
+                                        ("settings.apps_page", "Connect third-party apps", "link"), ("settings.security_page", "Security Center", "shield-line")] %}
+      <a class="wm-settings-link{% if here == endpoint %} is-current{% endif %}" href="{{ url_for(endpoint) }}"{% if here == endpoint %} aria-current="page"{% endif %}>
+        {{ icon(symbol) }}<span>{{ label }}</span>
+      </a>
+      {%- endfor %}
+    </nav>
+  </aside>
+  <div class="wm-scrim" data-wm-scrim hidden></div>
+  <main class="wm-settings-page" id="wm-settings">
+    <nav class="wm-crumbs" aria-label="Where you are">
+      <a href="{{ url_for('mail.home') }}">Mail</a>
+      {%- block crumbs %}<span aria-current="page">Settings</span>{% endblock %}
+    </nav>
+    {% block settings %}{% endblock %}
+  </main>
+</div>
+
+<div class="wm-toasts" data-wm-toasts role="status" aria-live="polite"></div>
+<template id="wm-icons">
+  {%- for symbol in ["close", "check", "warning", "copy", "search", "edit", "trash", "plus", "chevron", "chevron-right", "clock",
+                     "folder", "inbox", "archive", "spam", "drafts", "sent", "refresh", "move", "star", "read", "unread",
+                     "forward", "eye", "sort", "settings", "bold", "italic", "underline", "link", "bullets", "numbers",
+                     "text-color", "clear-format", "undo", "redo", "image", "align-left", "align-center", "align-right",
+                     "more", "signature", "filter", "download", "reply", "strike", "highlight", "indent-less", "indent-more",
+                     "quote", "table", "format", "grip"] %}
+  <span data-icon="{{ symbol }}">{{ icon(symbol) }}</span>
+  {%- endfor %}
+</template>
+<script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+<script src="{{ url_for('static', filename='js/copy-button.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tooltip.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/webmail-core.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-app.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-search.js') }}"></script>
+{% block scripts %}{% endblock %}
+{% endblock %}

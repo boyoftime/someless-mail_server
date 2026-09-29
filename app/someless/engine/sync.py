@@ -17,7 +17,8 @@ from pathlib import Path
 from flask import current_app
 
 from ..db import get_db
-from . import INTERNAL_DOMAIN, PANEL_ACCOUNT, SENDERS_GROUP, client, deliveries, enabled, names, remember, secret, state
+from . import (INTERNAL_DOMAIN, PANEL_ACCOUNT, SENDERS_GROUP, WEBMAIL_ACCOUNT, client, deliveries, enabled, names, remember,
+               secret, state)
 
 from .client import EngineError, EngineUnavailable
 
@@ -64,6 +65,7 @@ def desired_state():
         "SELECT login, key_hash FROM smtp_keys WHERE login IS NOT NULL AND (expires_at IS NULL OR expires_at > ?)",
         (time.time(),))}
     accounts[PANEL_ACCOUNT] = sha256_secret(hashlib.sha256(secret("panel_password").encode()).hexdigest())
+    accounts[WEBMAIL_ACCOUNT] = sha256_secret(hashlib.sha256(secret("webmail_password").encode()).hexdigest())
     return {"domains": domains, "accounts": accounts, "senders": senders, "mailboxes": mailboxes,
             "server_name": names.server_name(),
             "acme_directory": current_app.config.get("ENGINE_ACME_DIRECTORY", ACME_DIRECTORY),
@@ -105,10 +107,13 @@ def reconcile(engine, desired):
     group = accounts.pop(SENDERS_GROUP, None)   # how Senders were done before the send-as rule
     for login, password in desired["accounts"].items():
         if login not in accounts:
-            engine.create("Account", _user(login, internal_id, password))
+            engine.create("Account", _internal_account(login, internal_id, password))
             done.append(f"create Account {login}")
         elif accounts[login].get("memberGroupIds"):
             engine.update("Account", accounts[login]["id"], {"memberGroupIds": {}})
+            done.append(f"update Account {login}")
+        elif login == WEBMAIL_ACCOUNT and not _may_impersonate(accounts[login]):
+            engine.update("Account", accounts[login]["id"], {"permissions": IMPERSONATE})
             done.append(f"update Account {login}")
     for login, obj in accounts.items():
         if login not in desired["accounts"]:
@@ -277,6 +282,24 @@ def ask_for_certificate():
         return False
     remember(certificate_asked_at=time.time())
     return True
+
+
+IMPERSONATE = {"@type": "Merge", "enabledPermissions": {"impersonate": True}}
+
+
+def _internal_account(login, domain_id, password):
+    """An account in someless.internal: a key's, the panel's, or the webmail's, which may act for
+    the mailboxes (their owners are signed in to the webmail) and only from inside the container."""
+    account = _user(login, domain_id, password)
+    if login == WEBMAIL_ACCOUNT:
+        account["permissions"] = IMPERSONATE
+        account["credentials"]["0"]["allowedIps"] = {"127.0.0.1": True}
+    return account
+
+
+def _may_impersonate(obj):
+    permissions = obj.get("permissions") or {}
+    return permissions.get("@type") in ("Merge", "Replace") and (permissions.get("enabledPermissions") or {}).get("impersonate")
 
 
 def _user(name, domain_id, secret):

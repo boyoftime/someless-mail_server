@@ -11,6 +11,9 @@ from .client import EngineClient, EngineError, EngineUnavailable  # noqa: F401 (
 
 INTERNAL_DOMAIN = "someless.internal"  # Stalwart's own default domain; the key accounts live in it
 PANEL_ACCOUNT = "someless-panel"       # the panel's own sending account (test emails)
+# The webmail's account: it opens a mailbox's mail for its owner, signing in as
+# mailbox%someless-webmail@someless.internal (impersonation), from inside the container only
+WEBMAIL_ACCOUNT = "someless-webmail"
 SENDERS_GROUP = "someless-senders"     # how older installs let keys send as the Senders; the sync removes it
 API_URL = "http://127.0.0.1:17880"
 
