@@ -102,3 +102,12 @@ def test_the_readme_has_one_compose_file_for_every_setup():
     assert "docker network inspect nginx-proxy >/dev/null 2>&1 || docker network create nginx-proxy" in readme
     compose = COMPOSE.read_text()
     assert "nginx-proxy" in compose and '"17080:17080"' in compose and "put a # at the start" in compose
+
+
+def test_the_smoke_test_waits_for_the_webmail_as_for_the_panel():
+    """The webmail starts beside the panel, a moment after it: the smoke test waits for each before
+    looking at it, or a slower start fails the build."""
+    workflow = (ROOT / ".github" / "workflows" / "docker.yml").read_text()
+    wait = "curl -fsS http://127.0.0.1:17090/healthz && break"
+    assert wait in workflow
+    assert workflow.index(wait) < workflow.index("curl -fsS http://127.0.0.1:17090/login")

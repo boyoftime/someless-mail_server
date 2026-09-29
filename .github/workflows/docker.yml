@@ -104,7 +104,12 @@ jobs:
           done
           curl -fsS http://127.0.0.1:17080/healthz | grep -qx ok
           curl -fsS http://127.0.0.1:17080/ | grep -Eq "Preparing your Someless Mail server|Welcome to"
-          # the webmail answers on its own port, with its own sign-in
+          # the webmail answers on its own port, with its own sign-in (it starts beside the panel,
+          # a moment after it: waited for in the same way)
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:17090/healthz && break
+            sleep 1
+          done
           curl -fsS http://127.0.0.1:17090/healthz | grep -qx ok
           curl -fsS http://127.0.0.1:17090/login | grep -q "Log in to your mailbox"
           for i in $(seq 1 120); do
