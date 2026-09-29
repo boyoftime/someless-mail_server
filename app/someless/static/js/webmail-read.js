@@ -242,11 +242,13 @@
     if (asking) asking.abort();
     var ask = asking = new AbortController();
     reader.classList.add("is-loading");
+    wm.loading(reader, true);
     wm.request(url, { signal: ask.signal, quiet: true })
       .then(function (answer) {
         if (asking !== ask) return;
         asking = null;
         reader.classList.remove("is-loading");
+        wm.loading(reader, false);
         show(answer.html, id, answer.subject);
         wm.counts(answer.counts, answer.unread);
         if (remember) history.pushState({ wmMessage: id }, "", url);
@@ -256,6 +258,7 @@
         if (error.name === "AbortError") return;   // another message was picked meanwhile
         asking = null;
         reader.classList.remove("is-loading");
+        wm.loading(reader, false);
         pickOut(openId);   // back to the one that's open
         if (error.status === 404) {
           wm.board("This message isn't there any more", "It was moved or deleted, maybe from another app.");
@@ -395,8 +398,9 @@
       note(shown.body, "This file is too large to preview", "Files over 25 MB can only be downloaded.");
       return;
     }
-    shown.body.innerHTML = '<p class="wm-preview-loading"><span class="wm-more-spin" aria-hidden="true"></span><span>Loading the preview</span></p>';
+    var turning = loadingNote(shown.body, "Loading the preview");
     var failed = function () {
+      wm.spinner.stop(turning);
       note(shown.body, "The preview could not be loaded", "Something went wrong while opening this file. Download it to open on your device.");
     };
     if (kind === "image") {
@@ -404,6 +408,7 @@
       picture.className = "wm-preview-image";
       picture.alt = button.dataset.name;
       picture.onload = function () {
+        wm.spinner.stop(turning);
         shown.body.innerHTML = "";
         shown.body.appendChild(picture);
       };
@@ -414,12 +419,29 @@
       pdf.className = "wm-preview-pdf";
       pdf.title = button.dataset.name;
       pdf.addEventListener("load", function () {
+        wm.spinner.stop(turning);
         var loading = shown.body.querySelector(".wm-preview-loading");
         if (loading) loading.remove();
       });
       pdf.src = button.dataset.view;
       shown.body.appendChild(pdf);
     }
+  }
+
+  // what's coming, in a sheet: the turning arrows and a word (the arrows, to stop when it's come)
+  function loadingNote(holder, label) {
+    holder.innerHTML = "";
+    var line = document.createElement("div");
+    line.className = "wm-preview-loading";
+    line.setAttribute("role", "status");
+    var art = wm.spinner();
+    art.classList.remove("is-small");
+    line.appendChild(art);
+    var words = document.createElement("span");
+    words.textContent = label;
+    line.appendChild(words);
+    holder.appendChild(line);
+    return art;
   }
 
   // The shield: the links cleaned of tracking, each as it was, as it is, and what came off it
@@ -457,7 +479,7 @@
     copy.appendChild(document.createTextNode("Copy email headers"));
     copy.disabled = true;
     shown.tools.appendChild(copy);
-    shown.body.innerHTML = '<p class="wm-preview-loading"><span class="wm-more-spin" aria-hidden="true"></span><span>Loading…</span></p>';
+    var turning = loadingNote(shown.body, "Loading…");
     fetch(url, { credentials: "same-origin" })
       .then(function (response) {
         if (!response.ok) throw new Error("refused");
@@ -467,6 +489,7 @@
         var pre = document.createElement("pre");
         pre.className = "wm-source-text";
         pre.textContent = text;
+        wm.spinner.stop(turning);
         shown.body.innerHTML = "";
         shown.body.appendChild(pre);
         var headers = text.split(/\r?\n\r?\n/)[0];
@@ -480,6 +503,7 @@
         });
       })
       .catch(function () {
+        wm.spinner.stop(turning);
         shown.close();
         wm.board("Couldn't show the source", "The webmail didn't answer. Check your connection and try again.");
       });
@@ -497,6 +521,8 @@
     var nextView = nextReader.querySelector("[data-wm-view]");
     if (asking) asking.abort();
     asking = null;
+    reader.classList.remove("is-loading");
+    wm.loading(reader, false);
     if (nextView && nextView.dataset.open) {
       document.dispatchEvent(new CustomEvent("wm:leaving"));
       view.innerHTML = nextView.innerHTML;

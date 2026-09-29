@@ -85,7 +85,7 @@
       <p>You have no signatures associated to your account</p>
       {%- endif %}
     </div>
-    <div class="wm-card-foot"><a class="wm-button is-ghost" href="{{ url_for('settings.signatures_page') }}">Manage signatures</a></div>
+    <div class="wm-card-foot"><a class="wm-button is-ghost" href="{{ url_for('settings.signatures_page') }}" data-wm-page-link>Manage signatures</a></div>
   </section>
 
   {# Forwarding: one address, on or off, a copy kept or not #}
@@ -126,7 +126,7 @@
       <p>There are currently no filters set for your account</p>
       {%- endif %}
     </div>
-    <div class="wm-card-foot"><a class="wm-button is-ghost" href="{{ url_for('settings.filters_page') }}">Manage filters</a></div>
+    <div class="wm-card-foot"><a class="wm-button is-ghost" href="{{ url_for('settings.filters_page') }}" data-wm-page-link>Manage filters</a></div>
   </section>
 
   {# Auto-reply #}
@@ -136,7 +136,7 @@
       <p>Automatically let people know when you're unavailable.</p>
       {%- if rules.reply_on %}<p class="wm-status is-on">{{ icon("check") }}On</p>{% endif %}
     </div>
-    <div class="wm-card-foot"><a class="wm-button is-ghost" href="{{ url_for('settings.auto_reply_page') }}">Manage auto-reply</a></div>
+    <div class="wm-card-foot"><a class="wm-button is-ghost" href="{{ url_for('settings.auto_reply_page') }}" data-wm-page-link>Manage auto-reply</a></div>
   </section>
 
   {# Spam management #}
@@ -154,7 +154,7 @@
       <p>Connect your email, calendars, and contacts with third-party apps.</p>
       <p class="wm-status is-on">{{ icon("check") }}IMAP, SMTP and POP3 are on</p>
     </div>
-    <div class="wm-card-foot"><a class="wm-button is-ghost" href="{{ url_for('settings.apps_page') }}">Manage configurations</a></div>
+    <div class="wm-card-foot"><a class="wm-button is-ghost" href="{{ url_for('settings.apps_page') }}" data-wm-page-link>Manage configurations</a></div>
   </section>
 
   {# Security Center #}
@@ -163,7 +163,7 @@
     <div class="wm-card-body is-centred">
       <p>Update your password, and check your account's activity logs.</p>
     </div>
-    <div class="wm-card-foot"><a class="wm-button is-ghost" href="{{ url_for('settings.security_page') }}">Launch Security Center</a></div>
+    <div class="wm-card-foot"><a class="wm-button is-ghost" href="{{ url_for('settings.security_page') }}" data-wm-page-link>Launch Security Center</a></div>
   </section>
 </div>
 

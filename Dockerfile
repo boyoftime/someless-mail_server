@@ -16,6 +16,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 COPY app/requirements.txt /opt/someless/requirements.txt
 RUN pip install --no-cache-dir --root-user-action=ignore -r /opt/someless/requirements.txt
 
+# Files attached in the webmail are made smaller without losing anything (webmail/shrink.py):
+# jpegtran rewrites how a JPEG is written down, not its picture; qpdf packs a PDF's streams tighter
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libjpeg-turbo-progs qpdf \
+ && rm -rf /var/lib/apt/lists/* \
+ && command -v jpegtran \
+ && qpdf --version
+
 # The mail engine, with its licence (AGPL-3.0) and where its source is
 COPY --from=stalwart /usr/local/bin/stalwart /usr/local/bin/stalwart
 COPY --from=stalwart /usr/share/doc/stalwart /usr/share/doc/stalwart

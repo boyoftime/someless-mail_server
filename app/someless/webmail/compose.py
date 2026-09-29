@@ -10,9 +10,11 @@ message) use these:
   /compose/blob/<blob>                                   a picture uploaded, to show in the editor
   /compose/save, /compose/send, /compose/discard        the message, saved, sent, or its draft deleted
   /compose/suggest?q=                                    addresses to write to, as it's typed"""
+import base64
 import datetime
 import html
 import re
+import secrets
 import time
 from email.utils import getaddresses
 from html.parser import HTMLParser
@@ -20,7 +22,7 @@ from html.parser import HTMLParser
 import nh3
 from flask import Blueprint, Response, g, request, url_for
 
-from . import content, login_required, messages, views
+from . import content, login_required, messages, shrink, views
 from .jmap import MailError, for_mailbox, ref
 from .mail import _counts, _inbox_unread, _stream, _tree, reachable
 from ..db import get_db
@@ -164,6 +166,29 @@ def clean_outgoing(source, inline):
     return nh3.clean(source or "", tags=content.TAGS - {"style"}, attributes=content.ATTRIBUTES,
                      attribute_filter=attribute, url_schemes={"http", "https", "mailto", "tel", "cid", "data"},
                      link_rel=None, strip_comments=True, clean_content_tags={"script", "style", "title"})
+
+
+DATA_PICTURE = re.compile(r'src="data:image/(png|gif|jpe?g|webp);base64,([A-Za-z0-9+/=]+)"', re.I)
+
+
+def pictures_as_parts(source, mail):
+    """Pictures kept inside what it says (a signature's, data:), which Gmail and Outlook don't
+    show: each uploaded once and sent as a part of the message (cid:), as mail apps show them.
+    (What it says, and the parts to send with it.)"""
+    parts, cids = [], {}
+
+    def swap(found):
+        kind, data = found.group(1).lower().replace("jpg", "jpeg"), found.group(2)
+        if data not in cids:
+            raw = base64.b64decode(data)
+            made = mail.upload(raw, f"image/{kind}")
+            number = len(parts) + 1
+            cids[data] = f"picture{number}.{secrets.token_hex(6)}@someless"
+            parts.append({"blobId": made["blobId"], "type": f"image/{kind}", "name": f"picture{number}.{kind.replace('jpeg', 'jpg')}",
+                          "size": len(raw), "disposition": "inline", "cid": cids[data]})
+        return f'src="cid:{cids[data]}"'
+
+    return DATA_PICTURE.sub(swap, source), parts
 
 
 def _text_html(source):
@@ -345,9 +370,11 @@ def upload():
     kind = (sent.mimetype or "application/octet-stream").lower()
     if request.form.get("picture") and kind not in ("image/png", "image/jpeg", "image/gif", "image/webp"):
         return {"problem": "File type is not supported"}, 400
+    original = len(data)
+    data = shrink.shrink(data, kind)   # (pictures and PDFs made smaller, nothing in them lost)
     made = _mail().upload(data, kind)
     name = (sent.filename or "attachment").replace("\\", "/").rsplit("/", 1)[-1][:200] or "attachment"
-    return {"blobId": made["blobId"], "name": name, "type": kind, "size": made.get("size", len(data))}
+    return {"blobId": made["blobId"], "name": name, "type": kind, "size": made.get("size", len(data)), "original": original}
 
 
 @bp.get("/blob/<blob_id>")
@@ -410,6 +437,10 @@ def _message(data, tree, mail, draft):
         raise Problem(f"All files should not exceed {MAX_ALL // 1024 ** 2} MB")
     shown_inline = [part for part in files if part["disposition"] == "inline"]
     html_body = clean_outgoing(written, shown_inline)
+    html_body, pictures = pictures_as_parts(html_body, mail)
+    files += pictures
+    if sum(part["size"] for part in files) > MAX_ALL:
+        raise Problem(f"All files should not exceed {MAX_ALL // 1024 ** 2} MB")
     used = set(re.findall(r'src="cid:([^"]+)"', html_body))
     files = [part for part in files if part["disposition"] == "attachment" or part.get("cid") in used]
     drafts = tree.role("drafts")

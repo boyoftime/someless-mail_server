@@ -28,7 +28,7 @@ bp = Blueprint("settings", __name__, url_prefix="/settings")
 NAME_MARKS = set(".-_,'()|&")
 LONGEST_NAME = 128
 LONGEST_SIGNATURE_NAME = 50
-LONGEST_SIGNATURE = 10_000
+LONGEST_SIGNATURE = 2_000_000   # characters: its pictures are kept inside it (the page makes each at most 600px wide)
 LONGEST_REPLY_SUBJECT = 1000
 LONGEST_REPLY = 5000
 MOST_SIGNATURES = 20
@@ -263,7 +263,7 @@ def _signature_input():
         return None, "Signature name max length is 50 symbols"
     html = clean_outgoing(str(data.get("html") or ""), [])
     if len(html) > LONGEST_SIGNATURE:
-        return None, "That signature is too long."
+        return None, "This signature is too large. Use smaller pictures, or fewer of them."
     return {"name": name, "html": html, "default": bool(data.get("default"))}, None
 
 

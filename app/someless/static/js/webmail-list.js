@@ -14,6 +14,7 @@
   var NEAR = 700;        // px from the end: the next mail is asked for before it's reached
   var WAIT_AFTER = 5000; // ms before trying again after a failure
   var loading = false;
+  var turning = null;    // the arrows in "Loading more mail…", only while it's asked for
   var triedAt = 0;       // the last failure
   var queued = false;
   var total = Number(section.dataset.total || 0);
@@ -45,14 +46,26 @@
         more.className = "wm-more";
         more.setAttribute("data-wm-more", "");
         more.setAttribute("role", "status");
-        more.innerHTML = '<span class="wm-more-spin" aria-hidden="true"></span><span>Loading more mail…</span>';
+        more.innerHTML = '<span class="wm-more-art" aria-hidden="true"></span><span>Loading more mail…</span>';
         scroll.appendChild(more);
       }
       more.dataset.url = url;
       more.hidden = false;
     } else if (more) {
+      turn(false);
       more.remove();
       more = null;
+    }
+  }
+
+  // (the line is only in sight while the next mail is on its way, so the arrows turn only then)
+  function turn(on) {
+    if (on && !turning && more) {
+      turning = wm.spinner();
+      more.querySelector(".wm-more-art").appendChild(turning);
+    } else if (!on && turning) {
+      wm.spinner.stop(turning);
+      turning = null;
     }
   }
 
@@ -64,10 +77,12 @@
     if (loading || !more || Date.now() - triedAt < WAIT_AFTER) return;
     loading = true;
     more.hidden = false;
+    turn(true);
     var asked = more.dataset.url;
     wm.request(asked, { quiet: true })
       .then(function (answer) {
         loading = false;
+        turn(false);
         if (!more || more.dataset.url !== asked) return;   // drawn again meanwhile
         var have = {};
         rows().forEach(function (row) { have[row.dataset.id] = true; });
@@ -82,6 +97,7 @@
       })
       .catch(function () {
         loading = false;
+        turn(false);
         triedAt = Date.now();
         if (more) more.hidden = true;   // back when it's tried again
         wm.board("Couldn't load more mail", "The webmail didn't answer. Check your connection, then scroll down again.");
@@ -239,6 +255,7 @@
     if (asking) asking.abort();
     var ask = asking = new AbortController();
     section.classList.add("is-loading");
+    wm.loading(section, true);
     wm.request(section.dataset.viewUrl, {
       method: "POST", signal: ask.signal, failTitle: "Couldn't sort the mail",
       body: { sort: wanted.sort, filters: wanted.filters, q: section.dataset.q, in: section.dataset.in },
@@ -246,11 +263,13 @@
       if (asking !== ask) return;
       asking = null;
       section.classList.remove("is-loading");
+      wm.loading(section, false);
       draw(answer);
     }, function (error) {
       if (error.name === "AbortError") return;
       asking = null;
       section.classList.remove("is-loading");
+      wm.loading(section, false);
     });
   }
 

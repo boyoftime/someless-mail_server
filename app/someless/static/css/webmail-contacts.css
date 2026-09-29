@@ -15,14 +15,14 @@
 .wm-book span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wm-book:focus-visible { outline: 2px solid var(--wm-blue); outline-offset: -2px; }
 
-.wm-contacts-page { min-width: 0; min-height: 0; padding: 1.25rem 2rem 2.5rem; overflow-y: auto; background: var(--wm-reader); scrollbar-width: thin; }
+.wm-contacts-page { position: relative; min-width: 0; min-height: 0; padding: 1.25rem 2rem 2.5rem; overflow-y: auto; background: var(--wm-reader); scrollbar-width: thin; }
 .wm-contacts-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1rem; min-height: 44px; margin-bottom: 1rem; }
 .wm-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; padding: 4px 4px 4px 1rem; border-radius: 999px; background: var(--wm-card); box-shadow: 0 0 0 1px var(--wm-card-line); animation: wm-card-in 0.2s var(--wm-ease) backwards; }
 .wm-bulk[hidden] { display: none; }
 .wm-bulk-label { margin: 0 0.4rem 0 0; font-size: 0.86rem; font-weight: 600; }
 
 /* the table */
-.wm-contacts-card { overflow: hidden; border-radius: 8px; background: var(--wm-card); box-shadow: 0 0 0 1px var(--wm-card-line); transition: opacity 0.15s ease; }
+.wm-contacts-card { position: relative; min-height: 8rem; overflow: hidden; border-radius: 8px; background: var(--wm-card); box-shadow: 0 0 0 1px var(--wm-card-line); transition: opacity 0.15s ease; }
 .wm-contacts-card[hidden] { display: none; }
 .wm-contacts-card.is-loading { opacity: 0.55; pointer-events: none; }
 .wm-contacts-table { table-layout: fixed; }

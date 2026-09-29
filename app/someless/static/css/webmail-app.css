@@ -567,14 +567,15 @@ body.webmail-app .wm-folder-form input {
 .wm-sort-reset { width: 100%; height: 32px; border: 0; border-radius: 8px; background: none; color: var(--wm-blue); font: inherit; font-size: 0.84rem; font-weight: 700; cursor: pointer; }
 .wm-sort-reset:hover:not(:disabled) { background: var(--wm-blue-soft); }
 .wm-sort-reset:disabled { color: var(--wm-faint); cursor: default; }
-.wm-list.is-loading .wm-scroll { opacity: 0.55; transition: opacity 0.15s ease; }
+/* a folder coming in: its mail blurred behind the loading animation, as PrivateEmail's */
+.wm-list.is-loading .wm-scroll { opacity: 0.4; filter: blur(2.5px); pointer-events: none; transition: opacity 0.15s ease, filter 0.15s ease; }
 
 .wm-scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--wm-check) transparent; }
 .wm-messages { margin: 0; padding: 0; list-style: none; }
 /* the end of the list, while the next mail is on its way (webmail-list.js) */
 .wm-more { display: flex; align-items: center; justify-content: center; gap: 0.55rem; margin: 0; padding: 1rem 0 1.3rem; color: var(--wm-soft); font-size: 0.8rem; }
 .wm-more[hidden] { display: none; }
-.wm-more-spin { width: 16px; height: 16px; border: 2px solid var(--wm-bar); border-top-color: var(--wm-blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
+.wm-more-art { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 22px; height: 22px; }   /* (the arrows, while it's asked for: wm.spinner) */
 .wm-list-empty { display: grid; justify-items: center; gap: 0.8rem; padding: 3.5rem 1.5rem; color: var(--wm-soft); text-align: center; }
 .wm-list-empty[hidden] { display: none; }
 .wm-list-empty-art { width: 52px; height: 52px; color: var(--wm-faint); stroke-width: 2 !important; }
@@ -638,7 +639,8 @@ body.webmail-app .wm-check input:checked::after { content: ""; width: 8px; heigh
    message (webmail-read.html): its buttons along the top, then the subject and the card, which
    scroll under them */
 .wm-reader { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; background: var(--wm-reader); }
-.wm-reader.is-loading::after { content: ""; position: absolute; top: 0; right: 0; left: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--wm-blue), transparent); animation: wm-slide 1s linear infinite; }
+/* a message coming in: the pane empty but for the loading animation */
+.wm-reader.is-loading > .wm-view, .wm-reader.is-loading > .wm-empty, .wm-reader.is-loading > .wm-choose { visibility: hidden; }
 @keyframes wm-slide { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
 .wm-reader.is-busy { cursor: progress; }
 .wm-empty { display: grid; justify-items: center; gap: 1.35rem; margin: auto; transform: translateY(-0.8rem); }
@@ -964,7 +966,7 @@ body.webmail-app .wm-picker-new input { width: 100%; height: 30px; padding: 0 0.
 .wm-preview-meta { color: var(--wm-soft); font-size: 0.8rem; }
 .wm-preview-image { max-width: 100%; max-height: 100%; border-radius: 6px; object-fit: contain; }
 .wm-preview-pdf { width: 100%; height: 100%; border: 0; border-radius: 6px; background: #fff; }
-.wm-preview-loading { display: flex; align-items: center; gap: 0.6rem; margin: 0; color: var(--wm-soft); font-size: 0.86rem; }
+.wm-preview-loading { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; margin: auto; color: var(--wm-soft); font-size: 0.86rem; font-weight: 600; }
 .wm-preview-note { display: grid; justify-items: center; gap: 0.4rem; max-width: 22rem; text-align: center; }
 .wm-preview-note-title { margin: 0; font-size: 1rem; font-weight: 700; }
 .wm-preview-note-text { margin: 0; color: var(--wm-soft); font-size: 0.86rem; line-height: 1.5; }
@@ -1114,5 +1116,87 @@ body.webmail-app .tip::after { border-color: transparent; background: var(--wm-t
 @media (prefers-reduced-motion: reduce) {
   .wm-account, .wm-search-panel, .wm-sort, .wm-menu-pop, .wm-toast, .wm-dialog, .wm-choose { animation: none; }
   .wm-side, .wm-subfolders, .wm-files-body { transition: none; }
-  .wm-more-spin { animation-duration: 2.4s; }
+}
+
+/* Loading (webmail-core.js: wm.loading): the turning arrows in the middle of what's coming, in
+   the theme's blue; a page on its way dims under them. A turning ring when the animation can't
+   play. */
+.wm-loader { position: absolute; inset: 0; z-index: 6; display: grid; place-content: center; justify-items: center; gap: 0.35rem; pointer-events: none; animation: wm-loader-in 0.2s ease 0.04s backwards; }
+.wm-loader.is-page { z-index: 30; background: color-mix(in srgb, var(--wm-reader) 55%, transparent); pointer-events: auto; cursor: progress; }
+.wm-loader.is-leaving { animation: wm-loader-out 0.16s ease forwards; }
+.wm-loader-art { display: block; width: 64px; height: 64px; }
+.wm-loader-art svg path { fill: var(--wm-blue); }
+:root[data-theme="dark"] .wm-loader-art svg path { fill: #3d8bff; }
+.wm-loader-label { color: var(--wm-soft); font-size: 0.82rem; font-weight: 600; }
+.wm-loader-art.is-small { display: inline-block; flex: none; width: 22px; height: 22px; vertical-align: middle; }
+.wm-loader-art.is-small.is-plain { width: 16px; height: 16px; border-width: 2px; }
+.wm-loader-art.is-plain { width: 34px; height: 34px; border: 3px solid var(--wm-blue-soft); border-top-color: var(--wm-blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes wm-loader-in { from { opacity: 0; transform: scale(0.9); } }
+@keyframes wm-loader-out { to { opacity: 0; } }
+
+/* Every button, clicked: a burst of light swelling out of it (webmail-core.js: .wm-flare) — a
+   white flash at its edge, a glow in its colour running out, sparks from the big ones — and the
+   button itself brighter for a moment */
+.wm-flare {
+  --flare: 88, 156, 255;
+  position: fixed;
+  z-index: 2147483000;
+  pointer-events: none;
+  border-radius: var(--flare-radius, 999px);
+  animation: wm-flare 0.75s cubic-bezier(0.12, 0.75, 0.3, 1) forwards;
+}
+.wm-flare::before {
+  content: "";
+  position: absolute;
+  inset: -55% -25%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.7), rgba(var(--flare), 0.55) 42%, rgba(var(--flare), 0) 72%);
+  mix-blend-mode: screen;
+  animation: wm-flare-core 0.6s cubic-bezier(0.12, 0.75, 0.3, 1) forwards;
+}
+.wm-flare i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 8px 3px rgba(var(--flare), 0.95), 0 0 16px 6px rgba(var(--flare), 0.5);
+  animation: wm-spark 0.7s cubic-bezier(0.15, 0.8, 0.3, 1) forwards;
+}
+.is-flaring { animation: wm-flare-button 0.5s ease-out; }
+@keyframes wm-flare {
+  0% { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.95), 0 0 26px 10px rgba(var(--flare), 0.9); opacity: 1; }
+  35% { opacity: 1; }
+  100% { box-shadow: 0 0 0 20px rgba(var(--flare), 0), 0 0 64px 30px rgba(var(--flare), 0); opacity: 0; }
+}
+@keyframes wm-flare-core { 0% { opacity: 1; transform: scale(0.5); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.45); } }
+@keyframes wm-spark { 0% { opacity: 1; transform: translate(var(--sx, 0), var(--sy, 0)) scale(1.1); } 100% { opacity: 0; transform: translate(var(--x), var(--y)) scale(0.2); } }
+@keyframes wm-flare-button { 20% { filter: brightness(1.45) saturate(1.15); } }
+
+/* a button whose click is on its way (webmail-core.js: .is-busy): a spinner in place of its words */
+.wm-button, .wm-compose { position: relative; }
+.wm-button.is-busy, .wm-compose.is-busy { color: transparent !important; pointer-events: none; }
+.wm-button.is-busy > svg, .wm-compose.is-busy > svg { opacity: 0; }
+.wm-button.is-busy::before, .wm-compose.is-busy::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+.wm-button.is-ghost.is-busy::before { border-color: var(--wm-blue-soft); border-top-color: var(--wm-blue); }
+.wm-icon.is-busy { pointer-events: none; }
+.wm-icon.is-busy > svg { animation: spin 0.8s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .wm-flare, .wm-flare::before, .wm-flare i, .is-flaring { animation-duration: 0.01s; }
+  .wm-loader, .wm-loader.is-leaving { animation: none; }
 }

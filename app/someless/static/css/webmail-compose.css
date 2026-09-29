@@ -122,12 +122,13 @@ body.webmail-app .wm-cm-subject { height: 34px; }
 .wm-swatch { stroke: var(--wm-swatch, currentColor); }
 
 /* what it says, then its files */
-.wm-cm-editor-wrap { display: flex; flex: 1; flex-direction: column; min-height: 140px; }
+.wm-cm-editor-wrap { position: relative; display: flex; flex: 1; flex-direction: column; min-height: 140px; }
 .wm-cm-editor { flex: 1; width: 100%; min-height: 140px; border: 0; background: transparent; }
 .wm-cm-files { display: flex; flex: none; flex-wrap: wrap; gap: 8px; margin: 0; padding: 8px 16px 10px; list-style: none; }
 .wm-cm-files[hidden] { display: none; }
 .wm-cm-file { position: relative; display: flex; align-items: center; gap: 0.5rem; max-width: 15rem; padding: 0.4rem 0.3rem 0.4rem 0.6rem; overflow: hidden; border: 1px solid var(--wm-line); border-radius: 8px; }
 .wm-cm-file > svg { flex: none; width: 17px; height: 17px; color: var(--wm-soft); }
+.wm-cm-file > .wm-loader-art.is-small { width: 20px; height: 20px; margin: -1px -2px; }
 .wm-cm-file-text { display: grid; min-width: 0; }
 .wm-cm-file-name { overflow: hidden; font-size: 0.8rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .wm-cm-file-size { color: var(--wm-soft); font-size: 0.72rem; }

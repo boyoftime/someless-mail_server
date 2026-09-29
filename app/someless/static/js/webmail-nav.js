@@ -30,6 +30,7 @@
     if (asking) asking.abort();
     var ask = asking = new AbortController();
     section.classList.add("is-loading");
+    wm.loading(section, true);
     document.body.classList.add("is-going");
     fetch(url.href, { credentials: "same-origin", headers: { Accept: "text/html" }, signal: ask.signal })
       .then(function (response) {
@@ -58,6 +59,7 @@
       .then(function () {
         if (asking) return;
         section.classList.remove("is-loading");
+        wm.loading(section, false);
         document.body.classList.remove("is-going");
       });
   }
@@ -100,6 +102,13 @@
     var url = new URL(link.href, location.href);
     if (!ours(url)) return;
     event.preventDefault();
+    var row = link.closest(".wm-folder");
+    if (row) {   // the folder chosen shows so at once, while its mail comes
+      nav.querySelectorAll(".wm-folder.is-current").forEach(function (one) { one.classList.remove("is-current"); });
+      nav.querySelectorAll('[aria-current="page"]').forEach(function (one) { one.removeAttribute("aria-current"); });
+      row.classList.add("is-current");
+      link.setAttribute("aria-current", "page");
+    }
     go(url.href, true);
   });
 

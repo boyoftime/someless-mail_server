@@ -38,6 +38,7 @@
     if (loading) loading.abort();
     loading = new AbortController();
     card.classList.add("is-loading");
+    wm.loading(card.hidden ? page : card, true);
     return wm.request(address() + (address().indexOf("?") < 0 ? "?" : "&") + "size=" + state.size, { signal: loading.signal })
       .then(function (answer) {
         loading = null;
@@ -48,6 +49,8 @@
         state.pages = answer.pages;
         state.size = answer.size;
         history.replaceState(history.state, "", address());
+        wm.loading(card, false);
+        wm.loading(page, false);
         if (keepTicks) {   // (the same contacts stay ticked)
           body.querySelectorAll("tr").forEach(function (row) {
             if (wasTicked.indexOf(row.dataset.id) >= 0) row.querySelector("[data-wm-contact-tick]").checked = true;
@@ -60,6 +63,8 @@
         if (error && error.name === "AbortError") return;
         loading = null;
         card.classList.remove("is-loading");
+        wm.loading(card, false);
+        wm.loading(page, false);
       });
   }
 

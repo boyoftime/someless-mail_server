@@ -38,7 +38,7 @@
     <input id="reply-subject" class="wm-input" type="text" name="subject" maxlength="1000" placeholder="Auto-reply subject" value="{{ kept.reply_subject }}">
     <p class="wm-label">Message</p>
     <div class="wm-editor is-tall" data-wm-reply-body>
-      {{ editor_bar() }}
+      {{ editor_bar(pictures=false) }}
       <iframe class="wm-editor-frame" data-editor-frame title="Start typing your auto-reply message" sandbox="allow-same-origin"></iframe>
     </div>
     <template data-wm-reply-html>{{ kept.reply_html | safe }}</template>

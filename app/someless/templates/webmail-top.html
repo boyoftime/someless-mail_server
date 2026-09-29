@@ -13,7 +13,7 @@
   <nav class="wm-apps" aria-label="Apps">
     {%- for key, label, target in [("mail", "Email", url_for('mail.home')), ("calendar", "Calendar", url_for('calendar.index')),
                                    ("contacts", "Contacts", url_for('contacts.index'))] %}
-    <a class="wm-app{% if app == key %} is-current{% endif %}" href="{{ target }}"{% if app == key %} aria-current="page"{% endif %}
+    <a class="wm-app{% if app == key %} is-current{% endif %}" href="{{ target }}"{% if app == key %} aria-current="page"{% else %} data-wm-page-link{% endif %}
        aria-label="{{ label }}" data-tip="{{ label }}">{{ icon(key) }}</a>
     {%- endfor %}
   </nav>
@@ -51,12 +51,12 @@
   </form>
   {%- endif %}
   <div class="wm-tools">
-    <a class="wm-icon wm-help{% if app == 'help' %} is-active{% endif %}" href="{{ url_for('settings.help_page') }}" aria-label="Help center" data-tip="Help center">{{ icon("help") }}</a>
+    <a class="wm-icon wm-help{% if app == 'help' %} is-active{% endif %}" href="{{ url_for('settings.help_page') }}" data-wm-page-link aria-label="Help center" data-tip="Help center">{{ icon("help") }}</a>
     <span class="wm-divider" aria-hidden="true"></span>
     {%- if app == "mail" %}
     <button type="button" class="wm-icon" data-wm-refresh aria-label="Refresh" data-tip="Refresh">{{ icon("refresh") }}</button>
     {%- endif %}
-    <a class="wm-icon wm-settings{% if app == 'settings' %} is-active{% endif %}" href="{{ url_for('settings.index') }}" aria-label="Settings" data-tip="Settings">{{ icon("settings") }}</a>
+    <a class="wm-icon wm-settings{% if app == 'settings' %} is-active{% endif %}" href="{{ url_for('settings.index') }}" data-wm-page-link aria-label="Settings" data-tip="Settings">{{ icon("settings") }}</a>
     <div class="wm-account-wrap">
       <button type="button" class="wm-avatar" data-wm-account aria-controls="wm-account" aria-expanded="false" aria-label="Your account">{{ initial }}</button>
       {# the account: the mailbox, its address to copy, the theme, and logging out #}
@@ -75,7 +75,7 @@
           </p>
         </div>
         <div class="wm-account-rows">
-          <a class="wm-account-row" href="{{ url_for('settings.index') }}">{{ icon("settings") }}<span>Settings</span></a>
+          <a class="wm-account-row" href="{{ url_for('settings.index') }}" data-wm-page-link>{{ icon("settings") }}<span>Settings</span></a>
           <button type="button" class="wm-account-row wm-theme" role="switch" data-theme-switch aria-checked="{{ 'true' if theme == 'dark' else 'false' }}">
             {{ icon("moon") }}{{ icon("sun") }}<span>Dark theme</span>
             <span class="wm-switch" aria-hidden="true"><span></span></span>

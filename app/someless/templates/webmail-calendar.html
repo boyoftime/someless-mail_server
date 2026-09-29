@@ -2,6 +2,8 @@
 {% block title %}Calendar | Someless Webmail{% endblock %}
 {% block head %}
 <meta name="csrf-token" content="{{ csrf_token() }}">
+<meta name="wm-loader" content="{{ url_for('static', filename='lottie/webmail-loading.json') }}">
+<script src="{{ url_for('static', filename='js/lottie_light.min.js') }}" defer></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-app.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-settings.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-calendar.css') }}">
@@ -32,7 +34,7 @@
   </aside>
   <div class="wm-scrim" data-wm-scrim hidden></div>
 
-  <main class="wm-cal" data-wm-calendar data-view="{{ view }}" data-date="{{ date }}" data-today="{{ today }}"
+  <main class="wm-cal" data-wm-main data-wm-calendar data-view="{{ view }}" data-date="{{ date }}" data-today="{{ today }}"
         data-url="{{ url_for('calendar.index') }}" data-events-url="{{ url_for('calendar.events') }}"
         data-event-url="{{ url_for('calendar.create') }}" data-calendar-url="{{ url_for('calendar.index') }}/calendars"
         data-zone="{{ zone_name }}" data-own="{{ own | tojson | forceescape }}" data-calendars="{{ calendars | tojson | forceescape }}"

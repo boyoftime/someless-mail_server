@@ -116,6 +116,7 @@
     if (loading) loading.abort();
     loading = new AbortController();
     viewBox.setAttribute("aria-busy", "true");
+    wm.loading(viewBox, true);
     return wm.request(eventsUrl + "?start=" + iso(state.range.start) + "&end=" + iso(state.range.end),
                       { signal: loading.signal, failTitle: "Couldn't load the events" }).then(function (answer) {
       loading = null;
@@ -127,7 +128,12 @@
       });
       viewBox.setAttribute("aria-busy", "false");
       render(true);
-    }, function () { viewBox.setAttribute("aria-busy", "false"); });
+      wm.loading(viewBox, false);
+    }, function (error) {
+      if (error && error.name === "AbortError") return;
+      viewBox.setAttribute("aria-busy", "false");
+      wm.loading(viewBox, false);
+    });
   }
   function reload() {
     state.loaded = null;
@@ -156,7 +162,9 @@
   function render(withEvents) {
     var keep = viewBox.querySelector(".wm-grid-scroll");
     var scrolled = keep ? keep.scrollTop : null;
+    var loader = viewBox.querySelector(":scope > .wm-loader");   // (still turning: kept)
     viewBox.innerHTML = "";
+    if (loader) viewBox.appendChild(loader);
     viewBox.className = "wm-cal-view is-" + state.view + (withEvents ? " has-events" : "");
     if (state.view === "month") {
       drawMonth();

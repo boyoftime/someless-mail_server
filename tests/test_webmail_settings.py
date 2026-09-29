@@ -288,6 +288,24 @@ def test_a_signature_name_is_checked(mail):
     assert answer.status_code == 400 and answer.get_json()["problem"] == "Signature name max length is 50 symbols"
 
 
+def test_a_signature_keeps_its_pictures(mail):
+    picture = "data:image/jpeg;base64," + "A" * 120_000   # (a logo, made at most 600 pixels wide by the page)
+
+    answer = post(mail, "/settings/signatures", name="Work", html=f'<p>Amani</p><img src="{picture}" width="300" alt="">')
+
+    assert answer.status_code == 200
+    assert picture in answer.get_json()["signatures"][0]["html"]
+
+
+def test_a_signature_too_big_is_refused(mail):
+    picture = "data:image/png;base64," + "A" * 2_100_000
+
+    answer = post(mail, "/settings/signatures", name="Work", html=f'<img src="{picture}">')
+
+    assert answer.status_code == 400
+    assert answer.get_json()["problem"] == "This signature is too large. Use smaller pictures, or fewer of them."
+
+
 def test_a_signature_loses_its_scripts(mail):
     answer = post(mail, "/settings/signatures", name="Work", html='<p onclick="steal()">Hi<script>steal()</script></p>')
 

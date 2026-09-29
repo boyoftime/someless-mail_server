@@ -6,6 +6,9 @@
 //   wm.board(title, message) : an error on the notice board (board.js)
 //   wm.icon(name) : one of the page's icons (#wm-icons)
 //   wm.copy(text) : onto the clipboard (a promise); a button with data-wm-copy does it by itself
+//   wm.loading(holder, on, {page, label}) : the loading animation over holder (a positioned
+//     element), or gone; a link with data-wm-page-link puts it over [data-wm-main] as the next
+//     page comes. wm.spinner() : a small one to put in a line (wm.spinner.stop(it) when done)
 //   wm.menu(at, items, {onClose}) : a menu at an element or a point ({x, y}): the three dots, a
 //     right-click. items: {label, icon, act, trailing, switchOn, hidden, submenu} or "-" between.
 //   wm.confirm({title, text, yes, no, danger}) : a dialog asking first (a promise of true or false)
@@ -33,6 +36,7 @@
     }
     if (init.method !== "GET" && csrf) init.headers["X-CSRFToken"] = csrf.content;
     if (options.signal) init.signal = options.signal;
+    var spinning = spinnerFor(init.method);   // (the button clicked for it, turning till it's done)
     return fetch(url, init).then(function (response) {
       if (response.redirected && /\/login\b/.test(response.url)) {
         location.href = response.url;
@@ -57,6 +61,12 @@
     }, function (error) {
       if (error.name === "AbortError") throw error;
       if (!options.quiet) board(options.failTitle || "The webmail didn't answer", "Check your connection and try again.");
+      throw error;
+    }).then(function (answer) {
+      stopSpinner(spinning);
+      return answer;
+    }, function (error) {
+      stopSpinner(spinning);
       throw error;
     });
   }
@@ -132,6 +142,164 @@
       board("Couldn't copy", "Select the text and copy it yourself.");
     });
   });
+
+  // --- loading: the turning arrows (lottie/webmail-loading.json) over the part of the page that's
+  // coming, as PrivateEmail shows its dots: the folder's mail, a message, the next page ---
+  var loaderSource = document.querySelector('meta[name="wm-loader"]');
+  var loaderData = null;
+  var loaderAsked = null;
+  function loaderAnimation() {
+    if (!loaderAsked && loaderSource && window.fetch) {
+      loaderAsked = fetch(loaderSource.content).then(function (response) { return response.json(); })
+        .then(function (data) { loaderData = data; return data; }, function () { return null; });
+    }
+    return loaderAsked || Promise.resolve(null);
+  }
+  function loading(holder, on, options) {
+    if (!holder) return;
+    options = options || {};
+    var box = holder.querySelector(":scope > .wm-loader");
+    if (!on) {
+      if (!box || box.classList.contains("is-leaving")) return;
+      box.classList.add("is-leaving");
+      setTimeout(function () {
+        if (box.player) box.player.destroy();
+        box.remove();
+      }, reduceMotion ? 0 : 160);
+      return;
+    }
+    if (box) {
+      box.classList.remove("is-leaving");
+      return;
+    }
+    box = document.createElement("div");
+    box.className = "wm-loader" + (options.page ? " is-page" : "");
+    box.setAttribute("role", "status");
+    box.setAttribute("aria-label", "Loading");
+    if (options.page) {   // over what's in sight of it, however far it's scrolled
+      var rect = holder.getBoundingClientRect();
+      box.style.position = "fixed";
+      box.style.inset = "auto";
+      box.style.left = rect.left + "px";
+      box.style.top = rect.top + "px";
+      box.style.width = rect.width + "px";
+      box.style.height = rect.height + "px";
+    }
+    var art = document.createElement("span");
+    art.className = "wm-loader-art";
+    art.setAttribute("aria-hidden", "true");
+    box.appendChild(art);
+    if (options.label) {   // what's happening, under the arrows ("Adding the picture…")
+      var caption = document.createElement("span");
+      caption.className = "wm-loader-label";
+      caption.textContent = options.label;
+      box.appendChild(caption);
+      box.setAttribute("aria-label", options.label);
+    }
+    holder.appendChild(box);
+    play(art, function (player) { box.player = player; });
+  }
+  function play(art, done) {
+    loaderAnimation().then(function (data) {
+      if (!data || !window.lottie) {
+        art.classList.add("is-plain");   // (a turning ring instead)
+        return;
+      }
+      if (!art.isConnected || art.dataset.playing) return;
+      art.dataset.playing = "1";
+      done(window.lottie.loadAnimation({ container: art, renderer: "svg", loop: true, autoplay: !reduceMotion,
+                                         animationData: JSON.parse(JSON.stringify(data)) }));
+    });
+  }
+  // a small one, in a line (a file on its way): wm.spinner() to put in, wm.spinner.stop(it) when done
+  function spinner() {
+    var art = document.createElement("span");
+    art.className = "wm-loader-art is-small";
+    art.setAttribute("aria-hidden", "true");
+    setTimeout(function () { play(art, function (player) { art.player = player; }); }, 0);   // (once it's in the page)
+    return art;
+  }
+  spinner.stop = function (art) {
+    if (!art) return;
+    if (art.player) art.player.destroy();
+    art.remove();
+  };
+  // a page left for the next (Settings' parts, Contacts, the calendar): the loader at once
+  document.addEventListener("click", function (event) {
+    if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    var link = event.target.closest("a[href][data-wm-page-link]");
+    if (!link || link.target || link.hasAttribute("download") || link.getAttribute("aria-current") === "page") return;
+    var url = new URL(link.href, location.href);
+    if (url.origin !== location.origin || (url.pathname === location.pathname && url.search === location.search)) return;
+    var group = link.closest("[data-wm-page-links]");
+    if (group) {   // the part chosen shows so at once
+      group.querySelectorAll(".is-current").forEach(function (one) { one.classList.remove("is-current"); });
+      link.classList.add("is-current");
+    }
+    loading(document.querySelector("[data-wm-main]"), true, { page: true });
+  });
+  window.addEventListener("pageshow", function (event) {   // (back to this page: nothing's loading)
+    if (event.persisted) document.querySelectorAll(".wm-loader").forEach(function (box) { box.remove(); });
+  });
+
+  // --- buttons: a burst of light as each is clicked (sparks from the big ones); one whose click
+  // sends something turns into a spinner until the answer comes (request, below) ---
+  var FLARED = "button, a.wm-button, a.wm-icon, a.wm-app, a.wm-settings-back";
+  var CALM = ".wm-menu-item, .wm-cal-chip, .wm-cal-block, .wm-cal-more, .wm-mini-day, .wm-month-number, .wm-grid-daynum, " +
+             ".wm-repeat-day, .wm-swatch, [data-format], .wm-toast-close, .wm-search-chip-x, .wm-person-chip-x, [data-no-flare]";
+  var BIG = ".wm-button:not(.is-ghost), .wm-compose, .wm-cal-fab, .wm-settings-back";
+  var pressed = null;   // the button just clicked, and when
+  function flare(button) {
+    var rect = button.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    var made = document.createElement("span");
+    made.className = "wm-flare";
+    made.setAttribute("aria-hidden", "true");
+    made.style.left = rect.left + "px";
+    made.style.top = rect.top + "px";
+    made.style.width = rect.width + "px";
+    made.style.height = rect.height + "px";
+    made.style.setProperty("--flare-radius", getComputedStyle(button).borderRadius || "999px");
+    if (button.matches(".is-danger, .is-danger-text")) made.style.setProperty("--flare", "242, 92, 92");
+    if (button.matches(BIG)) {
+      for (var index = 0; index < 12; index += 1) {   // from its edge, outwards (its words stay clear)
+        var spark = document.createElement("i");
+        var angle = Math.PI * 2 * index / 12 + Math.random() * 0.35;
+        var halfWidth = rect.width / 2, halfHeight = rect.height / 2;
+        spark.style.setProperty("--sx", Math.round(Math.cos(angle) * halfWidth * 0.92) + "px");
+        spark.style.setProperty("--sy", Math.round(Math.sin(angle) * halfHeight * 0.92) + "px");
+        spark.style.setProperty("--x", Math.round(Math.cos(angle) * (halfWidth + 16 + Math.random() * 22)) + "px");
+        spark.style.setProperty("--y", Math.round(Math.sin(angle) * (halfHeight + 14 + Math.random() * 18)) + "px");
+        spark.style.animationDelay = Math.round(Math.random() * 50) + "ms";
+        made.appendChild(spark);
+      }
+    }
+    (button.closest("dialog[open]") || document.body).appendChild(made);   // (a dialog is on top of the page)
+    setTimeout(function () { made.remove(); }, 900);
+    button.classList.remove("is-flaring");
+    void button.offsetWidth;   // (again, for a quick second click)
+    button.classList.add("is-flaring");
+    setTimeout(function () { button.classList.remove("is-flaring"); }, 500);
+  }
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest(FLARED);
+    if (!button || button.disabled || button.matches(CALM)) return;
+    if (!reduceMotion) flare(button);
+    if (button.matches(".wm-button, .wm-compose, .wm-icon[data-act], [data-wm-busy]")) pressed = { button: button, at: Date.now() };
+  }, true);
+  function spinnerFor(method) {
+    if (method === "GET" || !pressed || Date.now() - pressed.at > 800 || !pressed.button.isConnected) return null;
+    var button = pressed.button;
+    pressed = null;
+    button.classList.add("is-busy");
+    button.setAttribute("aria-busy", "true");
+    return button;
+  }
+  function stopSpinner(button) {
+    if (!button) return;
+    button.classList.remove("is-busy");
+    button.removeAttribute("aria-busy");
+  }
 
   // --- menus: the three dots, a right-click ---
   var openMenu = null;
@@ -586,7 +754,8 @@
   }
 
   window.wm = {
-    request: request, toast: toast, board: board, icon: icon, copy: copy, menu: menu, closeMenus: closeMenus,
+    request: request, toast: toast, board: board, icon: icon, copy: copy, loading: loading, spinner: spinner, menu: menu,
+    closeMenus: closeMenus,
     confirm: confirmDialog, pickFolder: pickFolder, folders: folders, counts: counts, setTitle: setTitle,
     currentFolder: currentFolder, reduceMotion: reduceMotion,
   };

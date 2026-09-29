@@ -2,6 +2,8 @@
 {% block title %}{% if inbox_unread %}({{ inbox_unread }}) {% endif %}{{ open_message.subject if open_message else ("Search results" if searching else folder_path) }} | Someless Webmail{% endblock %}
 {% block head %}
 <meta name="csrf-token" content="{{ csrf_token() }}">
+<meta name="wm-loader" content="{{ url_for('static', filename='lottie/webmail-loading.json') }}">
+<script src="{{ url_for('static', filename='js/lottie_light.min.js') }}" defer></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-app.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-compose.css') }}">
 <script src="{{ url_for('static', filename='js/webmail-zone.js') }}" data-redraw></script>
@@ -21,7 +23,7 @@
    the message being read, or the messages ticked. The mail comes from the mail engine (mail.py). #}
 {{ top_bar("mail", email, name, initial, theme, folder_key, folder_path, query, scope, searching) }}
 
-<div class="wm-shell" data-wm-shell{% if columns %} style="{{ columns }}"{% endif %} data-do-url="{{ url_for('mail.act') }}"
+<div class="wm-shell" data-wm-shell data-wm-main{% if columns %} style="{{ columns }}"{% endif %} data-do-url="{{ url_for('mail.act') }}"
      data-create-url="{{ url_for('mail.create_folder') }}" data-order-url="{{ url_for('mail.folder_order') }}"
      data-folder-url="{{ url_for('mail.folder_act', folder='__key__') }}"
      data-live-url="/live" data-sound="{{ 1 if preferences.new_mail_sound else 0 }}" data-notify="{{ 1 if preferences.notifications else 0 }}"
@@ -95,7 +97,7 @@
         <p>{{ "We could not find any messages that match your search request." if searching else "No messages found" }}</p>
       </div>
       {%- if next_url %}
-      <p class="wm-more" data-wm-more data-url="{{ next_url }}" role="status"><span class="wm-more-spin" aria-hidden="true"></span><span>Loading more mail…</span></p>
+      <p class="wm-more" data-wm-more data-url="{{ next_url }}" role="status"><span class="wm-more-art" aria-hidden="true"></span><span>Loading more mail…</span></p>
       {%- endif %}
     </div>
   </section>

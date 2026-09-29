@@ -2,6 +2,7 @@
 message, a reply, a forward or a draft starts with; files uploaded; drafts saved; mail sent
 through the engine (JMAP EmailSubmission), and what's said when it can't be. The engine is the
 made-up one (jmap_fake.py)."""
+import base64
 import io
 
 import pytest
@@ -158,6 +159,22 @@ def test_a_file_is_uploaded_to_the_engine(mail, jmap):
     assert jmap.blobs[answer["blobId"]] == (b"hello", "text/plain")
 
 
+def test_a_picture_is_made_smaller_without_losing_anything(mail, jmap):
+    from PIL import Image
+    picture = Image.new("RGB", (160, 90))
+    for x in range(160):
+        picture.putpixel((x, x % 90), (x, 255 - x, 90))
+    loose = io.BytesIO()
+    picture.save(loose, "PNG", compress_level=0)
+
+    answer = mail.post("/compose/upload", data={"file": (io.BytesIO(loose.getvalue()), "chart.png", "image/png")}).get_json()
+
+    stored = jmap.blobs[answer["blobId"]][0]
+    assert answer["size"] == len(stored) < len(loose.getvalue()) == answer["original"]
+    with Image.open(io.BytesIO(stored)) as kept:
+        assert kept.tobytes() == picture.tobytes()
+
+
 def test_a_file_too_big_is_refused(mail, monkeypatch):
     monkeypatch.setattr(compose, "MAX_FILE", 4)
 
@@ -312,6 +329,32 @@ def test_pictures_in_what_it_says_go_with_it(mail, jmap):
     email = jmap.submissions[0]["email"]
     assert 'src="cid:logo1@someless"' in email["_html"]
     assert [(part["name"], part["disposition"], part["cid"]) for part in email["attachments"]] == [("logo.png", "inline", "logo1@someless")]
+
+
+PIXEL = base64.b64encode(b"\x89PNG\r\n\x1a\n-a-signature-picture").decode()
+
+
+def test_a_signatures_picture_goes_as_a_part_of_its_own(mail, jmap):
+    """Pictures in a signature are kept in it (data:), which Gmail and Outlook don't show: they
+    go as parts of the message (cid:), each once."""
+    written = (f'<p>Hi</p><div class="wm-signature"><img src="data:image/png;base64,{PIXEL}" width="200" alt="">'
+               f'<img src="data:image/png;base64,{PIXEL}" alt=""></div>')
+
+    mail.post("/compose/send", json=message(html=written))
+
+    email = jmap.submissions[0]["email"]
+    assert "data:image" not in email["_html"]
+    parts = email["attachments"]
+    assert [(part["disposition"], part["type"]) for part in parts] == [("inline", "image/png")]
+    assert email["_html"].count(f'src="cid:{parts[0]["cid"]}"') == 2
+    assert jmap.blobs[parts[0]["blobId"]][0] == base64.b64decode(PIXEL)
+
+
+def test_a_signatures_picture_is_kept_with_a_draft_too(mail, jmap):
+    mail.post("/compose/save", json=message(html=f'<p>Hi</p><img src="data:image/jpeg;base64,{PIXEL}">'))
+
+    draft = next(email for email in jmap.emails.values() if "$draft" in email["keywords"])
+    assert "data:image" not in draft["_html"] and draft["attachments"][0]["type"] == "image/jpeg"
 
 
 # --- what it says, safe to send ---

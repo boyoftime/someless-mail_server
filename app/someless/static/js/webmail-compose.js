@@ -219,7 +219,12 @@
     var self = this;
     var item = document.createElement("li");
     item.className = "wm-cm-file" + (file.uploading ? " is-uploading" : "");
-    item.appendChild(wm.icon((file.type || "").indexOf("image/") === 0 ? "image" : file.type === "application/pdf" ? "pdf" : "file"));
+    if (file.uploading) {   // on its way: the turning arrows, then its kind's icon
+      file.spinner = wm.spinner();
+      item.appendChild(file.spinner);
+    } else {
+      item.appendChild(kindIcon(file));
+    }
     var text = document.createElement("span");
     text.className = "wm-cm-file-text";
     var name = document.createElement("span");
@@ -228,7 +233,7 @@
     name.title = file.name;
     var size = document.createElement("span");
     size.className = "wm-cm-file-size";
-    size.textContent = human(file.size || 0);
+    size.textContent = file.uploading ? "Uploading…" : human(file.size || 0);
     text.appendChild(name);
     text.appendChild(size);
     item.appendChild(text);
@@ -247,6 +252,11 @@
     this.filesList.appendChild(item);
     this.filesList.hidden = false;
   };
+
+  function kindIcon(file) {
+    return wm.icon((file.type || "").indexOf("image/") === 0 ? "image" : file.type === "application/pdf" ? "pdf" : "file");
+  }
+  var SHRUNK = /^(image\/png|image\/jpeg|application\/pdf)$/;   // (made smaller on the way: webmail/shrink.py)
 
   Composer.prototype.removeFile = function (file) {
     if (file.request) file.request.abort();
@@ -280,6 +290,9 @@
       request.upload.addEventListener("progress", function (event) {
         if (!event.lengthComputable || !file.element) return;
         file.element.querySelector(".wm-cm-file-bar span").style.width = Math.round(event.loaded * 100 / event.total) + "%";
+        if (event.loaded >= event.total && SHRUNK.test(file.type)) {   // all sent: the webmail makes it smaller now
+          file.element.querySelector(".wm-cm-file-size").textContent = "Compressing…";
+        }
       });
       request.addEventListener("load", function () {
         file.request = null;
@@ -305,7 +318,16 @@
         file.size = answer.size;
         if (file.element) {
           file.element.classList.remove("is-uploading");
-          file.element.querySelector(".wm-cm-file-size").textContent = human(file.size);
+          if (file.spinner) {
+            file.spinner.replaceWith(kindIcon(file));
+            wm.spinner.stop(file.spinner);
+            file.spinner = null;
+          }
+          var sizeText = file.element.querySelector(".wm-cm-file-size");
+          sizeText.textContent = human(file.size);
+          if (answer.original > answer.size) {
+            sizeText.title = "Made smaller, nothing lost: " + human(answer.original) + " → " + human(answer.size);
+          }
         }
         self.changedNow();
         resolve(file);
@@ -330,8 +352,13 @@
     var range = this.savedRange;
     var promise = this.upload(source, true);
     if (!promise) return;
+    var wrap = this.element.querySelector("[data-cm-editor-wrap]");
+    wm.loading(wrap, true, { label: "Adding the picture…" });   // (until it shows)
     promise.then(function (file) {
-      if (!file) return;
+      if (!file) {
+        wm.loading(wrap, false);
+        return;
+      }
       file.cid = Math.random().toString(16).slice(2) + Date.now().toString(16) + "@someless";
       var picture = doc.createElement("img");
       picture.src = "/compose/blob/" + encodeURIComponent(file.blobId) + "?type=" + encodeURIComponent(file.type);
@@ -351,7 +378,12 @@
       } else {
         doc.body.appendChild(picture);
       }
-      picture.addEventListener("load", function () { self.fit(); });
+      var shown = function () {
+        wm.loading(wrap, false);
+        self.fit();
+      };
+      picture.addEventListener("load", shown);
+      picture.addEventListener("error", shown);
       self.checkEmpty();
       self.changedNow();
     });

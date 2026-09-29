@@ -2,6 +2,8 @@
 {% block title %}{% block page_title %}Settings{% endblock %} | Someless Webmail{% endblock %}
 {% block head %}
 <meta name="csrf-token" content="{{ csrf_token() }}">
+<meta name="wm-loader" content="{{ url_for('static', filename='lottie/webmail-loading.json') }}">
+<script src="{{ url_for('static', filename='js/lottie_light.min.js') }}" defer></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-app.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-settings.css') }}">
 <script src="{{ url_for('static', filename='js/webmail-zone.js') }}"></script>
@@ -17,20 +19,20 @@
 {{ top_bar("settings", email, name, initial, theme) }}
 <div class="wm-settings-shell">
   <aside class="wm-side wm-settings-side" id="wm-side" aria-label="Settings">
-    <a class="wm-settings-back" href="{{ url_for('mail.home') }}">{{ icon("back") }}<span>Back to mail</span></a>
-    <nav class="wm-settings-nav" aria-label="Settings">
+    <a class="wm-settings-back" href="{{ url_for('mail.home') }}" data-wm-page-link>{{ icon("back") }}<span>Back to mail</span></a>
+    <nav class="wm-settings-nav" aria-label="Settings" data-wm-page-links>
       {%- set here = request.endpoint %}
       {%- for endpoint, label, symbol in [("settings.index", "Settings", "settings"), ("settings.signatures_page", "Signatures", "signature"),
                                         ("settings.auto_reply_page", "Auto-reply", "reply"), ("settings.filters_page", "Filters", "filter"),
                                         ("settings.apps_page", "Connect third-party apps", "link"), ("settings.security_page", "Security Center", "shield-line")] %}
-      <a class="wm-settings-link{% if here == endpoint %} is-current{% endif %}" href="{{ url_for(endpoint) }}"{% if here == endpoint %} aria-current="page"{% endif %}>
+      <a class="wm-settings-link{% if here == endpoint %} is-current{% endif %}" href="{{ url_for(endpoint) }}"{% if here == endpoint %} aria-current="page"{% endif %} data-wm-page-link>
         {{ icon(symbol) }}<span>{{ label }}</span>
       </a>
       {%- endfor %}
     </nav>
   </aside>
   <div class="wm-scrim" data-wm-scrim hidden></div>
-  <main class="wm-settings-page" id="wm-settings">
+  <main class="wm-settings-page" id="wm-settings" data-wm-main>
     <nav class="wm-crumbs" aria-label="Where you are">
       <a href="{{ url_for('mail.home') }}">Mail</a>
       {%- block crumbs %}<span aria-current="page">Settings</span>{% endblock %}

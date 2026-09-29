@@ -1,20 +1,38 @@
 {% from "webmail-icons.html" import icon %}
-{# The small editor's bar (webmail-editor.js), for a signature and the auto-reply's message. #}
-{% macro editor_bar() %}
+{# The small editor's bar (webmail-editor.js), as PrivateEmail's for a signature: undo and redo,
+   the font and its size, bold, italics, underline and strikethrough, a picture and a link, the
+   text's colour and highlight, lists, alignment, and more (indents, a quote, a line, clearing the
+   formatting). pictures: whether a picture can go in (a signature: yes; the auto-reply: no). #}
+{% macro tool(action, name, label, keys="") -%}
+<button type="button" class="wm-icon wm-mini" data-format="{{ action }}" aria-label="{{ label }}"
+        data-tip="{{ label }}{% if keys %} ({{ keys }}){% endif %}">{{ icon(name) }}</button>
+{%- endmacro %}
+{% macro editor_bar(pictures=true) %}
 <div class="wm-editor-bar" data-editor-bar role="toolbar" aria-label="Formatting options">
-  <button type="button" class="wm-icon wm-mini" data-format="bold" aria-label="Bold" data-tip="Bold">{{ icon("bold") }}</button>
-  <button type="button" class="wm-icon wm-mini" data-format="italic" aria-label="Italics" data-tip="Italics">{{ icon("italic") }}</button>
-  <button type="button" class="wm-icon wm-mini" data-format="underline" aria-label="Underline" data-tip="Underline">{{ icon("underline") }}</button>
-  <button type="button" class="wm-icon wm-mini" data-editor-color aria-label="Text color" data-tip="Text color">{{ icon("text-color") }}</button>
+  {{ tool("undo", "undo", "Undo", "Ctrl+Z") }}
+  {{ tool("redo", "redo", "Redo", "Ctrl+Y") }}
   <span class="wm-cm-divider" aria-hidden="true"></span>
-  <button type="button" class="wm-icon wm-mini" data-format="insertUnorderedList" aria-label="Bulleted list" data-tip="Bulleted list">{{ icon("bullets") }}</button>
-  <button type="button" class="wm-icon wm-mini" data-format="insertOrderedList" aria-label="Numbered list" data-tip="Numbered list">{{ icon("numbers") }}</button>
-  <button type="button" class="wm-icon wm-mini" data-format="justifyLeft" aria-label="Align left" data-tip="Align left">{{ icon("align-left") }}</button>
-  <button type="button" class="wm-icon wm-mini" data-format="justifyCenter" aria-label="Align center" data-tip="Align center">{{ icon("align-center") }}</button>
+  <button type="button" class="wm-editor-select" data-editor-pick="font" aria-label="Font" data-tip="Font"><span data-editor-font>Arial</span>{{ icon("chevron") }}</button>
+  <button type="button" class="wm-editor-select is-size" data-editor-pick="size" aria-label="Font size" data-tip="Font size"><span data-editor-size>14</span>{{ icon("chevron") }}</button>
   <span class="wm-cm-divider" aria-hidden="true"></span>
-  <button type="button" class="wm-icon wm-mini" data-editor-link aria-label="Insert link" data-tip="Insert link">{{ icon("link") }}</button>
-  <button type="button" class="wm-icon wm-mini" data-format="removeFormat" aria-label="Remove formatting" data-tip="Remove formatting">{{ icon("clear-format") }}</button>
-  <button type="button" class="wm-icon wm-mini" data-format="undo" aria-label="Undo" data-tip="Undo">{{ icon("undo") }}</button>
-  <button type="button" class="wm-icon wm-mini" data-format="redo" aria-label="Redo" data-tip="Redo">{{ icon("redo") }}</button>
+  {{ tool("bold", "bold", "Bold", "Ctrl+B") }}
+  {{ tool("italic", "italic", "Italics", "Ctrl+I") }}
+  {{ tool("underline", "underline", "Underline", "Ctrl+U") }}
+  {{ tool("strikeThrough", "strike", "Strikethrough") }}
+  <span class="wm-cm-divider" aria-hidden="true"></span>
+  {%- if pictures %}
+  <button type="button" class="wm-icon wm-mini" data-editor-picture aria-label="Insert picture" data-tip="Insert picture">{{ icon("image") }}</button>
+  <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" data-editor-picture-input hidden>
+  {%- endif %}
+  <button type="button" class="wm-icon wm-mini" data-editor-link aria-label="Insert link" data-tip="Insert link (Ctrl+K)">{{ icon("link") }}</button>
+  <span class="wm-cm-divider" aria-hidden="true"></span>
+  <button type="button" class="wm-icon wm-mini wm-editor-swatch" data-editor-pick="color" aria-label="Text color" data-tip="Text color">{{ icon("text-color") }}</button>
+  <button type="button" class="wm-icon wm-mini wm-editor-swatch is-back" data-editor-pick="back" aria-label="Highlight color" data-tip="Highlight color">{{ icon("highlight") }}</button>
+  <span class="wm-cm-divider" aria-hidden="true"></span>
+  {{ tool("insertUnorderedList", "bullets", "Bulleted list", "Ctrl+Shift+8") }}
+  {{ tool("insertOrderedList", "numbers", "Numbered list", "Ctrl+Shift+7") }}
+  <span class="wm-cm-divider" aria-hidden="true"></span>
+  <button type="button" class="wm-icon wm-mini" data-editor-pick="align" aria-label="Align" data-tip="Align">{{ icon("align-left") }}</button>
+  <button type="button" class="wm-icon wm-mini" data-editor-pick="more" aria-label="More options" data-tip="More options">{{ icon("chevron") }}</button>
 </div>
 {% endmacro %}

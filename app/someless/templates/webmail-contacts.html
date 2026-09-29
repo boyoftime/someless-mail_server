@@ -2,6 +2,8 @@
 {% block title %}Contacts | Someless Webmail{% endblock %}
 {% block head %}
 <meta name="csrf-token" content="{{ csrf_token() }}">
+<meta name="wm-loader" content="{{ url_for('static', filename='lottie/webmail-loading.json') }}">
+<script src="{{ url_for('static', filename='js/lottie_light.min.js') }}" defer></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-app.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-settings.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-contacts.css') }}">
@@ -35,7 +37,7 @@
   </aside>
   <div class="wm-scrim" data-wm-scrim hidden></div>
 
-  <main class="wm-contacts-page" data-wm-contacts data-url="{{ url_for('contacts.index') }}" data-delete-url="{{ url_for('contacts.delete') }}"
+  <main class="wm-contacts-page" data-wm-main data-wm-contacts data-url="{{ url_for('contacts.index') }}" data-delete-url="{{ url_for('contacts.delete') }}"
         data-book="{{ book }}" data-q="{{ query }}" data-page="{{ page }}" data-pages="{{ pages }}" data-size="{{ size }}" data-total="{{ total }}">
     <header class="wm-contacts-head">
       <h1 class="wm-settings-title">Contacts</h1>

@@ -268,12 +268,26 @@ body.webmail-app .wm-check-line input:focus-visible, body.webmail-app .wm-check 
 .wm-when-label { margin: 0; font-weight: 600; }
 
 /* the small editor: a signature, the auto-reply's message */
-.wm-editor { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--wm-search-line); border-radius: 8px; background: var(--wm-list); }
+.wm-editor { position: relative; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--wm-search-line); border-radius: 8px; background: var(--wm-list); }
 .wm-editor:focus-within { border-color: var(--wm-blue); box-shadow: 0 0 0 3px var(--wm-blue-soft); }
 .wm-editor-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 4px 6px; border-bottom: 1px solid var(--wm-line); background: var(--wm-card); }
 .wm-editor-bar .wm-icon.wm-mini { width: 28px; height: 28px; border-radius: 6px; }
 .wm-editor-bar .wm-icon.wm-mini svg { width: 16px; height: 16px; }
 .wm-editor-frame { display: block; width: 100%; height: 14rem; border: 0; background: transparent; }
+/* the bar's pickers (the font, its size), the styles on, and the colours' palette */
+.wm-editor-select { display: inline-flex; align-items: center; gap: 0.25rem; height: 28px; padding: 0 0.35rem 0 0.55rem; border: 1px solid var(--wm-line); border-radius: 6px; background: var(--wm-list); color: var(--wm-ink); font: inherit; font-size: 0.8rem; cursor: pointer; }
+.wm-editor-select:hover { border-color: var(--wm-faint); }
+.wm-editor-select span { min-width: 5.6rem; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.wm-editor-select.is-size span { min-width: 1.6rem; }
+.wm-editor-select svg { width: 13px; height: 13px; color: var(--wm-soft); }
+.wm-editor-bar [aria-pressed="true"] { background: var(--wm-blue-soft); color: var(--wm-blue); }
+:root[data-theme="dark"] .wm-editor-bar [aria-pressed="true"] { color: var(--wm-link); }
+.wm-editor-swatch .wm-swatch { stroke: var(--wm-swatch, currentColor); }
+.wm-palette { display: grid; grid-template-columns: repeat(5, 26px); gap: 6px; padding: 10px; }
+.wm-palette-swatch { width: 26px; height: 26px; padding: 0; border: 1px solid rgba(0, 0, 0, 0.14); border-radius: 6px; background: var(--swatch); cursor: pointer; transition: transform 0.12s ease; }
+.wm-palette-swatch:hover, .wm-palette-swatch:focus-visible { outline: 2px solid var(--wm-blue); outline-offset: 1px; transform: scale(1.08); }
+.wm-palette-none { grid-column: 1 / -1; height: 30px; border: 0; border-radius: 6px; background: var(--wm-icon-hover); color: var(--wm-ink); font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.wm-palette-none:hover { background: var(--wm-current); }
 .wm-editor.is-tall .wm-editor-frame { height: 20rem; }
 .wm-cm-divider { display: inline-flex; flex: none; width: 1px; height: 16px; margin: 0 4px; background: var(--wm-line); }
 .wm-cm-link { width: 22rem; max-width: calc(100vw - 1rem); padding: 12px 14px; }
