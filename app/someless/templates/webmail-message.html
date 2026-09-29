@@ -4,7 +4,10 @@
    link opens it in the reading pane (webmail-read.js); the box ticks it (webmail-actions.js),
    and it can be dragged onto a folder. What's marked on it: unread (bold), a favorite (the
    star), sent as high priority (!), answered, forwarded, with attachments, and in a search, the
-   folder it's in. index: its place in its piece, for coming in one after another; more: in a
+   folder it's in. Beside the box, who it's from (in Sent and Drafts: who it's to) in a circle:
+   their initials in their own colour, or their photo when they're a contact with one
+   (webmail-list.js). Unread, it glows at its end, where the new-mail badge turns. index: its
+   place in its piece, for coming in one after another; more: in a
    piece that came in; open: the one in the reading pane; folder_key: the list it's in (search,
    with search: its words and folder). #}
 {% macro message_row(message, index, more=false, open=false, folder_key="inbox", search=none) %}
@@ -12,6 +15,7 @@
     style="--i: {{ index }}" data-id="{{ message.id }}" data-unread="{{ 1 if message.unread else 0 }}" data-flagged="{{ 1 if message.flagged else 0 }}"
     {%- if message.draft %} data-draft{% endif %} draggable="true">
   <label class="wm-check"><input type="checkbox" aria-label="Select “{{ message.subject }}”"{% if open %} checked data-auto{% endif %}></label>
+  <span class="wm-face" style="--hue: {{ message.hue }};" data-email="{{ message.who_email }}" aria-hidden="true">{{ message.initials }}</span>
   <a class="wm-message-link" href="{{ url_for('mail.message', folder=folder_key, email_id=message.id, **(search or {})) }}" draggable="false"
      {%- if open %} aria-current="true"{% endif %}>
     <span class="wm-from-line">
@@ -29,5 +33,6 @@
       {%- if message.flagged %}<span class="wm-mark is-star" title="Favorite">{{ icon("star-filled") }}</span>{% endif %}
     </span>
   </a>
+  <span class="wm-unread-badge" aria-hidden="true"></span>
 </li>
 {% endmacro %}

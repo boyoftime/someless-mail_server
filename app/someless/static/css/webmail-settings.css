@@ -57,7 +57,6 @@
   padding: 1.25rem 2rem 3rem;
   overflow-y: auto;
   background: var(--wm-reader);
-  scrollbar-width: thin;
 }
 .wm-settings-page > * { max-width: 72rem; }
 .wm-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin: 0 0 0.9rem; color: var(--wm-soft); font-size: 0.8rem; }
@@ -280,8 +279,8 @@ body.webmail-app .wm-check-line input:focus-visible, body.webmail-app .wm-check 
 .wm-editor-select span { min-width: 5.6rem; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .wm-editor-select.is-size span { min-width: 1.6rem; }
 .wm-editor-select svg { width: 13px; height: 13px; color: var(--wm-soft); }
-.wm-editor-bar [aria-pressed="true"] { background: var(--wm-blue-soft); color: var(--wm-blue); }
-:root[data-theme="dark"] .wm-editor-bar [aria-pressed="true"] { color: var(--wm-link); }
+.wm-editor-bar [aria-pressed] { transition: background-color 0.22s ease, color 0.22s ease, box-shadow 0.3s ease; }
+.wm-editor-bar [aria-pressed="true"] { background: var(--wm-blue); color: #fff; box-shadow: var(--wm-lit-glow-small); }   /* on: lit */
 .wm-editor-swatch .wm-swatch { stroke: var(--wm-swatch, currentColor); }
 .wm-palette { display: grid; grid-template-columns: repeat(5, 26px); gap: 6px; padding: 10px; }
 .wm-palette-swatch { width: 26px; height: 26px; padding: 0; border: 1px solid rgba(0, 0, 0, 0.14); border-radius: 6px; background: var(--swatch); cursor: pointer; transition: transform 0.12s ease; }

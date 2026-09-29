@@ -47,7 +47,7 @@
 .wm-composer.is-sending .wm-cm-send { opacity: 0.7; }
 
 /* its bar: the title in the middle, the buttons at the right */
-.wm-cm-head { position: relative; display: flex; flex: none; align-items: center; justify-content: center; min-height: 44px; padding: 4px 104px; border-bottom: 1px solid var(--wm-line); background: var(--wm-sunken); cursor: default; user-select: none; }
+.wm-cm-head { position: relative; display: flex; flex: none; align-items: center; justify-content: center; min-height: 44px; padding: 4px 136px; border-bottom: 1px solid var(--wm-line); background: var(--wm-sunken); cursor: default; user-select: none; }
 .wm-cm-title { max-width: 100%; margin: 0; overflow: hidden; font-size: 0.95rem; font-weight: 700; line-height: 1.5; text-overflow: ellipsis; white-space: nowrap; }
 .wm-cm-controls { position: absolute; top: 50%; right: 8px; display: flex; gap: 2px; transform: translateY(-50%); }
 .wm-cm-controls .wm-icon { width: 30px; height: 30px; }
@@ -57,14 +57,22 @@
 .wm-composer.is-minimized { width: 280px; height: auto; }
 .wm-composer.is-minimized .wm-cm-body, .wm-composer.is-minimized .wm-cm-foot, .wm-composer.is-minimized .wm-cm-inline-head { display: none; }
 .wm-composer.is-minimized .wm-cm-head { justify-content: flex-start; padding: 4px 104px 4px 14px; border-bottom: 0; cursor: pointer; }
+.wm-composer.is-minimized [data-cm="screen"] { display: none; }
 .wm-composer.is-minimized .wm-cm-head:hover { background: var(--wm-icon-hover); }
 
 /* full screen: in the middle, over a dark veil */
 .wm-composer.is-full { position: fixed; top: 5vh; left: 50%; z-index: 61; width: min(1100px, 90vw); height: 90vh; max-height: none; border-radius: 8px; transform: translateX(-50%); animation: wm-cm-full 0.22s var(--wm-ease) both; }
 @keyframes wm-cm-full { from { opacity: 0; transform: translate(-50%, 12px) scale(0.98); } }
 
+/* the whole screen (webmail-compose.js toggleScreen: the browser's full screen too, when it allows
+   it): edge to edge, nothing else in sight, until Exit full screen or Esc */
+.wm-composer.is-screen { position: fixed; inset: 0; z-index: 61; width: auto; height: auto; max-height: none; border-radius: 0; transform: none; animation: wm-cm-screen 0.24s var(--wm-ease) both; }
+.wm-composer.is-screen [data-cm="fullscreen"] { display: none; }
+.wm-composer.is-screen .wm-cm-head { padding-right: 104px; }
+@keyframes wm-cm-screen { from { opacity: 0.4; transform: scale(0.97); } }
+
 /* the rows: From, To, Cc, Bcc, Subject */
-.wm-cm-body { position: relative; display: flex; flex: 1; flex-direction: column; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+.wm-cm-body { position: relative; display: flex; flex: 1; flex-direction: column; min-height: 0; overflow-y: auto; }
 .wm-cm-fields { flex: none; }
 .wm-cm-row { position: relative; display: flex; align-items: flex-start; gap: 0.5rem; margin: 0 16px; padding: 4px 0; border-bottom: 1px solid var(--wm-line); }
 .wm-cm-row[hidden] { display: none; }
@@ -111,7 +119,8 @@ body.webmail-app .wm-cm-subject { height: 34px; }
 .wm-cm-toolbar[hidden] { display: none; }
 .wm-cm-toolbar .wm-icon { width: 28px; height: 28px; border-radius: 6px; }
 .wm-cm-toolbar .wm-icon svg { width: 18px; height: 18px; }
-.wm-cm-toolbar .wm-icon.is-on { background: var(--wm-blue-soft); color: var(--wm-blue); }
+.wm-cm-toolbar .wm-icon { transition: background-color 0.22s ease, color 0.22s ease, box-shadow 0.3s ease; }
+.wm-cm-toolbar .wm-icon.is-on { background: var(--wm-blue); color: #fff; box-shadow: var(--wm-lit-glow-small); }
 .wm-cm-select { display: inline-flex; align-items: center; gap: 0.25rem; height: 30px; padding: 0 0.4rem 0 0.55rem; border: 0; border-radius: 6px; background: none; color: var(--wm-ink); font: inherit; font-size: 0.82rem; cursor: pointer; }
 .wm-cm-select:hover { background: var(--wm-icon-hover); }
 .wm-cm-select span { min-width: 4.2rem; text-align: left; }
@@ -140,14 +149,53 @@ body.webmail-app .wm-cm-subject { height: 34px; }
 .wm-cm-file-x:hover { background: var(--wm-icon-hover); color: var(--wm-ink); }
 .wm-cm-file-x svg { width: 13px; height: 13px; }
 
+/* a table being written (webmail-tables.js): its handles, over the frame, small and in the
+   theme's blue (move it, a column or a row more, its cell's menu, the cell pulled bigger), and a
+   glowing line where a table being moved would go */
+.wm-tt { position: fixed; z-index: 62; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 7px; background: var(--wm-blue); color: #fff; box-shadow: 0 2px 8px rgba(10, 14, 30, 0.35); cursor: pointer; transform: translate(-50%, -50%); animation: wm-tt-in 0.14s ease both; }
+.wm-tt[hidden] { display: none; }
+.wm-tt svg { width: 14px; height: 14px; }
+.wm-tt:hover { background: var(--wm-blue-hover); box-shadow: 0 2px 8px rgba(10, 14, 30, 0.35), var(--wm-lit-glow-small); }
+.wm-tt-move { cursor: grab; }
+.wm-tt-add { border-radius: 50%; }
+.wm-tt-menu { width: 20px; height: 20px; border-radius: 6px; }
+.wm-tt-size { width: 18px; height: 18px; border-radius: 5px; cursor: nwse-resize; }
+.wm-tt-size svg { width: 12px; height: 12px; }
+body.is-moving-table, body.is-moving-table * { cursor: grabbing !important; }
+body.is-sizing-cell, body.is-sizing-cell * { cursor: nwse-resize !important; }
+.wm-tt-drop { position: fixed; z-index: 62; height: 3px; border-radius: 2px; background: var(--wm-blue); box-shadow: 0 0 8px rgba(88, 156, 255, 0.8); pointer-events: none; }
+.wm-tt-drop[hidden] { display: none; }
+@keyframes wm-tt-in { from { opacity: 0; transform: translate(-50%, -50%) scale(0.7); } }
+
+/* a reply under the message: ⋯ for what it answers, folded away so Send is just below the words */
+.wm-cm-quote { display: grid; flex: none; align-self: flex-start; place-items: center; width: 36px; height: 20px; margin: 4px 16px 10px; padding: 0; border: 0; border-radius: 10px; background: var(--wm-icon-hover); color: var(--wm-soft); cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; }
+.wm-cm-quote[hidden] { display: none; }
+.wm-cm-quote svg { width: 20px; height: 20px; }
+.wm-cm-quote:hover, .wm-cm-quote[aria-expanded="true"] { background: var(--wm-blue-soft); color: var(--wm-blue); }
+
+/* the rocket that takes a message off (webmail-rocket.js): out of Send's line (nothing of it below
+   there), then free up the screen, glowing; rumbling while it waits; sputtering out, not sent */
+.wm-rocket { position: fixed; z-index: 2147483000; width: 280px; height: 280px; pointer-events: none; clip-path: inset(-300vh -45% 0 -45%); filter: drop-shadow(0 0 10px rgba(88, 156, 255, 0.55)); }
+.wm-rocket[popover] { inset: auto; margin: 0; padding: 0; border: 0; overflow: visible; background: none; color: inherit; }
+.wm-rocket svg { overflow: visible; }
+.wm-rocket.is-holding svg { animation: wm-rumble 0.14s linear infinite; }
+@keyframes wm-rumble { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(-0.7px, 0.5px); } 50% { transform: translate(0.6px, -0.5px); } 75% { transform: translate(-0.5px, -0.4px); } }
+.wm-rocket.is-sputtering { opacity: 0; transform: translateY(18px) scale(0.92); transition: opacity 0.4s ease, transform 0.45s ease; }
+/* lift-off: a dome of light swelling from where it stood, and fading */
+.wm-rocket::after { content: ""; position: absolute; bottom: -60px; left: 50%; width: 240px; height: 120px; margin-left: -120px; border-radius: 50%; background: radial-gradient(closest-side, rgba(232, 246, 255, 0.95), rgba(92, 182, 255, 0.6) 45%, rgba(92, 182, 255, 0)); opacity: 0; transform: scale(0.4); pointer-events: none; }
+.wm-rocket.is-lifting::after { animation: wm-liftoff 0.8s cubic-bezier(0.12, 0.75, 0.3, 1) forwards; }
+@keyframes wm-liftoff { 0% { opacity: 0; transform: scale(0.4); } 16% { opacity: 1; } 100% { opacity: 0; transform: scale(1.7); } }
+
 /* along the bottom: Send, the tools, Discard */
 .wm-cm-foot { display: flex; flex: none; align-items: center; gap: 2px; min-height: 56px; padding: 0 8px; border-top: 1px solid var(--wm-line); }
 .wm-cm-send { height: 36px; margin-right: 4px; padding: 0 1.4rem; }
 .wm-cm-tool { width: 36px; height: 36px; border-radius: 8px; color: var(--wm-soft); }
 .wm-cm-tool svg { width: 20px; height: 20px; }
 .wm-cm-tool:hover { color: var(--wm-ink); }
-.wm-cm-tool.is-on { background: var(--wm-blue-soft); color: var(--wm-blue); }
-.wm-cm-tool[data-cm="important"].is-on { background: var(--wm-danger-soft); color: var(--wm-danger); }
+.wm-cm-tool { transition: background-color 0.22s ease, color 0.22s ease, box-shadow 0.3s ease; }
+/* on (Aa with the bar out, marked important): lit and glowing for as long as it's on */
+.wm-cm-tool.is-on { background: var(--wm-blue); color: #fff; box-shadow: var(--wm-lit-glow); }
+.wm-cm-tool[data-cm="important"].is-on { background: var(--wm-lit-red); color: #fff; box-shadow: var(--wm-lit-red-glow); }
 .wm-cm-tool[data-cm="discard"] { margin-left: 4px; }
 .wm-cm-status { flex: 1; min-width: 0; overflow: hidden; color: var(--wm-faint); font-size: 0.76rem; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -199,7 +247,7 @@ body.webmail-app .wm-cm-link-form input:focus { border-color: var(--wm-blue); }
   .wm-composers { right: 0; left: 0; max-width: none; justify-content: flex-end; gap: 8px; padding: 0 8px; }
   .wm-composer:not(.is-minimized):not(.is-inline) { position: fixed; inset: 0; z-index: 61; width: auto; height: auto; max-height: none; border-radius: 0; }
   .wm-composer.is-full { top: 0; left: 0; width: auto; height: auto; transform: none; }
-  .wm-cm-head { padding: 4px 104px 4px 16px; justify-content: flex-start; }
+  .wm-cm-head { padding: 4px 136px 4px 16px; justify-content: flex-start; }
   .wm-composer.is-minimized { width: 220px; }
 }
 @media (max-width: 600px) {
@@ -209,5 +257,5 @@ body.webmail-app .wm-cm-link-form input:focus { border-color: var(--wm-blue); }
   .wm-composer.is-minimized { width: calc(100vw - 16px); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .wm-composer, .wm-composer.is-full, .wm-cm-overlay { animation: none; transition: none; }
+  .wm-composer, .wm-composer.is-full, .wm-composer.is-screen, .wm-cm-overlay, .wm-tt { animation: none; transition: none; }
 }

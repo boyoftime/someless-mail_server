@@ -48,6 +48,8 @@
       clearTimeout(button.copiedTimer);
       button.copiedTimer = setTimeout(function () { button.classList.remove("is-copied"); }, 1800);
       announce("Copied");
+      // its tip ("Copy") goes, so "Copied" shows alone where it was (tooltip.js)
+      document.dispatchEvent(new CustomEvent("someless:tips-away", { detail: { element: button } }));
     }, function () {
       if (window.somelessBoard) {
         window.somelessBoard.show({ type: "error", title: "Couldn't copy", message: "Select the text and copy it yourself." });

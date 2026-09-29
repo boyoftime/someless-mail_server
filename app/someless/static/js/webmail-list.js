@@ -373,6 +373,38 @@
     check();
   }
 
+  // --- the circles beside the mail: a contact's photo where there's one (contacts.py /photos),
+  // asked for once for each address, for all the ones in sight at once ---
+  var photos = {};   // address: its photo, or "" (asked: none)
+  var MOST_AT_ONCE = 100;
+  function showPhotos() {
+    var wanted = [];
+    Array.prototype.forEach.call(list.querySelectorAll(".wm-face[data-email]:not(.has-photo)"), function (face) {
+      var email = face.dataset.email;
+      if (photos[email]) {
+        var picture = document.createElement("img");
+        picture.alt = "";
+        picture.src = photos[email];
+        face.appendChild(picture);
+        face.classList.add("has-photo");
+      } else if (email && photos[email] === undefined && wanted.indexOf(email) < 0 && wanted.length < MOST_AT_ONCE) {
+        wanted.push(email);
+      }
+    });
+    if (!wanted.length || !section.dataset.photosUrl) return;
+    wanted.forEach(function (email) { photos[email] = ""; });
+    var query = wanted.map(function (email) { return "e=" + encodeURIComponent(email); }).join("&");
+    wm.request(section.dataset.photosUrl + "?" + query, { quiet: true }).then(function (answer) {
+      var found = answer.photos || {};
+      Object.keys(found).forEach(function (email) { photos[email] = found[email]; });
+      showPhotos();
+    }, function () {
+      wanted.forEach(function (email) { delete photos[email]; });   // (asked again next time)
+    });
+  }
+  list.addEventListener("someless:rows", showPhotos);
+  showPhotos();
+
   window.wm.list = {
     adopt: adopt,
     rows: rows, rowFor: rowFor, remove: remove, refresh: refresh, reload: reload, total: function () { return total; },

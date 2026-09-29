@@ -25,6 +25,13 @@ from .client import EngineError, EngineUnavailable
 MANUAL = {"@type": "Manual"}
 ACME_DIRECTORY = "https://acme-v02.api.letsencrypt.org/directory"  # Let's Encrypt
 ASK_AGAIN_AFTER = 600   # seconds: Let's Encrypt allows 5 failed checks of a name an hour
+RECEIVED_MOST = 104857600   # bytes: a message from another server, or sent with an SMTP key (Stalwart's own)
+# What Stalwart takes, raised to let through the largest message a mailbox may send (100 MB of
+# files: some 140 MB once written in a message): what the webmail uploads, and what mail apps save
+# in Sent. The mailboxes' own limits are in the size rule (size_rule).
+ENGINE_LIMITS = {"Jmap": {"maxUploadSize": 110000000, "uploadQuota": 500000000},
+                 "Email": {"maxAttachmentSize": 110000000, "maxMessageSize": 160000000},
+                 "Imap": {"maxRequestSize": 160000000}}
 _thread_lock = threading.Lock()
 
 
@@ -46,6 +53,27 @@ def send_as_rule(senders):
     return {"match": {"0": {"if": " || ".join(f"sender == '{email}'" for email in fit), "then": "false"}}, "else": "true"}
 
 
+def in_a_message(megabytes):
+    """How large a message gets with so many MB of files: their base64 is a third larger, in lines
+    of 76 with a line break after each, and the words and headers around them take a little more."""
+    return int(megabytes * 1024 ** 2 * 4 / 3 * 78 / 76) + 1024 ** 2
+
+
+def size_rule(limits):
+    """x:MtaStageData.maxMessageSize: each mailbox, signed in (a mail app), sends as large a message as
+    its limit lets it (limits: {address: MB}); any other message is as large as Stalwart takes. (An
+    address with a quote or backslash can't go in the rule's text: it's left out, and has that.)"""
+    by_limit = {}
+    for email, megabytes in sorted(limits.items()):
+        if "'" in email or "\\" in email:
+            logging.getLogger(__name__).warning("mailbox %s can't go in the size rule (a quote or backslash)", email)
+            continue
+        by_limit.setdefault(megabytes, []).append(email)
+    match = {str(index): {"if": " || ".join(f"authenticated_as == '{email}'" for email in emails), "then": str(in_a_message(megabytes))}
+             for index, (megabytes, emails) in enumerate(sorted(by_limit.items()))}
+    return {"match": match, "else": str(RECEIVED_MOST)}
+
+
 def desired_state():
     db = get_db()
     # authenticated domains, and any with mailboxes: those stay, or their mail would go
@@ -57,7 +85,7 @@ def desired_state():
         aliases = [alias["email"] for alias in db.execute(
             "SELECT email FROM mailbox_aliases WHERE mailbox_id = ? ORDER BY email", (row["id"],))]
         mailboxes[row["email"]] = {"id": row["id"], "quota": row["quota_bytes"], "secret": row["password_hash"],
-                                   "version": row["password_version"], "aliases": aliases}
+                                   "version": row["password_version"], "aliases": aliases, "send_limit": row["send_limit_mb"]}
     senders = [row["email"] for row in db.execute(
         "SELECT senders.email FROM senders JOIN domains ON domains.id = senders.domain_id WHERE domains.authenticated = 1"
         " ORDER BY senders.email")]
@@ -101,6 +129,17 @@ def reconcile(engine, desired):
     if engine.get("MtaStageAuth", ["singleton"])[0].get("mustMatchSender") != rule:
         engine.update("MtaStageAuth", "singleton", {"mustMatchSender": rule})
         done.append("update the send-as rule")
+    # how large a message each mailbox may send (the Mailboxes page), and what Stalwart takes, raised to fit
+    rule = size_rule({email: box["send_limit"] for email, box in desired["mailboxes"].items()})
+    if engine.get("MtaStageData", ["singleton"])[0].get("maxMessageSize") != rule:
+        engine.update("MtaStageData", "singleton", {"maxMessageSize": rule})
+        done.append("update the size rule")
+    for kind, wanted in ENGINE_LIMITS.items():
+        now = engine.get(kind, ["singleton"])[0]
+        change = {field: value for field, value in wanted.items() if now.get(field) != value}
+        if change:
+            engine.update(kind, "singleton", change)
+            done.append(f"update {kind} limits")
     everyone = engine.get("Account")
     # accounts in someless.internal: one per key, and the panel's
     accounts = {obj["name"]: obj for obj in everyone if obj.get("domainId") == internal_id and obj["name"] != "admin"}

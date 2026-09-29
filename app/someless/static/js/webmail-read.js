@@ -162,6 +162,13 @@
     doc.documentElement.classList.toggle("is-dark", dark);
     doc.documentElement.classList.toggle("is-light", !dark);
     doc.documentElement.classList.toggle("is-paper", paper);
+    var ours = doc.querySelector("style[data-wm-frame]");   // our scrollbars, the pictures' loading look
+    if (!ours) {
+      ours = doc.createElement("style");
+      ours.setAttribute("data-wm-frame", "");
+      (doc.head || doc.documentElement).appendChild(ours);
+    }
+    ours.textContent = wm.frameCss();
     if (dark && !paper) {
       if (!doc.wmDarkened) darken(doc);
     } else if (doc.wmDarkened) {
@@ -174,15 +181,29 @@
   function setUp() {
     var body = frame();
     if (!body) return;
+    // its page as soon as it's all there, not only once its pictures have come (the frame's load
+    // waits for them): in its colours, each picture's place with the turning arrows till it's
+    // there, and taller as each one comes
+    function early() {
+      var doc = page();
+      if (!doc || doc.readyState === "loading" || doc.wmEarly) return !!(doc && doc.wmEarly);
+      doc.wmEarly = true;
+      wm.watchPictures(doc);
+      doc.addEventListener("load", fit, true);
+      colours();
+      return true;
+    }
+    var tries = 0;
+    (function soon() {
+      if (frame() === body && !early() && ++tries < 600) requestAnimationFrame(soon);
+    })();
     function ready() {
       var doc = page();
       if (!doc || doc.wmReady) return;
       doc.wmReady = true;
+      early();
       colours();
       if (doc.fonts) doc.fonts.ready.then(fit);   // its font can make it taller
-      Array.prototype.forEach.call(doc.images, function (picture) {
-        if (!picture.complete) picture.addEventListener("load", fit);
-      });
       // a link to write to someone: a new message to them, here (webmail-compose.js)
       doc.addEventListener("click", function (event) {
         var link = event.target.closest && event.target.closest('a[href^="mailto:"]');
@@ -457,16 +478,7 @@
     var items = document.createElement("ul");
     items.className = "wm-tracker-list";
     items.appendChild(holder.content.cloneNode(true));
-    shown.body.appendChild(items);
-    items.addEventListener("click", function (event) {
-      var copy = event.target.closest("[data-wm-copy-link]");
-      if (!copy) return;
-      navigator.clipboard.writeText(copy.dataset.wmCopyLink).then(function () {
-        wm.toast("Link copied");
-      }, function () {
-        wm.board("Couldn't copy", "Select the link and copy it yourself.");
-      });
-    });
+    shown.body.appendChild(items);   // (each link's copy button: copy-button.js)
   }
 
   // View source: the message as it came, headers and all, with its headers to copy
@@ -495,8 +507,15 @@
         var headers = text.split(/\r?\n\r?\n/)[0];
         copy.disabled = false;
         copy.addEventListener("click", function () {
-          navigator.clipboard.writeText(headers).then(function () {
-            wm.toast("Email headers copied");
+          wm.copy(headers).then(function () {   // (the older way too, on a plain http:// address)
+            // said on the button, in sight: a toast would be under the sheet
+            copy.replaceChildren(wm.icon("check"), document.createTextNode("Copied"));
+            copy.classList.add("is-copied");
+            clearTimeout(copy.wmCopiedTimer);
+            copy.wmCopiedTimer = setTimeout(function () {
+              copy.replaceChildren(wm.icon("copy"), document.createTextNode("Copy email headers"));
+              copy.classList.remove("is-copied");
+            }, 1800);
           }, function () {
             wm.board("Couldn't copy", "Select the headers and copy them yourself.");
           });

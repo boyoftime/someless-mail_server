@@ -115,7 +115,8 @@ CREATE TABLE IF NOT EXISTS mailboxes (
     quota_bytes INTEGER NOT NULL,
     password_hash TEXT NOT NULL,
     password_version INTEGER NOT NULL DEFAULT 1,   -- up by one with each new password: the engine gets it then
-    created_at REAL NOT NULL
+    created_at REAL NOT NULL,
+    send_limit_mb INTEGER NOT NULL DEFAULT 50      -- the most a message it sends may carry in files (1 to 100 MB)
 );
 -- The webmail's sign-in lock (Settings > Miscellaneous, webmail_lock.py): so many wrong passwords
 -- in a row, then a wait
@@ -258,7 +259,8 @@ LATER_COLUMNS = [("domains", "provider", "TEXT"), ("domain_keys", "mail_host", "
                  ("webmail_settings", "forward_keep", "INTEGER NOT NULL DEFAULT 1"),
                  ("webmail_settings", "reply_on", "INTEGER NOT NULL DEFAULT 0"), ("webmail_settings", "reply_start", "TEXT"),
                  ("webmail_settings", "reply_end", "TEXT"), ("webmail_settings", "reply_subject", "TEXT"),
-                 ("webmail_settings", "reply_html", "TEXT")]
+                 ("webmail_settings", "reply_html", "TEXT"),
+                 ("mailboxes", "send_limit_mb", "INTEGER NOT NULL DEFAULT 50")]
 
 
 def _add_later_columns(db):

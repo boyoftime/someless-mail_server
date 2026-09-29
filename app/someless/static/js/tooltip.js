@@ -142,4 +142,33 @@
     void tip.offsetWidth;
     tip.style.transition = "";
   });
+
+  // The browser's own plain tooltip (an element's title) never shows: each title becomes a tip of
+  // ours, on the page as it comes and on anything put in or changed later. What it said stays with
+  // screen readers: as the element's label when it has no words of its own, else as its
+  // description. (A frame's title names the frame and shows nothing: it stays.)
+  function fromTitle(element) {
+    var words = element.getAttribute("title");
+    if (element.tagName === "IFRAME" || words === null) return;
+    element.removeAttribute("title");
+    if (!words) return;
+    element.setAttribute("data-tip", words);
+    var said = element.getAttribute("data-tip-said");   // (said already, from its title before)
+    if (!said && (element.hasAttribute("aria-label") || element.hasAttribute("aria-labelledby"))) return;
+    said = said || (element.textContent.trim() ? "aria-description" : "aria-label");
+    element.setAttribute("data-tip-said", said);
+    element.setAttribute(said, words);
+  }
+  function titlesIn(node) {
+    if (node.nodeType !== 1) return;
+    if (node.hasAttribute("title")) fromTitle(node);
+    Array.prototype.forEach.call(node.querySelectorAll("[title]"), fromTitle);
+  }
+  titlesIn(document.body);
+  new MutationObserver(function (changes) {
+    changes.forEach(function (change) {
+      if (change.type === "attributes") fromTitle(change.target);
+      else Array.prototype.forEach.call(change.addedNodes, titlesIn);
+    });
+  }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["title"] });
 })();

@@ -487,3 +487,42 @@ def test_senders_are_matched_whatever_their_case():
 def sync_error(app):
     with app.app_context():
         return engine_module.state()["sync_error"]
+
+
+# --- how large a message each mailbox may send (the Mailboxes page) ---
+
+def test_the_size_rule_lets_each_mailbox_send_as_much_as_its_limit():
+    assert sync.size_rule({"a@x.com": 50, "b@y.com": 50, "c@z.com": 100}) == {"match": {
+        "0": {"if": "authenticated_as == 'a@x.com' || authenticated_as == 'b@y.com'", "then": str(sync.in_a_message(50))},
+        "1": {"if": "authenticated_as == 'c@z.com'", "then": str(sync.in_a_message(100))}},
+        "else": "104857600"}
+    assert sync.size_rule({}) == {"match": {}, "else": "104857600"}   # mail from elsewhere: as the engine takes it
+    assert sync.size_rule({"o'brien@x.com": 50, "b@y.com": 50}) == {"match": {   # a quote can't go in the rule
+        "0": {"if": "authenticated_as == 'b@y.com'", "then": str(sync.in_a_message(50))}}, "else": "104857600"}
+
+
+def test_files_up_to_the_limit_fit_in_the_message_allowed():
+    for limit in (1, 50, 100):
+        files = limit * 1024 ** 2
+        assert sync.in_a_message(limit) > files * 4 // 3 + files // 76 * 2   # base64, a third larger, in lines of 76
+
+
+def test_the_engine_takes_what_the_mailboxes_may_send(app, engine):
+    domain_id = authenticated_domain(app)
+    a_mailbox(app, "ceo@pineloop.online", domain_id)
+    a_mailbox(app, "sales@pineloop.online", domain_id)
+    with app.app_context():
+        get_db().execute("UPDATE mailboxes SET send_limit_mb = 100 WHERE email = 'sales@pineloop.online'")
+        get_db().commit()
+
+    sync_now(app)
+
+    rule = engine.objects["MtaStageData"]["singleton"]["maxMessageSize"]
+    assert rule == sync.size_rule({"ceo@pineloop.online": 50, "sales@pineloop.online": 100})
+    assert engine.objects["Jmap"]["singleton"]["maxUploadSize"] >= 100 * 1024 ** 2
+    assert engine.objects["Email"]["singleton"]["maxAttachmentSize"] >= 100 * 1024 ** 2
+    assert engine.objects["Email"]["singleton"]["maxMessageSize"] >= sync.in_a_message(100)
+    assert engine.objects["Imap"]["singleton"]["maxRequestSize"] >= sync.in_a_message(100)
+    assert ("action", "ReloadSettings", None) in engine.calls
+    with app.app_context():
+        assert sync.reconcile(engine, sync.desired_state()) == []   # and a second sync changes nothing

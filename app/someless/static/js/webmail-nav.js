@@ -64,13 +64,16 @@
       });
   }
 
-  // the new page's list, reading pane and folders, in place of these
+  // the new page's list, reading pane and folders, in place of these (without the page's first
+  // motion again: html.wm-been, webmail-first.js)
   function adopt(page) {
+    document.documentElement.classList.add("wm-been");
     var token = page.querySelector('meta[name="csrf-token"]');
     var mine = document.querySelector('meta[name="csrf-token"]');
     if (token && mine) mine.content = token.content;
     var nextNav = page.querySelector("[data-wm-folders]");
-    nav.innerHTML = nextNav.innerHTML;
+    if (wm.folderActions) wm.folderActions.put(nextNav.innerHTML);   // (the rows stay when they're the same folders)
+    else nav.innerHTML = nextNav.innerHTML;
     nav.dataset.current = nextNav.dataset.current;
     nav.dataset.byName = nextNav.dataset.byName;
     var storage = document.querySelector(".wm-storage");

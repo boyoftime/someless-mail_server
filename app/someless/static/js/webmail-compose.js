@@ -45,6 +45,9 @@
     }
     return (Math.round(size * 100) / 100) + " " + units[unit];
   }
+  function newCid() {   // a picture's name inside the message it goes with
+    return Math.random().toString(16).slice(2) + Date.now().toString(16) + "@someless";
+  }
 
   // --- the page of what it says (a frame, where no script runs; this script works it) ---
   function editorPage() {
@@ -60,6 +63,9 @@
       ".wm-quote-title{margin:0 0 8px;color:" + (dark ? "#a7b0cd" : "#5d636e") + "}.wm-quote-head{margin-bottom:12px;color:" +
       (dark ? "#a7b0cd" : "#5d636e") + "}table{border-collapse:collapse}td,th{border:1px solid " + (dark ? "#3b4777" : "#c9ced8") +
       ";padding:4px 8px;min-width:40px}.wm-signature{color:inherit}" +
+      "img.wm-picked{outline:2px solid #3b82f6;outline-offset:2px}" +
+      ".wm-write-here::before{content:'Write your message here';position:absolute;color:" + (dark ? "#7c87a9" : "#878d98") + ";pointer-events:none}" +
+      "body.wm-quote-folded blockquote.wm-quote{display:none}" + wm.frameCss() +
       "</style></head><body contenteditable=\"true\" spellcheck=\"true\" class=\"is-empty\"></body></html>";
   }
 
@@ -106,9 +112,11 @@
       self.frame.removeEventListener("load", onLoad);
       var doc = self.frame.contentDocument;
       doc.body.innerHTML = self.pendingHtml;
+      wm.watchPictures(doc);   // (a draft's pictures, a reply's: the turning arrows till each is there)
       self.ready = true;
       self.wireEditor(doc);
       self.checkEmpty();
+      self.foldQuote(!!self.quoteFolded);
       self.fit();
     });
     this.frame.srcdoc = editorPage();
@@ -116,7 +124,7 @@
 
   Composer.prototype.html = function () {
     var doc = this.doc();
-    return doc ? doc.body.innerHTML : this.pendingHtml;
+    return doc ? wm.contentOf(doc.body) : this.pendingHtml;
   };
 
   Composer.prototype.checkEmpty = function () {
@@ -124,6 +132,32 @@
     if (!doc) return;
     var empty = !doc.body.textContent.trim() && !doc.body.querySelector("img, table, li, blockquote, .wm-signature");
     doc.body.classList.toggle("is-empty", empty);
+    // with a signature or what it answers below it: the empty line at the top says where to write
+    var first = doc.body.firstElementChild;
+    var below = doc.body.querySelector(".wm-signature, blockquote.wm-quote");
+    Array.prototype.forEach.call(doc.querySelectorAll(".wm-write-here"), function (one) {
+      if (one !== first) one.classList.remove("wm-write-here");
+    });
+    if (first) {
+      var hint = !empty && !!below && first !== below && first.tagName === "P" && !first.textContent.trim() && !first.querySelector("img, table");
+      first.classList.toggle("wm-write-here", hint);
+      if (!first.classList.length) first.removeAttribute("class");
+    }
+  };
+
+  // A reply under the message: what it answers folded away behind ⋯, so Send is just under the
+  // words being written; ⋯ shows it again. It goes with the reply either way.
+  Composer.prototype.foldQuote = function (folded) {
+    var doc = this.doc();
+    var button = this.element.querySelector('[data-cm="quote"]');
+    this.quoteFolded = folded;
+    button.hidden = !doc || !doc.querySelector("blockquote.wm-quote") || !this.element.classList.contains("is-inline");
+    if (doc) doc.body.classList.toggle("wm-quote-folded", folded && !button.hidden);
+    button.setAttribute("aria-expanded", String(!folded));
+    var tip = folded ? button.dataset.tipOff : button.dataset.tipOn;
+    button.dataset.tip = tip;
+    button.setAttribute("aria-label", tip);
+    this.fit();
   };
 
   // under a message: the frame as tall as what it says
@@ -177,20 +211,31 @@
     this.draft = started.draft || null;
     this.reply = started.reply || null;
     this.signatures = started.signatures || [];
-    this.limits = started.limits || { file: 25 * 1024 * 1024, all: 45 * 1024 * 1024, recipients: 50 };
+    this.limits = started.limits || { file: 50 * 1024 * 1024, all: 50 * 1024 * 1024, recipients: 50 };   // (the mailbox's own: compose.py)
     this.setImportant(!!started.important);
     (started.attachments || []).forEach(function (part) {
       self.addFile({ name: part.name, size: part.size, type: part.type, blobId: part.blobId, cid: part.cid, inline: part.inline });
     });
     this.mountEditor(started.html || "");
+    if (this.reply) {   // a reply or a forward: the formatting bar out from the start, Aa lit
+      var format = this.element.querySelector('[data-cm="format"]');
+      format.setAttribute("aria-pressed", "true");
+      format.classList.add("is-on");
+      this.element.querySelector("[data-cm-toolbar]").hidden = false;
+    }
     this.changed = false;
     this.touched = false;
   };
 
-  Composer.prototype.showCcBcc = function () {
-    this.element.querySelector('[data-cm-row="cc"]').hidden = false;
-    this.element.querySelector('[data-cm-row="bcc"]').hidden = false;
-    this.element.querySelector('[data-cm="ccbcc"]').hidden = true;
+  // Cc and Bcc, opened by their link: they open down into place (as it opens with some: there)
+  Composer.prototype.showCcBcc = function (smoothly) {
+    var element = this.element;
+    ["cc", "bcc"].forEach(function (field) {
+      var row = element.querySelector('[data-cm-row="' + field + '"]');
+      if (smoothly) wm.reveal(row, true);
+      else row.hidden = false;
+    });
+    element.querySelector('[data-cm="ccbcc"]').hidden = true;
   };
 
   Composer.prototype.setImportant = function (on) {
@@ -359,7 +404,7 @@
         wm.loading(wrap, false);
         return;
       }
-      file.cid = Math.random().toString(16).slice(2) + Date.now().toString(16) + "@someless";
+      file.cid = newCid();
       var picture = doc.createElement("img");
       picture.src = "/compose/blob/" + encodeURIComponent(file.blobId) + "?type=" + encodeURIComponent(file.type);
       picture.alt = file.name;
@@ -378,13 +423,83 @@
       } else {
         doc.body.appendChild(picture);
       }
+      wm.loading(wrap, false);   // (in its place now, it shows the turning arrows itself till it's there)
       var shown = function () {
-        wm.loading(wrap, false);
         self.fit();
       };
       picture.addEventListener("load", shown);
       picture.addEventListener("error", shown);
       self.checkEmpty();
+      self.changedNow();
+    });
+  };
+
+  // A picture in what it says, right-clicked: another put in its place, made smaller or larger,
+  // or taken out (one taken out isn't sent: only the pictures it shows go with it: message())
+  Composer.prototype.pictureMenu = function (picture, event) {
+    var self = this;
+    var doc = this.doc();
+    if (!doc) return;
+    var outer = this.frame.getBoundingClientRect();
+    var widest = Math.max(80, doc.body.clientWidth - 32);
+    var natural = picture.naturalWidth || widest;
+    function size(share) {
+      return function () {
+        picture.setAttribute("width", String(Math.max(16, Math.round(Math.min(natural, widest) * share))));
+        picture.removeAttribute("height");
+        picture.style.width = "";
+        picture.style.height = "";
+        self.changedNow();
+        self.fit();
+      };
+    }
+    picture.classList.add("wm-picked");
+    wm.menu({ x: outer.left + event.clientX, y: outer.top + event.clientY }, [
+      { label: "Replace picture", icon: "image", act: function () {
+        self.replacing = picture;
+        self.element.querySelector("[data-cm-picture-input]").click();
+      } },
+      "-",
+      { label: "Small", icon: "image", act: size(0.25) },
+      { label: "Medium", icon: "image", act: size(0.5) },
+      { label: "Large", icon: "image", act: size(0.75) },
+      { label: "Original size", icon: "image", act: function () {
+        picture.removeAttribute("width");
+        picture.removeAttribute("height");
+        picture.style.width = "";
+        picture.style.height = "";
+        self.changedNow();
+        self.fit();
+      } },
+      "-",
+      { label: "Remove picture", icon: "trash", danger: true, act: function () {
+        picture.remove();
+        self.checkEmpty();
+        self.changedNow();
+        self.fit();
+      } },
+    ], { onClose: function () {
+      picture.classList.remove("wm-picked");
+      if (!picture.classList.length) picture.removeAttribute("class");
+    } });
+  };
+
+  // a picture put in the place of another: uploaded, then shown there (as wide as the one before)
+  Composer.prototype.replacePicture = function (picture, source) {
+    var self = this;
+    var promise = this.upload(source, true);
+    if (!promise) return;
+    var wrap = this.element.querySelector("[data-cm-editor-wrap]");
+    wm.loading(wrap, true, { label: "Replacing the picture…" });
+    promise.then(function (file) {
+      wm.loading(wrap, false);
+      if (!file || !picture.isConnected) return;
+      file.cid = newCid();
+      picture.src = "/compose/blob/" + encodeURIComponent(file.blobId) + "?type=" + encodeURIComponent(file.type);
+      picture.alt = file.name;
+      picture.setAttribute("data-cid", file.cid);
+      picture.removeAttribute("height");
+      picture.addEventListener("load", function () { self.fit(); }, { once: true });
       self.changedNow();
     });
   };
@@ -508,7 +623,11 @@
       clearTimeout(self.saveTimer);
       self.sending = true;
       self.element.classList.add("is-sending");
-      wm.request(data().sendUrl, { method: "POST", body: self.message(false), quiet: true }).then(function (answer) {
+      var body = self.message(false);
+      // off it goes: the rocket rises from Send while it goes, and blasts off once it's sent (webmail-rocket.js)
+      var flight = wm.rocket ? wm.rocket(self.element.querySelector('[data-cm="send"]')) : null;
+      wm.request(data().sendUrl, { method: "POST", body: body, quiet: true }).then(function (answer) {
+        if (flight) flight.sent();
         self.sending = false;
         wm.counts(answer.counts, answer.unread);
         wm.toast(answer.message || "Message has been successfully sent");
@@ -517,6 +636,7 @@
         refreshIf("drafts");
         if (self.reply && wm.list) wm.list.refresh({ quiet: true });
       }, function (error) {
+        if (flight) flight.failed();
         self.sending = false;
         self.element.classList.remove("is-sending");
         if (error.name === "AbortError") return;
@@ -578,6 +698,8 @@
     clearTimeout(this.saveTimer);
     composers = composers.filter(function (other) { return other !== this; }, this);
     var element = this.element;
+    if (this.tables) this.tables.destroy();
+    if (element.classList.contains("is-screen")) this.toggleScreen(false);
     if (element.classList.contains("is-full")) setOverlay(false);
     if (element.classList.contains("is-inline")) {
       var card = element.closest(".wm-read-card");
@@ -644,7 +766,8 @@
     if (!narrow()) {
       for (var index = 0; index < open.length && needed > room; index++) {
         var composer = open[index];
-        if (composer.element.classList.contains("is-minimized") || composer.element.classList.contains("is-full")) continue;
+        if (composer.element.classList.contains("is-minimized") || composer.element.classList.contains("is-full") ||
+            composer.element.classList.contains("is-screen")) continue;
         if (index === open.length - 1) break;   // the newest stays open
         composer.element.classList.add("is-minimized");
         needed -= 320;
@@ -675,6 +798,8 @@
   Composer.prototype.toggleMinimize = function (on) {
     var element = this.element;
     var minimized = on === undefined ? !element.classList.contains("is-minimized") : on;
+    if (minimized && this.tables) this.tables.hide();
+    if (minimized && element.classList.contains("is-screen")) this.toggleScreen(false);
     if (minimized && element.classList.contains("is-full")) this.toggleFull(false);
     element.classList.toggle("is-minimized", minimized);
     if (!minimized) {
@@ -708,6 +833,40 @@
     document.dispatchEvent(new CustomEvent("someless:tips-away", { detail: { element: button } }));
   };
 
+  // Full screen: the whole screen, edge to edge, to see it all well (the browser's own full screen
+  // too, when it allows it: the whole page, so the menus and dialogs still open over it). Exit full
+  // screen, or Esc, brings it back as it was.
+  Composer.prototype.toggleScreen = function (on) {
+    var element = this.element;
+    var screen = on === undefined ? !element.classList.contains("is-screen") : on;
+    if (screen === element.classList.contains("is-screen")) return;
+    composers.forEach(function (other) {   // (one at a time)
+      if (other !== this && other.element.classList.contains("is-screen")) other.toggleScreen(false);
+    }, this);
+    element.classList.toggle("is-screen", screen);
+    if (screen) element.classList.remove("is-minimized");
+    setOverlay(screen || element.classList.contains("is-full"));
+    var root = document.documentElement;
+    if (screen && root.requestFullscreen && !document.fullscreenElement) {
+      root.requestFullscreen().catch(function () {});   // (refused: it fills the window all the same)
+    } else if (!screen && document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(function () {});
+    }
+    var button = element.querySelector('[data-cm="screen"]');
+    var tip = screen ? button.dataset.tipOn : button.dataset.tipOff;
+    button.dataset.tip = tip;
+    button.setAttribute("aria-label", tip);
+    button.replaceChildren(wm.icon(screen ? "screen-exit" : "screen-full"));
+    document.dispatchEvent(new CustomEvent("someless:tips-away", { detail: { element: button } }));
+  };
+  // the browser's full screen left (Esc): the composer too
+  document.addEventListener("fullscreenchange", function () {
+    if (document.fullscreenElement) return;
+    composers.forEach(function (composer) {
+      if (composer.element.classList.contains("is-screen")) composer.toggleScreen(false);
+    });
+  });
+
   // an inline reply taken to a window of its own
   Composer.prototype.popOut = function () {
     var html = this.html();
@@ -733,22 +892,25 @@
       var action = button.dataset.cm;
       if (action === "minimize") self.toggleMinimize();
       else if (action === "fullscreen") self.toggleFull();
+      else if (action === "screen") self.toggleScreen();
+      else if (action === "quote") self.foldQuote(!self.quoteFolded);
       else if (action === "close") self.close();
       else if (action === "popout") self.popOut();
       else if (action === "ccbcc") {
-        self.showCcBcc();
+        self.showCcBcc(true);
         self.fields.cc.input.focus();
       } else if (action === "send") self.send();
       else if (action === "discard") self.discard();
       else if (action === "attach") element.querySelector("[data-cm-files-input]").click();
       else if (action === "picture") {
         self.saveRange();
+        self.replacing = null;
         element.querySelector("[data-cm-picture-input]").click();
-      } else if (action === "format") {
-        var bar = element.querySelector("[data-cm-toolbar]");
-        bar.hidden = !bar.hidden;
-        button.setAttribute("aria-pressed", String(!bar.hidden));
-        button.classList.toggle("is-on", !bar.hidden);
+      } else if (action === "format") {   // the bar opens down into place; Aa stays lit while it's out
+        var shown = button.getAttribute("aria-pressed") !== "true";
+        button.setAttribute("aria-pressed", String(shown));
+        button.classList.toggle("is-on", shown);
+        wm.reveal(element.querySelector("[data-cm-toolbar]"), shown);
         self.fit();
       } else if (action === "link") self.linkDialog(button);
       else if (action === "signature") self.signatureMenu(button);
@@ -776,7 +938,12 @@
       event.target.value = "";
     });
     element.querySelector("[data-cm-picture-input]").addEventListener("change", function (event) {
-      Array.prototype.forEach.call(event.target.files, function (file) { self.insertPicture(file); });
+      var replacing = self.replacing;   // (Replace picture, from a picture's menu)
+      self.replacing = null;
+      Array.prototype.forEach.call(event.target.files, function (file, index) {
+        if (replacing && index === 0) self.replacePicture(replacing, file);
+        else self.insertPicture(file);
+      });
       event.target.value = "";
     });
     // files dropped on it
@@ -834,6 +1001,9 @@
     } else if (mod && (event.key === "s" || event.key === "S")) {
       event.preventDefault();
       this.save(false);
+    } else if (event.key === "Escape" && this.element.classList.contains("is-screen")) {
+      event.preventDefault();
+      this.toggleScreen(false);
     } else if (event.key === "Escape" && this.element.classList.contains("is-full")) {
       event.preventDefault();
       this.toggleFull(false);
@@ -886,6 +1056,21 @@
       items.forEach(function (file) { self.insertPicture(file); });
     });
     doc.addEventListener("selectionchange", function () { self.showState(); });
+    // tables made to fit (webmail-tables.js), and a picture's menu on a right-click
+    if (self.tables) self.tables.destroy();
+    if (wm.tableTools) {
+      self.tables = wm.tableTools(self.frame, { changed: function () {
+        self.checkEmpty();
+        self.changedNow();
+        self.fit();
+      } });
+    }
+    doc.addEventListener("contextmenu", function (event) {
+      var picture = event.target.nodeType === 1 && event.target.closest("img");
+      if (!picture) return;
+      event.preventDefault();
+      self.pictureMenu(picture, event);
+    });
     doc.addEventListener("focus", function () { self.element.classList.add("is-writing"); }, true);
     doc.addEventListener("click", function (event) {
       var link = event.target.closest && event.target.closest("a[href]");
@@ -1440,6 +1625,7 @@
     go.then(function (closed) {
       if (!closed) return;
       var composer = new Composer({ kind: kind, id: id });
+      composer.quoteFolded = kind !== "forward";   // (a forward shows what it passes on)
       composer.element.classList.add("is-inline", "is-loading");
       composers.push(composer);
       card.classList.add("has-reply");
@@ -1521,8 +1707,7 @@
     composers.forEach(function (composer) {
       var doc = composer.doc();
       if (!doc) return;
-      var html = doc.body.innerHTML;
-      composer.mountEditor(html);
+      composer.mountEditor(composer.html());
     });
   });
 

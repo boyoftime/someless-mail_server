@@ -29,8 +29,7 @@ from ..db import get_db
 
 bp = Blueprint("compose", __name__, url_prefix="/compose")
 
-MAX_FILE = 25 * 1024 ** 2          # one file ("Maximum allowed file size 25 MB")
-MAX_ALL = 45 * 1024 ** 2           # all of them (the engine takes 50 MB a message, what it says included)
+DEFAULT_SEND_MB = 50               # the most a message may carry in files, unless the mailbox has its own
 MOST_RECIPIENTS = 50               # PrivateEmail's "Recipient limit exceeded. The maximum number allowed per email is 50"
 LONGEST_SUBJECT = 255
 LONGEST_HTML = 8 * 1024 ** 2       # (a request to the engine is 10 MB at most)
@@ -40,6 +39,12 @@ REPLY_PREFIX = re.compile(r"^\s*re\s*:", re.I)
 FORWARD_PREFIX = re.compile(r"^\s*(fwd?|fw)\s*:", re.I)
 DRAFT_OF = "X-Someless-Draft-Of"   # a draft's own note of what it answers (never sent)
 SENT = "Message has been successfully sent"
+
+
+def _send_limit():
+    """The most one file, and all of them, may be, in bytes: the mailbox's own limit (the panel's
+    Mailboxes page, 1 to 100 MB; the engine takes that much: engine/sync.py)."""
+    return (g.mailbox["send_limit_mb"] or DEFAULT_SEND_MB) * 1024 ** 2
 
 
 def _mail():
@@ -283,7 +288,7 @@ def start():
     started = {"kind": kind, "from": own[0], "froms": [{"email": address, "name": name} for address in own],
                "to": [], "cc": [], "bcc": [], "subject": "", "html": "", "attachments": [], "important": False,
                "reply": None, "draft": None, "signatures": views.signatures(g.mailbox["id"]),
-               "limits": {"file": MAX_FILE, "all": MAX_ALL, "recipients": MOST_RECIPIENTS}}
+               "limits": {"file": _send_limit(), "all": _send_limit(), "recipients": MOST_RECIPIENTS}}
     signature = _signature_html()
     if kind == "new":
         if signature:
@@ -364,9 +369,10 @@ def upload():
     sent = request.files.get("file")
     if sent is None:
         return {"problem": "Files upload failed"}, 400
-    data = sent.read(MAX_FILE + 1)
-    if len(data) > MAX_FILE:
-        return {"problem": f"Maximum allowed file size {MAX_FILE // 1024 ** 2} MB"}, 413
+    limit = _send_limit()
+    data = sent.read(limit + 1)
+    if len(data) > limit:
+        return {"problem": f"Maximum allowed file size {limit // 1024 ** 2} MB"}, 413
     kind = (sent.mimetype or "application/octet-stream").lower()
     if request.form.get("picture") and kind not in ("image/png", "image/jpeg", "image/gif", "image/webp"):
         return {"problem": "File type is not supported"}, 400
@@ -433,14 +439,15 @@ def _message(data, tree, mail, draft):
                       "name": str(part.get("name") or "attachment")[:200], "size": int(part.get("size") or 0),
                       "disposition": "inline" if inline else "attachment",
                       **({"cid": re.sub(r"[^A-Za-z0-9._@-]", "", str(part["cid"]))[:120]} if inline else {})})
-    if sum(part["size"] for part in files) > MAX_ALL:
-        raise Problem(f"All files should not exceed {MAX_ALL // 1024 ** 2} MB")
+    limit = _send_limit()
+    if sum(part["size"] for part in files) > limit:
+        raise Problem(f"All files should not exceed {limit // 1024 ** 2} MB")
     shown_inline = [part for part in files if part["disposition"] == "inline"]
     html_body = clean_outgoing(written, shown_inline)
     html_body, pictures = pictures_as_parts(html_body, mail)
     files += pictures
-    if sum(part["size"] for part in files) > MAX_ALL:
-        raise Problem(f"All files should not exceed {MAX_ALL // 1024 ** 2} MB")
+    if sum(part["size"] for part in files) > limit:
+        raise Problem(f"All files should not exceed {limit // 1024 ** 2} MB")
     used = set(re.findall(r'src="cid:([^"]+)"', html_body))
     files = [part for part in files if part["disposition"] == "attachment" or part.get("cid") in used]
     drafts = tree.role("drafts")

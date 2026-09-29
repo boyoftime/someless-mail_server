@@ -36,7 +36,7 @@
       ";pointer-events:none}p{margin:0}a{color:" + (dark ? "#8cb4ff" : "#3b63e6") + "}" +
       "img{max-width:100%;height:auto;cursor:pointer}img.is-picked{outline:2px solid #3b63e6;outline-offset:2px}" +
       "blockquote{margin:0 0 0 .8ex;padding-left:1ex;border-left:2px solid " + (dark ? "#3b4777" : "#ccc") + "}" +
-      "</style></head><body contenteditable=\"true\" class=\"is-empty\"></body></html>";
+      wm.frameCss() + "</style></head><body contenteditable=\"true\" class=\"is-empty\"></body></html>";
   }
 
   // a picture file, ready to go in: {src, width}
@@ -169,6 +169,7 @@
         frame.removeEventListener("load", onLoad);
         var inner = frame.contentDocument;
         inner.body.innerHTML = pending;
+        wm.watchPictures(inner);   // (the pictures in it: the turning arrows till each is there)
         inner.execCommand("styleWithCSS", false, true);
         inner.addEventListener("input", changed);
         inner.addEventListener("keydown", function (event) {
@@ -405,7 +406,7 @@
           { label: "Quote", icon: "quote", act: then("formatBlock", "blockquote") },
           { label: "Horizontal line", icon: "format", act: then("insertHorizontalRule") },
           "-",
-          { label: "Remove formatting", icon: "clear-format", act: then("removeFormat") },
+          { label: "Remove formatting", icon: "eraser", act: then("removeFormat") },
         ]);
       }
     }
@@ -434,7 +435,7 @@
       var inner = doc();
       if (!inner) return pending;
       inner.querySelectorAll("img.is-picked").forEach(function (one) { one.classList.remove("is-picked"); });
-      return inner.body.innerHTML.replace(/ class=""/g, "");
+      return wm.contentOf(inner.body).replace(/ class=""/g, "");
     };
     api.set = function (html) {
       pending = html || "";

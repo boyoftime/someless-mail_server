@@ -1121,3 +1121,40 @@ def test_search_lists_all_results_with_their_folders(signed_in, jmap):
 
 def test_an_empty_search_goes_back_to_the_folder(signed_in):
     assert signed_in.get("/search?q=%20&in=sent").headers["Location"] == "/mail/sent"
+
+
+# --- who each message is from, in a circle (webmail-message.html; the photo: webmail-list.js) ---
+
+def avatar_of(page):
+    return page.split('class="wm-face"')[1].split("</span>")[0]
+
+
+def test_each_message_in_the_list_has_its_senders_initials_in_a_circle(signed_in, jmap):
+    jmap.add(sender=("Amina Hassan", "Amina@Example.com"))
+
+    avatar = avatar_of(signed_in.get("/mail/inbox").get_data(as_text=True))
+
+    assert 'data-email="amina@example.com"' in avatar and avatar.rstrip().endswith(">AH")
+    assert "--hue:" in avatar
+
+
+def test_sent_mail_shows_whom_it_went_to_in_its_circle(signed_in, jmap):
+    jmap.add(folder="sent", to=(("Musa Otieno", "musa@example.com"),))
+
+    avatar = avatar_of(signed_in.get("/mail/sent").get_data(as_text=True))
+
+    assert 'data-email="musa@example.com"' in avatar and avatar.rstrip().endswith(">MO")
+
+
+def test_the_same_person_always_has_the_same_colour(signed_in, jmap):
+    jmap.add(sender=("Amina", "amina@example.com"))
+    jmap.add(sender=("Amina Hassan", "AMINA@example.com"))
+    jmap.add(sender=("Musa", "musa@example.com"))
+
+    page = signed_in.get("/mail/inbox").get_data(as_text=True)
+    hues = {}
+    for part in page.split('class="wm-face"')[1:]:
+        email = part.split('data-email="')[1].split('"')[0]
+        hues.setdefault(email, set()).add(part.split("--hue:")[1].split(";")[0].strip())
+
+    assert len(hues["amina@example.com"]) == 1

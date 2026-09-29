@@ -333,6 +333,7 @@ A mailbox is an inbox at one of your domains, like `ceo@example.com`. In **Mailb
 
 Each mailbox's card shows how much of its storage is used, and has buttons to open its webmail (in a new tab, already signed in: no password asked), to change its password or storage, to delete it (with all its mail), and:
 
+- **Sending limit** (the paper clip): how much a message it sends may carry in attachments, from 1 to 100 MB; new mailboxes start at 50 MB. It holds in the webmail and in mail apps alike. Many other mail services refuse messages over 25 MB, so a larger limit helps most between your own mailboxes.
 - **Aliases:** other addresses whose mail lands in this mailbox, like `hello@example.com` or `sales@example.com`, at any of your authenticated domains. Add as many as you like.
 - **Configuration details:** what to type in a mail app (Outlook, Apple Mail, Thunderbird, the mail app on your phone), each with a copy button:
 
@@ -359,7 +360,7 @@ To send them the link, click **Webmail link** on the **Mailboxes** page: copy it
 What they find there:
 
 - **Mail:** the folders (their own too, folders inside folders, dragged into place), the mail 50 at a time with more as they scroll, the message beside the list, tracking links cleaned, attachments to preview or download, and search with its first results as they type. New mail arrives by itself, with a short tone and, if they allow it, a notification on their computer.
-- **Writing:** a compose window with formatting, attachments, signatures, replies under the message, drafts saved as they write, and several windows at once.
+- **Writing:** a compose window with formatting, attachments, signatures, replies under the message, drafts saved as they write, and several windows at once, maximized or on the whole screen. Tables grow, shrink and move with handles that appear on pointing at them; a picture right-clicked is replaced, resized or taken out.
 - **Settings:** their name, light or dark, the new-mail sound, signatures, filters (conditions, and what happens to the mail), an auto-reply between two dates, forwarding, a new password, where they logged in from, and how to connect their phone and mail apps.
 - **Calendar:** a day, the working week, a week or a month; events that repeat, all-day events, people invited by email, and invitations to accept, decline or answer maybe.
 - **Contacts:** their address book, with photos, found as they type; the compose window suggests them.
@@ -554,5 +555,5 @@ The same thanks, and the donate button, are in the web interface too: **Credits*
 - The webmail's live new mail: [flask-sock](https://github.com/miguelgrinberg/flask-sock) 0.7.0 and [simple-websocket](https://github.com/miguelgrinberg/simple-websocket) 1.1.0 (MIT).
 - Cleaning the mail's HTML: [nh3](https://github.com/messense/nh3) 0.3.7 (MIT), built on [ammonia](https://github.com/rust-ammonia/ammonia).
 - Making attached pictures and PDFs smaller without losing anything: [libjpeg-turbo](https://libjpeg-turbo.org/)'s jpegtran (IJG and BSD licences) and [qpdf](https://github.com/qpdf/qpdf) (Apache-2.0), from Debian.
-- The webmail's loading animation is from [LottieFiles](https://lottiefiles.com/).
+- The webmail's animations are from [LottieFiles](https://lottiefiles.com/): the loading arrows, the unread-mail badge, and the rocket that takes a message off when it's sent (in the webmail's blues, with a flame of our own).
 - The new-mail sound: "Modern short message tone" by [digitalstore07](https://pixabay.com/users/digitalstore07/) on [Pixabay](https://pixabay.com/) (Pixabay Content License).

@@ -16,6 +16,8 @@
   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15.5" r="4"/><path d="M10.9 12.6l8.6-8.6"/><path d="M16.5 7l2.5 2.5"/><path d="M14.3 9.2l2 2"/></svg>
   {%- elif name == "disk" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6.5" rx="7.5" ry="3"/><path d="M4.5 6.5v11c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-11"/><path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/></svg>
+  {%- elif name == "clip" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 11.2l-7.6 7.6a4.8 4.8 0 0 1-6.8-6.8l7.9-7.9a3.2 3.2 0 0 1 4.5 4.5l-7.9 7.9a1.6 1.6 0 0 1-2.3-2.3l7.3-7.3"/></svg>
   {%- elif name == "at" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.6"/><path d="M15.6 8.4v4.8a2.4 2.4 0 0 0 4.8 0V12a8.4 8.4 0 1 0-3.3 6.7"/></svg>
   {%- elif name == "gear" -%}
@@ -187,6 +189,7 @@
         </form>
         <button type="button" class="icon-button" data-password-for="{{ box.email }}" data-url="{{ url_for('mailboxes.change_password', mailbox_id=box.id) }}" aria-haspopup="dialog" aria-label="Change {{ box.email }}'s password" data-tip="Change password">{{ icon("key") }}</button>
         <button type="button" class="icon-button" data-storage-for="{{ box.email }}" data-url="{{ url_for('mailboxes.change_storage', mailbox_id=box.id) }}" data-size="{{ box.size }}" data-unit="{{ box.unit }}" aria-haspopup="dialog" aria-label="Edit {{ box.email }}'s storage" data-tip="Edit storage">{{ icon("disk") }}</button>
+        <button type="button" class="icon-button" data-sending-for="{{ box.email }}" data-url="{{ url_for('mailboxes.change_sending', mailbox_id=box.id) }}" data-limit="{{ box.send_limit }}" aria-haspopup="dialog" aria-label="Edit {{ box.email }}'s sending limit" data-tip="Sending limit">{{ icon("clip") }}</button>
         <form method="post" action="{{ url_for('mailboxes.delete', mailbox_id=box.id) }}" class="mailbox-delete">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="icon-button is-danger" data-mailbox-email="{{ box.email }}" aria-label="Delete {{ box.email }}" data-tip="Delete">{{ icon("trash") }}</button>
@@ -204,6 +207,7 @@
         <div class="storage-bar" aria-hidden="true" style="--used: 0%"><span></span></div>
         <p class="mailbox-storage-text"><strong>{{ box.quota }}</strong>. How much is used shows once the mail engine answers.</p>
         {% endif %}
+        <p class="mailbox-storage-text">Sends up to <strong>{{ box.send_limit }} MB</strong> of attachments a message.</p>
       </div>
       <div class="mailbox-alias-list">
         <p class="mailbox-label">Aliases</p>
@@ -522,6 +526,37 @@
       <button class="button rules-save" type="submit" data-busy-label="Saving…">
         <span class="button-spinner" aria-hidden="true"></span>
         <span class="button-label">Save storage</span>
+      </button>
+    </div>
+  </form>
+</dialog>
+
+{# How large a message a mailbox may send, in MB of attachments: filled in like the storage's #}
+<dialog class="rules-dialog domain-dialog" id="sending-dialog" aria-labelledby="sending-title"{% if sending_problem %} data-open{% endif %}>
+  <form method="post" action="{{ url_for('mailboxes.change_sending', mailbox_id=for_mailbox.id) if sending_problem else '' }}" class="rules-form" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("clip") }}</span>
+      <div>
+        <h2 id="sending-title" class="rules-title">Sending limit</h2>
+        <p class="rules-hint">For <span data-dialog-email>{{ for_mailbox.email if sending_problem }}</span>. The most its messages may carry in attachments, from the webmail and from mail apps.</p>
+      </div>
+    </div>
+    {% if sending_problem %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't change the sending limit">{{ sending_problem }}</p>{% endif %}
+    <div class="field">
+      <label class="field-label" for="edit-sending">Attachments a message, in MB</label>
+      <p class="field-hint" id="edit-sending-hint">From 1 to 100 MB. New mailboxes start at 50 MB. Some servers refuse messages over 25 MB.</p>
+      <div class="input-wrap">
+        <span class="input-icon">{{ icon("clip") }}</span>
+        <input id="edit-sending" name="limit" required inputmode="numeric" autocomplete="off" placeholder="50" aria-describedby="edit-sending-hint"
+               value="{{ typed.limit if sending_problem else '' }}">
+      </div>
+    </div>
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet" data-dialog-close>Cancel</button>
+      <button class="button rules-save" type="submit" data-busy-label="Saving…">
+        <span class="button-spinner" aria-hidden="true"></span>
+        <span class="button-label">Save limit</span>
       </button>
     </div>
   </form>

@@ -158,6 +158,12 @@
     setTimeout(function () { size.select(); }, 0);
   });
 
+  shared("sending-dialog", "data-sending-for", function (dialog, button) {
+    var limit = dialog.querySelector("input[name=limit]");
+    limit.value = button.dataset.limit;
+    setTimeout(function () { limit.select(); }, 0);
+  });
+
   // Delete a mailbox: ask first
   var deleteDialog = document.getElementById("delete-mailbox-dialog");
   var asking = null; // the mailbox's form waiting for an answer

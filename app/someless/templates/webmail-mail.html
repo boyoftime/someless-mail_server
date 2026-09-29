@@ -3,6 +3,7 @@
 {% block head %}
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <meta name="wm-loader" content="{{ url_for('static', filename='lottie/webmail-loading.json') }}">
+<meta name="wm-rocket" content="{{ url_for('static', filename='lottie/webmail-rocket.json') }}">
 <script src="{{ url_for('static', filename='js/lottie_light.min.js') }}" defer></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-app.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/webmail-compose.css') }}">
@@ -46,7 +47,7 @@
   </aside>
   <div class="wm-scrim" data-wm-scrim hidden></div>
 
-  <section class="wm-list" aria-labelledby="wm-list-title" data-wm-list data-folder="{{ folder_key }}" data-q="{{ query }}"
+  <section class="wm-list" aria-labelledby="wm-list-title" data-wm-list data-photos-url="{{ url_for('contacts.photos') }}" data-folder="{{ folder_key }}" data-q="{{ query }}"
            data-in="{{ scope or '' }}" data-total="{{ total }}" data-view-url="{{ url_for('mail.list_view', folder=folder_key) }}"
            data-list-url="{{ url_for('mail.rows', folder=folder_key) }}"
            data-actions="{{ actions | tojson | forceescape }}">
@@ -166,7 +167,8 @@
   {%- for name in ["inbox", "drafts", "sent", "archive", "spam", "trash", "folder", "folder-plus", "edit", "read", "unread", "star", "star-filled",
                    "move", "not-spam", "sort", "chevron-right", "reply", "reply-all", "forward", "print", "download", "source", "clear-box",
                    "close", "check", "warning", "copy", "search", "eye", "image", "pdf", "file", "refresh", "clock", "maximize",
-                   "restore", "minimize", "align-left", "align-center", "align-right", "signature", "attachment", "plus"] %}
+                   "restore", "minimize", "align-left", "align-center", "align-right", "signature", "attachment", "plus",
+                   "screen-full", "screen-exit", "grip", "more", "resize", "table", "bold", "strike"] %}
   <span data-icon="{{ name }}">{{ icon(name) }}</span>
   {%- endfor %}
 </template>
@@ -183,6 +185,8 @@
 <script src="{{ url_for('static', filename='js/webmail-search.js') }}"></script>
 <script src="{{ url_for('static', filename='js/webmail-nav.js') }}"></script>
 <script src="{{ url_for('static', filename='js/webmail-live.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-tables.js') }}"></script>
+<script src="{{ url_for('static', filename='js/webmail-rocket.js') }}"></script>
 <script src="{{ url_for('static', filename='js/webmail-compose.js') }}"></script>
 <script src="{{ url_for('static', filename='js/webmail-resize.js') }}"></script>
 {% endblock %}

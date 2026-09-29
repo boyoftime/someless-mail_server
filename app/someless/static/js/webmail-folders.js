@@ -23,11 +23,40 @@
 
   // the folders as they are now (mail.py sends them after each change)
   function redraw(answer) {
-    if (answer.html) {
-      nav.innerHTML = answer.html;
-      nav.classList.add("is-redrawn");
-    }
+    if (answer.html) put(answer.html);
     wm.counts(answer.counts, answer.unread);
+  }
+
+  // The folders sent (after a change here, or with another folder's page: webmail-nav.js) put in
+  // place, still, as PrivateEmail's are: the page's first motion isn't played again (html.wm-been,
+  // webmail-first.js), and when they're the folders shown already, only their counts and which one
+  // is shown change, so the rows stay just as they are (the one under the pointer too).
+  function put(html) {
+    document.documentElement.classList.add("wm-been");
+    var next = document.createElement("div");
+    next.innerHTML = html;
+    if (shape(next) !== shape(nav)) {
+      nav.innerHTML = html;
+      return;
+    }
+    next.querySelectorAll(".wm-folder").forEach(function (row) {
+      var mine = rowOf(row.dataset.folder);
+      var count = row.querySelector(".wm-count");
+      var myCount = mine.querySelector(".wm-count");
+      myCount.textContent = count.textContent;
+      myCount.hidden = count.hidden;
+      var here = row.classList.contains("is-current");
+      mine.classList.toggle("is-current", here);
+      var link = mine.querySelector(".wm-folder-link");
+      if (here) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    });
+  }
+  function shape(holder) {   // the folders, their names, places, menus and folding
+    return Array.prototype.map.call(holder.querySelectorAll(".wm-folder"), function (row) {
+      return [row.dataset.folder, row.dataset.name, row.dataset.depth, row.dataset.menu,
+              row.parentElement.classList.contains("is-collapsed")].join("\n");
+    }).join("\n\n");
   }
   document.addEventListener("wm:folders", function (event) { redraw(event.detail); });
 
@@ -333,5 +362,5 @@
     }
   });
 
-  window.wm.folderActions = { run: run, createIn: createIn, rename: rename };
+  window.wm.folderActions = { run: run, createIn: createIn, rename: rename, put: put };
 })();

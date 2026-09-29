@@ -99,7 +99,8 @@
         <li class="wm-tracker">
           <p class="wm-tracker-line"><span class="wm-tag">Original</span><span class="wm-tracker-url">{{ was }}</span></p>
           <p class="wm-tracker-line"><span class="wm-tag is-cleaned">Cleaned</span><span class="wm-tracker-url">{{ now }}</span>
-            <button type="button" class="wm-icon wm-mini" data-wm-copy-link="{{ now }}" aria-label="Copy the link" data-tip="Copy">{{ icon("copy") }}</button></p>
+            {#- copy-button.js: the copy icon turns into a tick, "Copied" above it (the older way on http://, in the dialog) #}
+            <button type="button" class="copy-button wm-tracker-copy" data-copy="{{ now }}" aria-label="Copy the link" data-tip="Copy"><svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 5.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h.5"/></svg><svg class="copy-done" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></p>
           <p class="wm-tracker-line"><span class="wm-tag is-removed">Removed</span><span class="wm-tracker-url">{{ removed | join(", ") }}</span></p>
         </li>
         {%- endfor %}

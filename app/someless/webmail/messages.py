@@ -2,6 +2,8 @@
 the reading pane (webmail-read.html), from what the engine keeps (JMAP Email). Times are the
 reader's own: the page tells the webmail its time zone (the wm_tz cookie, webmail-app.js)."""
 import datetime
+import hashlib
+import re
 import urllib.parse
 import zoneinfo
 
@@ -87,6 +89,17 @@ def people(addresses):
     return ", ".join(name_of(address) for address in addresses or []) or ""
 
 
+def initials(name):
+    """AH for Amina Hassan, A for amina@example.com: the letters in a person's circle."""
+    words = [word for word in re.split(r"[\s._-]+", (name or "").partition("@")[0]) if word[:1].isalnum()]
+    return ((words[0][:1] + (words[1][:1] if len(words) > 1 else "")) if words else "?").upper()
+
+
+def hue(email):
+    """A person's colour in the list (0 to 359), always the same for the same address."""
+    return int(hashlib.sha256((email or "").strip().lower().encode()).hexdigest()[:8], 16) % 360
+
+
 def important(email):
     """Sent as high priority (X-Priority 1 or 2): PrivateEmail's "High Priority"."""
     value = (email.get("header:X-Priority:asText") or "").strip()
@@ -99,6 +112,8 @@ def row(email, folder, located=None):
     keywords = email.get("keywords") or {}
     to_side = folder is not None and folder.get("role") in ("sent", "drafts")
     who = people(email.get("to")) if to_side else people(email.get("from"))
+    first = ((email.get("to") if to_side else email.get("from")) or [{}])[0]   # (the one in the circle)
+    address = (first.get("email") or "").strip().lower()
     return {
         "id": email["id"], "folder": located or folder, "located": located,
         "sender": who or ("(No recipients)" if to_side else "(Unknown sender)"),
@@ -107,6 +122,7 @@ def row(email, folder, located=None):
         "unread": "$seen" not in keywords, "flagged": "$flagged" in keywords, "answered": "$answered" in keywords,
         "forwarded": "$forwarded" in keywords, "draft": "$draft" in keywords, "attachment": bool(email.get("hasAttachment")),
         "important": important(email), "size": email.get("size") or 0,
+        "who_email": address, "initials": initials(name_of(first)), "hue": hue(address),
     }
 
 

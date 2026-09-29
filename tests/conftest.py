@@ -56,5 +56,10 @@ def engine(app):
     fake.objects["Account"] = {"a0": {"name": "admin", "domainId": "d0"}}
     fake.objects["SystemSettings"] = {"singleton": {"defaultHostname": "someless.internal"}}
     fake.objects["MtaStageAuth"] = {"singleton": {}}
+    # the sizes it takes, as Stalwart starts with them
+    fake.objects["MtaStageData"] = {"singleton": {"maxMessageSize": {"match": {}, "else": "104857600"}}}
+    fake.objects["Jmap"] = {"singleton": {"maxUploadSize": 50000000, "uploadQuota": 50000000}}
+    fake.objects["Email"] = {"singleton": {"maxAttachmentSize": 50000000, "maxMessageSize": 75000000}}
+    fake.objects["Imap"] = {"singleton": {"maxRequestSize": 52428800}}
     app.config.update(ENGINE_ENABLED=True, ENGINE_CLIENT=lambda: fake)
     return fake

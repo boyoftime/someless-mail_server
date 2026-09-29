@@ -253,3 +253,15 @@ def test_initials():
     assert contacts.initials("amina hassan") == "AH"
     assert contacts.initials("grace") == "G"
     assert contacts.initials("") == "?"
+
+
+# --- the photos beside the mail in the list (webmail-list.js): a contact's, by its address ---
+
+def test_the_photos_of_the_addresses_asked_for(mail):
+    photo = "data:image/jpeg;base64,/9j/4AAQSkZJRg=="
+    mail.post("/contacts", json=person(photo=photo))
+    mail.post("/contacts", json=person(display_name="Musa", emails=[{"type": "work", "value": "musa@example.com"}]))
+
+    answer = mail.get("/contacts/photos", query_string={"e": ["AMINA@elsewhere.example", "musa@example.com", "nobody@example.com"]})
+
+    assert answer.get_json() == {"photos": {"amina@elsewhere.example": photo}}

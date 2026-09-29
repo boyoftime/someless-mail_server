@@ -368,6 +368,30 @@ def _wants_json():
     return request.accept_mimetypes.best == "application/json"
 
 
+MOST_PHOTOS = 100   # addresses asked about at once
+
+
+@bp.get("/photos")
+@login_required
+@reachable
+def photos():
+    """The photos of the contacts with the addresses asked for, for the circles beside the mail in
+    the list (webmail-list.js): {"photos": {address: its photo}}, only the ones that have one."""
+    wanted = {one.strip().lower() for one in request.args.getlist("e")[:MOST_PHOTOS] if one.strip()}
+    if not wanted:
+        return {"photos": {}}
+    mail = _mail()
+    found = {}   # address: the contact with it
+    for person in everyone(mail):
+        for one in person["emails"]:
+            address = one["value"].strip().lower()
+            if address in wanted:
+                found.setdefault(address, person)
+    people = list({person["id"]: dict(person) for person in found.values()}.values())   # (each once)
+    pictured = {person["id"]: person["photo"] for person in _photos(mail, people)}
+    return {"photos": {address: pictured[person["id"]] for address, person in found.items() if pictured.get(person["id"])}}
+
+
 @bp.get("/<contact_id>")
 @login_required
 @reachable

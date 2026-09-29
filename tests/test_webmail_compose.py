@@ -175,12 +175,39 @@ def test_a_picture_is_made_smaller_without_losing_anything(mail, jmap):
         assert kept.tobytes() == picture.tobytes()
 
 
-def test_a_file_too_big_is_refused(mail, monkeypatch):
-    monkeypatch.setattr(compose, "MAX_FILE", 4)
+def sending_limit(app, megabytes):
+    """The mailbox's limit, as the panel's Mailboxes page sets it."""
+    with app.app_context():
+        get_db().execute("UPDATE mailboxes SET send_limit_mb = ? WHERE email = 'ceo@pineloop.online'", (megabytes,))
+        get_db().commit()
 
-    response = mail.post("/compose/upload", data={"file": (io.BytesIO(b"hello"), "notes.txt")})
 
-    assert response.status_code == 413 and response.get_json()["problem"].startswith("Maximum allowed file size")
+def test_the_limits_are_the_mailboxs_own(app, mail):
+    started = start(mail).get_json()
+    assert started["limits"]["file"] == started["limits"]["all"] == 50 * 1024 ** 2   # (a new mailbox's)
+
+    sending_limit(app, 80)
+
+    started = start(mail).get_json()
+    assert started["limits"]["file"] == started["limits"]["all"] == 80 * 1024 ** 2
+
+
+def test_a_file_over_the_mailboxs_limit_is_refused(app, mail):
+    sending_limit(app, 1)
+
+    response = mail.post("/compose/upload", data={"file": (io.BytesIO(b"x" * (1024 ** 2 + 1)), "notes.bin")})
+
+    assert response.status_code == 413 and response.get_json()["problem"] == "Maximum allowed file size 1 MB"
+
+
+def test_files_over_the_mailboxs_limit_are_not_sent(app, mail):
+    sending_limit(app, 1)
+    files = [{"blobId": f"b{number}", "name": f"part{number}.bin", "type": "application/octet-stream", "size": 600 * 1024}
+             for number in (1, 2)]
+
+    response = mail.post("/compose/send", json=message(attachments=files))
+
+    assert response.get_json()["problem"] == "All files should not exceed 1 MB"
 
 
 def test_only_pictures_go_in_what_it_says(mail):
@@ -388,3 +415,25 @@ def test_addresses_are_suggested_as_they_are_typed(mail, jmap):
     assert by_name == [{"name": "Musa Otieno", "email": "musa@kilimo.example"}]
     assert by_address == [{"name": "Amina Hassan", "email": "amina@example.com"}]
     assert mail.get("/compose/suggest?q=ceo").get_json()["people"] == []   # (not the mailbox itself)
+
+
+# --- the composer's tools, on the page (webmail-composer.html, webmail-tables.js) ---
+
+def test_the_formatting_bar_can_strike_words_through(mail):
+    page = mail.get("/mail/inbox").get_data(as_text=True)
+    strike = page.split('data-format="strikeThrough"')[1].split(">")[0]
+    assert 'aria-label="Strikethrough"' in strike
+
+
+def test_a_composer_can_take_the_whole_screen_beside_maximize(mail):
+    page = mail.get("/mail/inbox").get_data(as_text=True)
+    maximize = page.split('data-cm="fullscreen"')[1].split(">")[0]
+    screen = page.split('data-cm="screen"')[1].split(">")[0]
+    assert 'aria-label="Maximize"' in maximize and 'data-tip-on="Restore"' in maximize
+    assert 'aria-label="Full screen"' in screen and 'data-tip-on="Exit full screen"' in screen
+
+
+def test_the_mail_page_brings_the_tools_for_tables_before_the_composer(mail):
+    page = mail.get("/mail/inbox").get_data(as_text=True)
+    assert "js/webmail-tables.js" in page
+    assert page.index("js/webmail-tables.js") < page.index("js/webmail-compose.js")

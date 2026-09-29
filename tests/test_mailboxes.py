@@ -369,3 +369,42 @@ def test_saving_the_rules_in_place_answers_with_them(app, client, login):
     assert [rule["key"] for rule in answer["rules"]] == ["length", "number", "special"]
     assert answer["rules"][0]["label"] == "At least 10 characters"
     assert save_mailbox_rules(client, min_length="13", json=True).status_code == 400
+
+
+# --- how large a message it may send ---
+
+def test_a_new_mailbox_may_send_50_mb_at_a_time(app, client, login):
+    authenticated_domain(app)
+    login()
+
+    create(client)
+
+    assert rows(app)[0]["send_limit_mb"] == 50
+    page = text(client.get("/mailboxes"))
+    assert 'data-sending-for="ceo@pineloop.online"' in page and 'data-limit="50"' in page
+
+
+def test_the_sending_limit_changes(app, client, login, engine):
+    authenticated_domain(app)
+    login()
+    create(client)
+    mailbox_id = rows(app)[0]["id"]
+
+    response = client.post(f"/mailboxes/{mailbox_id}/sending", data={"limit": "100"})
+
+    assert response.status_code == 302 and rows(app)[0]["send_limit_mb"] == 100
+    assert "ceo@pineloop.online can now send up to 100 MB at a time." in text(client.get("/mailboxes"))
+    assert "authenticated_as == 'ceo@pineloop.online'" in str(engine.objects["MtaStageData"]["singleton"]["maxMessageSize"])
+
+
+def test_the_sending_limit_is_from_1_to_100_mb(app, client, login):
+    authenticated_domain(app)
+    login()
+    create(client)
+    mailbox_id = rows(app)[0]["id"]
+
+    for limit in ("0", "101", "abc", "", "2.5"):
+        response = client.post(f"/mailboxes/{mailbox_id}/sending", data={"limit": limit})
+        assert response.status_code == 400, limit
+        assert "Choose a size from 1 to 100 MB." in text(response)
+    assert rows(app)[0]["send_limit_mb"] == 50

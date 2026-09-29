@@ -41,6 +41,12 @@ body.webmail-app {
   --wm-danger: #d93a3a;
   --wm-danger-hover: #c22f2f;
   --wm-danger-soft: #fdecec;
+  /* a tool that's on (the formatting bar out, bold where the cursor is, marked important): lit,
+     with the burst's glow around it (webmail-compose.css, webmail-settings.css) */
+  --wm-lit-glow: 0 0 0 1px rgba(170, 205, 255, 0.9), 0 0 10px 2px rgba(88, 156, 255, 0.75), 0 0 20px 4px rgba(88, 156, 255, 0.3);
+  --wm-lit-glow-small: 0 0 0 1px rgba(170, 205, 255, 0.9), 0 0 7px 1px rgba(88, 156, 255, 0.7), 0 0 13px 2px rgba(88, 156, 255, 0.26);
+  --wm-lit-red: #e5484d;
+  --wm-lit-red-glow: 0 0 0 1px rgba(255, 196, 196, 0.9), 0 0 10px 2px rgba(255, 92, 92, 0.72), 0 0 20px 4px rgba(255, 92, 92, 0.28);
   --wm-warning-soft: #fff4dd;
   --wm-sunken: #eef0f4;
   --wm-skeleton: #eceef2;
@@ -181,7 +187,6 @@ body.webmail-app .wm-search input[type="search"]:focus { border-color: var(--wm-
   background: var(--wm-card);
   box-shadow: var(--wm-card-shadow);
   animation: wm-drop 0.18s var(--wm-ease) both;
-  scrollbar-width: thin;
 }
 .wm-search-panel[hidden] { display: none; }
 .wm-search-filters { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.7rem 0.75rem 0.35rem; }
@@ -352,7 +357,7 @@ body.webmail-app .wm-copy { position: relative; flex: none; width: 26px; height:
 body.is-resizing, body.is-resizing * { cursor: col-resize !important; user-select: none !important; }
 body.is-resizing iframe { pointer-events: none; }
 
-.wm-side { display: flex; flex-direction: column; min-height: 0; padding-top: 1.05rem; overflow-x: hidden; overflow-y: auto; background: var(--wm-side); scrollbar-width: thin; view-transition-name: wm-side; }
+.wm-side { display: flex; flex-direction: column; min-height: 0; padding-top: 1.05rem; overflow-x: hidden; overflow-y: auto; background: var(--wm-side); view-transition-name: wm-side; }
 /* a heading in the side column (Contact Books, Calendars) */
 .wm-side-label { margin: 0.35rem 1.25rem 0.4rem; color: var(--wm-faint); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 .wm-compose {
@@ -570,7 +575,7 @@ body.webmail-app .wm-folder-form input {
 /* a folder coming in: its mail blurred behind the loading animation, as PrivateEmail's */
 .wm-list.is-loading .wm-scroll { opacity: 0.4; filter: blur(2.5px); pointer-events: none; transition: opacity 0.15s ease, filter 0.15s ease; }
 
-.wm-scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--wm-check) transparent; }
+.wm-scroll { flex: 1; min-height: 0; overflow-y: auto; }
 .wm-messages { margin: 0; padding: 0; list-style: none; }
 /* the end of the list, while the next mail is on its way (webmail-list.js) */
 .wm-more { display: flex; align-items: center; justify-content: center; gap: 0.55rem; margin: 0; padding: 1rem 0 1.3rem; color: var(--wm-soft); font-size: 0.8rem; }
@@ -580,7 +585,7 @@ body.webmail-app .wm-folder-form input {
 .wm-list-empty[hidden] { display: none; }
 .wm-list-empty-art { width: 52px; height: 52px; color: var(--wm-faint); stroke-width: 2 !important; }
 .wm-list-empty p { margin: 0; max-width: 16rem; font-size: 0.92rem; font-weight: 600; }
-.wm-message { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0.9rem; padding: 0 1.5rem 0 1.45rem; transition: background-color 0.12s ease; }
+.wm-message { position: relative; isolation: isolate; display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 0.75rem; padding: 0 1.5rem 0 1.45rem; transition: background-color 0.12s ease; }
 .wm-message:hover, .wm-message.is-menu { background: var(--wm-hover); }
 .wm-message.is-open, .wm-message.is-open:hover { margin: 0 0.5rem; padding-inline: 0.95rem 1rem; border-radius: 8px; background: var(--wm-open); }
 .wm-message.is-cursor { box-shadow: inset 2px 0 0 var(--wm-blue); }
@@ -619,6 +624,21 @@ body.webmail-app .wm-check input:checked::after { content: ""; width: 8px; heigh
 .wm-mark.is-star { color: var(--wm-star); }
 .wm-message.is-unread .wm-from, .wm-message.is-unread .wm-subject { color: var(--wm-ink); font-weight: 700; }
 .wm-message.is-unread .wm-time { color: var(--wm-blue); font-weight: 700; }
+/* who it's from (in Sent and Drafts: who it's to), in a circle: their initials in their own
+   colour, or their photo when they're a contact with one (webmail-list.js) */
+.wm-face { position: relative; display: grid; place-items: center; width: 38px; height: 38px; overflow: hidden; border-radius: 50%; background: hsl(var(--hue, 220) 52% 44%); color: #fff; font-size: 0.84rem; font-weight: 700; letter-spacing: 0.02em; pointer-events: none; user-select: none; }
+:root[data-theme="dark"] .wm-face { background: hsl(var(--hue, 220) 46% 36%); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+.wm-face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+/* unread: a coral glow rising to its end, where it meets the line beside the list, and there the
+   new-mail badge (static/img/webmail-unread.svg, drawn from its Lottie), its halo breathing and
+   its envelope giving a shake now and then. (Behind the words: the row is its own layer.) */
+.wm-message.is-unread::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(90deg, transparent calc(100% - 3px), #ff7389 calc(100% - 3px)),   /* the bright line at its end */
+    radial-gradient(24% 78% at 100% 50%, rgba(255, 100, 124, 0.55), rgba(255, 100, 124, 0.18) 55%, rgba(255, 100, 124, 0) 100%),   /* the glow round the badge */
+    linear-gradient(90deg, rgba(255, 100, 124, 0) 45%, rgba(255, 100, 124, 0.1)); }   /* rising to the end */
+.wm-unread-badge { position: absolute; top: 50%; right: 3px; display: none; width: 26px; height: 26px; margin-top: -13px; background: url("../img/webmail-unread.svg") center / contain no-repeat; filter: drop-shadow(0 0 6px rgba(255, 100, 124, 0.75)); pointer-events: none; }
+.wm-message.is-unread .wm-unread-badge { display: block; }
+.wm-message.is-unread .wm-subject { padding-right: 10px; }
 /* dragged: how many, beside the pointer ("3 message(s)", as PrivateEmail says it) */
 .wm-drag-label {
   position: fixed;
@@ -660,7 +680,7 @@ body.webmail-app .wm-check input:checked::after { content: ""; width: 8px; heigh
 }
 .wm-read-tools .wm-icon svg { width: 19px; height: 19px; }
 .wm-read-back { display: none; }
-.wm-read-scroll { flex: 1; min-height: 0; padding: 1.15rem 1rem 1.5rem; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--wm-check) transparent; }
+.wm-read-scroll { flex: 1; min-height: 0; padding: 1.15rem 1rem 1.5rem; overflow-y: auto; }
 .wm-read-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin: 0 0.4rem 1.15rem; }
 .wm-read-subject { margin: 0; font-size: 1.5rem; font-weight: 700; line-height: 1.3; letter-spacing: -0.015em; overflow-wrap: anywhere; }
 .wm-read-priority { display: inline-flex; align-items: center; gap: 0.15rem; padding: 0.15rem 0.55rem 0.15rem 0.3rem; border-radius: 999px; background: var(--wm-danger-soft); color: var(--wm-danger); font-size: 0.74rem; font-weight: 700; }
@@ -821,7 +841,6 @@ body.webmail-app .wm-check input:checked::after { content: ""; width: 8px; heigh
   box-shadow: var(--wm-menu-shadow);
   color: var(--wm-ink);
   animation: wm-pop 0.14s var(--wm-ease) both;
-  scrollbar-width: thin;
 }
 .wm-menu-pop.is-leaving { animation: wm-pop-out 0.12s ease both; }
 @keyframes wm-pop { from { opacity: 0; transform: scale(0.97); } }
@@ -866,7 +885,7 @@ body.webmail-app .wm-picker-search input {
   font-size: 0.84rem;
 }
 body.webmail-app .wm-picker-search input:focus { border-color: var(--wm-blue); }
-.wm-picker-list { max-height: 21rem; margin: 0; padding: 0 0 0.5rem; overflow-y: auto; list-style: none; scrollbar-width: thin; }
+.wm-picker-list { max-height: 21rem; margin: 0; padding: 0 0 0.5rem; overflow-y: auto; list-style: none; }
 .wm-picker-item { display: flex; align-items: center; min-height: 34px; padding: 0 0.4rem 0 0.6rem; font-size: 0.86rem; cursor: pointer; }
 .wm-picker-item:hover, .wm-picker-item:focus { outline: none; background: var(--wm-hover); }
 .wm-picker-item.is-current { background: var(--wm-blue-soft); color: var(--wm-blue); font-weight: 600; }
@@ -960,7 +979,7 @@ body.webmail-app .wm-picker-new input { width: 100%; height: 30px; padding: 0 0.
 .wm-sheet-head { display: flex; flex: none; align-items: center; gap: 0.75rem; padding: 0.85rem 0.8rem 0.85rem 1.4rem; border-bottom: 1px solid var(--wm-line); }
 .wm-sheet-title { flex: 1; min-width: 0; margin: 0; overflow: hidden; font-size: 1rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .wm-sheet-tools { display: flex; flex: none; align-items: center; gap: 0.6rem; }
-.wm-sheet-body { flex: 1; min-height: 0; padding: 1.2rem 1.4rem 1.4rem; overflow: auto; scrollbar-width: thin; }
+.wm-sheet-body { flex: 1; min-height: 0; padding: 1.2rem 1.4rem 1.4rem; overflow: auto; }
 .wm-preview .wm-sheet-card { width: min(62rem, calc(100vw - 2rem)); height: min(48rem, calc(100vh - 3rem)); }
 .wm-preview .wm-sheet-body { display: grid; place-items: center; padding: 1rem; background: var(--wm-sunken); }
 .wm-preview-meta { color: var(--wm-soft); font-size: 0.8rem; }
@@ -975,6 +994,10 @@ body.webmail-app .wm-picker-new input { width: 100%; height: 30px; padding: 0 0.
 .wm-tracker { display: grid; gap: 0.35rem; padding: 0.8rem 0.9rem; border: 1px solid var(--wm-line); border-radius: 10px; }
 .wm-tracker-line { display: flex; align-items: center; gap: 0.6rem; min-width: 0; margin: 0; font-size: 0.8rem; }
 .wm-tracker-url { flex: 1; min-width: 0; overflow: hidden; color: var(--wm-soft); text-overflow: ellipsis; white-space: nowrap; }
+.wm-tracker-copy { width: 30px; height: 30px; border-color: transparent; background: transparent; color: var(--wm-soft); }
+.wm-tracker-copy:hover { border-color: transparent; background: var(--wm-icon-hover); color: var(--wm-ink); }
+.wm-tracker-copy svg { width: 16px; height: 16px; }
+.wm-button.is-copied, .wm-button.is-copied:hover { border-color: rgba(45, 212, 191, 0.7); color: #2dd4bf; box-shadow: 0 0 18px -2px rgba(45, 212, 191, 0.75); }   /* copied: as the copy buttons' tick */
 .wm-tag { flex: none; min-width: 4.4rem; padding: 0.12rem 0.5rem; border-radius: 999px; background: var(--wm-icon-hover); color: var(--wm-soft); font-size: 0.7rem; font-weight: 700; text-align: center; }
 .wm-tag.is-cleaned { background: var(--wm-blue-soft); color: var(--wm-blue); }
 .wm-tag.is-removed { background: var(--wm-danger-soft); color: var(--wm-danger); }
@@ -998,8 +1021,8 @@ body.webmail-app .tip::after { border-color: transparent; background: var(--wm-t
 /* Coming in, after logging in or on a refresh (body.is-arriving): the page cross-fades from the
    one before, the bar settles from above, Compose and the folders follow one after another, the
    mail comes in row by row, the storage bar fills, and the reading pane's envelope rises last.
-   Another folder or a message's link comes in quietly (html.wm-been, webmail-first.js): only the
-   mail settles. With less motion asked for, it's all simply there. (Held only before each one
+   Another folder or a message's link comes in quietly (html.wm-been, webmail-first.js, and
+   webmail-nav.js for a folder opened in place): only the mail settles; the folders stay still. With less motion asked for, it's all simply there. (Held only before each one
    starts: a transform left behind would pin the folders' drawer open on a phone. And nothing in
    a column that scrolls moves past its bottom on the way in: that would bring a scrollbar for a
    moment. So the storage grows from its own bottom edge, and the mail settles from just above
@@ -1041,7 +1064,6 @@ body.webmail-app .tip::after { border-color: transparent; background: var(--wm-t
   /* the list drawn again (sorted, filtered), and new mail arriving at the top */
   .wm-messages.is-redrawn .wm-message { animation: wm-in-settle 0.3s var(--wm-ease) backwards; animation-delay: calc(min(var(--i, 0), 12) * 0.02s); }
   .wm-message.is-new { animation: wm-in-settle 0.4s var(--wm-ease) backwards, wm-new 2.4s ease 0.4s backwards; }
-  .wm-folders.is-redrawn .wm-folder { animation: wm-in-fade 0.2s ease backwards; }
 }
 
 /* Narrower screens: the reading pane waits for a message, the folders slide in from the left */
@@ -1131,6 +1153,13 @@ body.webmail-app .tip::after { border-color: transparent; background: var(--wm-t
 .wm-loader-art.is-small { display: inline-block; flex: none; width: 22px; height: 22px; vertical-align: middle; }
 .wm-loader-art.is-small.is-plain { width: 16px; height: 16px; border-width: 2px; }
 .wm-loader-art.is-plain { width: 34px; height: 34px; border: 3px solid var(--wm-blue-soft); border-top-color: var(--wm-blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
+/* a link of the webmail's own, its address taken off while the pointer rests on it (webmail-core.js): still a link to the eye */
+a[data-wm-href] { cursor: pointer; }
+/* A picture on its way (webmail-core.js: wm.watchPictures): a faint box where it will be, with
+   the same arrows turning in it (a picture that turns by itself: static/img), until it's there.
+   The pages in frames (a message, what's being written) get the same from wm.frameCss(). */
+img.wm-img-loading { background: url("../img/webmail-loading-light.svg") center / min(40px, 55%) no-repeat, rgba(59, 99, 230, 0.08); }
+:root[data-theme="dark"] img.wm-img-loading { background-image: url("../img/webmail-loading-dark.svg"); background-color: rgba(61, 139, 255, 0.1); }
 @keyframes wm-loader-in { from { opacity: 0; transform: scale(0.9); } }
 @keyframes wm-loader-out { to { opacity: 0; } }
 
@@ -1167,6 +1196,8 @@ body.webmail-app .tip::after { border-color: transparent; background: var(--wm-t
   animation: wm-spark 0.7s cubic-bezier(0.15, 0.8, 0.3, 1) forwards;
 }
 .is-flaring { animation: wm-flare-button 0.5s ease-out; }
+/* as a popover (on the top layer): none of a popover's own box, only the burst's */
+.wm-flare[popover] { inset: auto; margin: 0; padding: 0; border: 0; overflow: visible; background: none; color: inherit; }
 @keyframes wm-flare {
   0% { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.95), 0 0 26px 10px rgba(var(--flare), 0.9); opacity: 1; }
   35% { opacity: 1; }

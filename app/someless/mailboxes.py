@@ -26,6 +26,7 @@ MB = 1024 ** 2
 GB = 1024 ** 3
 UNITS = {"GB": GB, "MB": MB}
 LARGEST = 100_000 * GB   # a typo guard: no disk holds more
+SEND_LIMITS = range(1, 101)   # MB: the most a message a mailbox sends may carry in files (50 to start)
 # The part before the @, as mail apps and other servers handle it without surprises: letters,
 # digits, dots, dashes and underscores; no dot at either end or two in a row. Kept lowercase.
 LOCAL_PART = re.compile(r"(?![.])(?!.*\.\.)[a-z0-9._-]{1,64}(?<![.])")
@@ -169,7 +170,7 @@ def _page(status=200, **context):
         size, unit = _in_unit(quota)
         boxes.append({
             "id": row["id"], "email": row["email"], "domain": row["domain"], "aliases": aliases,
-            "quota": size_text(quota), "size": size, "unit": unit,
+            "quota": size_text(quota), "size": size, "unit": unit, "send_limit": row["send_limit_mb"],
             "used": None if in_use is None else {
                 "percent": min(100.0, in_use * 100 / quota), "text": size_text(in_use),
                 "available": size_text(max(0, quota - in_use))},
@@ -334,6 +335,24 @@ def change_storage(mailbox_id):
     db.commit()
     engine_sync.after_change()
     flash(f"{mailbox['email']} now has {size_text(size)} of storage.", "success")
+    return redirect(url_for("mailboxes.index"))
+
+
+@bp.post("/<int:mailbox_id>/sending")
+@login_required
+def change_sending(mailbox_id):
+    """How large a message the mailbox may send, in MB of files (the webmail, and mail apps through the
+    engine's size rule: engine/sync.py)."""
+    mailbox = _mailbox(mailbox_id)
+    typed = request.form.get("limit", "").strip()
+    limit = int(typed) if typed.isdigit() else 0
+    if limit not in SEND_LIMITS:
+        return _page(400, sending_problem="Choose a size from 1 to 100 MB.", for_mailbox=mailbox, typed={"limit": typed})
+    db = get_db()
+    db.execute("UPDATE mailboxes SET send_limit_mb = ? WHERE id = ?", (limit, mailbox_id))
+    db.commit()
+    engine_sync.after_change()
+    flash(f"{mailbox['email']} can now send up to {limit} MB at a time.", "success")
     return redirect(url_for("mailboxes.index"))
 
 

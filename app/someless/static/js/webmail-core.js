@@ -163,6 +163,7 @@
       if (!box || box.classList.contains("is-leaving")) return;
       box.classList.add("is-leaving");
       setTimeout(function () {
+        if (!box.classList.contains("is-leaving")) return;   // (wanted again meanwhile: it stays)
         if (box.player) box.player.destroy();
         box.remove();
       }, reduceMotion ? 0 : 160);
@@ -207,10 +208,46 @@
       }
       if (!art.isConnected || art.dataset.playing) return;
       art.dataset.playing = "1";
-      done(window.lottie.loadAnimation({ container: art, renderer: "svg", loop: true, autoplay: !reduceMotion,
-                                         animationData: JSON.parse(JSON.stringify(data)) }));
+      var player = window.lottie.loadAnimation({ container: art, renderer: "svg", loop: true, autoplay: true,
+                                                 animationData: JSON.parse(JSON.stringify(data)) });
+      if (reduceMotion) player.setSpeed(0.4);   // (less motion, but still turning: standing still looks stuck)
+      done(player);
     });
   }
+  // --- something shown or put away where it is (the formatting bar, Cc and Bcc): it opens down into
+  // its place and fades in, and closes back up the same way, rather than at once. Asked the other
+  // way while it moves, it turns back from where it is. With less motion asked for: at once. ---
+  function reveal(element, show) {
+    if (!element) return;
+    var moving = element.wmReveal;
+    if (moving) {
+      if (moving.wmShow !== show) {
+        moving.wmShow = show;
+        moving.reverse();
+      }
+      return;
+    }
+    if (show === !element.hidden) return;
+    if (reduceMotion || !element.animate) {
+      element.hidden = !show;
+      return;
+    }
+    element.hidden = false;   // (measured open, whichever way it goes)
+    var style = getComputedStyle(element);
+    var open = { height: element.offsetHeight + "px", minHeight: style.minHeight, paddingTop: style.paddingTop,
+                 paddingBottom: style.paddingBottom, opacity: 1, transform: "translateY(0)" };
+    var shut = { height: "0px", minHeight: "0px", paddingTop: "0px", paddingBottom: "0px", opacity: 0, transform: "translateY(-8px)" };
+    element.style.overflow = "hidden";
+    var animation = element.animate(show ? [shut, open] : [open, shut], { duration: 300, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" });
+    animation.wmShow = show;
+    element.wmReveal = animation;
+    animation.onfinish = function () {
+      element.wmReveal = null;
+      element.style.overflow = "";
+      element.hidden = !animation.wmShow;   // (the way it went last)
+    };
+  }
+
   // a small one, in a line (a file on its way): wm.spinner() to put in, wm.spinner.stop(it) when done
   function spinner() {
     var art = document.createElement("span");
@@ -274,7 +311,16 @@
         made.appendChild(spark);
       }
     }
-    (button.closest("dialog[open]") || document.body).appendChild(made);   // (a dialog is on top of the page)
+    // On the page's top layer (a popover), above an open dialog too, and placed on the screen: put
+    // in a dialog, it would be placed from the dialog's corner while it moves (its opening) and
+    // run past its edges, so the dialog would scroll for it. (Without popovers: in the dialog.)
+    if (typeof made.showPopover === "function") {
+      made.setAttribute("popover", "manual");
+      document.body.appendChild(made);
+      made.showPopover();
+    } else {
+      (button.closest("dialog[open]") || document.body).appendChild(made);
+    }
     setTimeout(function () { made.remove(); }, 900);
     button.classList.remove("is-flaring");
     void button.offsetWidth;   // (again, for a quick second click)
@@ -753,10 +799,137 @@
     document.title = (match ? match[0] : "") + title;
   }
 
+  // --- pictures on their way (in a message, in what's being written, a contact's photo): a faint
+  // box where each will be, with the turning arrows in it, until it's there (img.wm-img-loading,
+  // webmail-app.css; the arrows are the loading animation's, drawn once as a picture that turns by
+  // itself, so they turn in a message too, where nothing runs). For this page, and for each page
+  // in a frame as it comes. The mark is never kept: contentOf() leaves it out. ---
+  var PICTURE_LOADING = "wm-img-loading";
+  var ONLY_SHOWN = [PICTURE_LOADING, "wm-picked", "wm-write-here"];   // (marks never kept: contentOf)
+  function watchPictures(doc) {
+    if (!doc || !doc.documentElement || doc.wmPictures) return;
+    doc.wmPictures = true;
+    function wait(picture) {
+      if (picture.complete || picture.classList.contains(PICTURE_LOADING) || picture.closest(".wm-top")) return;
+      var hadClass = picture.hasAttribute("class");
+      picture.classList.add(PICTURE_LOADING);
+      function there() {
+        picture.removeEventListener("load", there);
+        picture.removeEventListener("error", there);
+        var decoded = picture.decode ? picture.decode().catch(function () {}) : Promise.resolve();
+        decoded.then(function () {   // (drawn, not only fetched)
+          picture.classList.remove(PICTURE_LOADING);
+          if (!hadClass && !picture.classList.length) picture.removeAttribute("class");   // (as it was)
+        });
+      }
+      picture.addEventListener("load", there);
+      picture.addEventListener("error", there);
+    }
+    function look(node) {
+      if (node.nodeType !== 1) return;
+      if (node.tagName === "IMG") wait(node);
+      else Array.prototype.forEach.call(node.getElementsByTagName("img"), wait);
+    }
+    look(doc.documentElement);
+    new MutationObserver(function (changes) {
+      changes.forEach(function (change) {
+        if (change.type === "attributes") {
+          if (change.target.tagName === "IMG") wait(change.target);
+        } else {
+          Array.prototype.forEach.call(change.addedNodes, look);
+        }
+      });
+    }).observe(doc.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["src", "srcset"] });
+  }
+  // what a page in a frame says, as it's kept (a draft, a signature): without the marks that are
+  // only for the eye (a picture on its way, a picture picked out while its menu is open)
+  function contentOf(body) {
+    var marked = ONLY_SHOWN.map(function (name) { return "." + name; }).join(", ");
+    if (!body.querySelector(marked)) return body.innerHTML;
+    var copy = body.cloneNode(true);
+    Array.prototype.forEach.call(copy.querySelectorAll(marked), function (element) {
+      ONLY_SHOWN.forEach(function (name) { element.classList.remove(name); });
+      if (!element.classList.length) element.removeAttribute("class");
+    });
+    return copy.innerHTML;
+  }
+
+  // --- what the pages inside frames (what's being written, a message) take from this one: our
+  // scrollbars (style.css) and the pictures' loading look. A frame's page has none of this page's
+  // styles, so the browser would draw its own grey bar there. The scrollbar rules are taken from
+  // style.css as it's loaded (one place to change them), in the theme shown's colours; Firefox,
+  // which has no such rules, takes the colours. ---
+  var scrollbarRules = "";
+  function frameCss() {
+    if (!scrollbarRules) {
+      Array.prototype.forEach.call(document.styleSheets, function (sheet) {
+        var rules;
+        try { rules = sheet.cssRules; } catch (error) { return; }   // (one it may not read)
+        Array.prototype.forEach.call(rules || [], function (rule) {
+          if (rule.selectorText && rule.selectorText.indexOf("::-webkit-scrollbar") !== -1) scrollbarRules += rule.cssText;
+        });
+      });
+    }
+    var root = getComputedStyle(document.documentElement);
+    var dark = document.documentElement.dataset.theme === "dark";
+    var arrows = new URL("../img/webmail-loading-" + (dark ? "dark" : "light") + ".svg",
+                         new URL(loaderSource ? loaderSource.content : "/static/lottie/", location.href)).href;
+    return ":root{--scroll-core:" + root.getPropertyValue("--scroll-core").trim() + ";--scroll-rail:" +
+      root.getPropertyValue("--scroll-rail").trim() + "}" + scrollbarRules +
+      "@supports not selector(::-webkit-scrollbar){html{scrollbar-width:thin;scrollbar-color:#0195fb transparent}}" +
+      "img." + PICTURE_LOADING + "{background:url(\"" + arrows + "\") center/min(40px,55%) no-repeat," +
+      (dark ? "rgba(61,139,255,.1)" : "rgba(59,99,230,.08)") + ";border-radius:6px}" +
+      "img." + PICTURE_LOADING + ":not([width]):not([height]){min-width:72px;min-height:72px}";   // (no size yet: a box)
+  }
+
+  watchPictures(document);
+
+  // --- a link's address, as the browser shows it in the bottom corner while the pointer rests on
+  // the link: not for the webmail's own links (a message, a folder, its pages), as PrivateEmail
+  // shows none. The address is taken off while the pointer rests there, and put back the moment
+  // the link is pressed (a click, a middle-click, a right-click, a drag: all as they were) or
+  // reached with the keyboard. Links to other sites keep theirs, so where they go can be seen. ---
+  function ownLink(node) {
+    var link = node && node.closest && node.closest("a[href]");
+    return link && link.origin === location.origin ? link : null;
+  }
+  function takeOff(link) {
+    link.setAttribute("data-wm-href", link.getAttribute("href"));
+    link.removeAttribute("href");
+  }
+  function putBack(node) {
+    var link = node && node.closest && node.closest("a[data-wm-href]");
+    if (!link) return;
+    link.setAttribute("href", link.getAttribute("data-wm-href"));
+    link.removeAttribute("data-wm-href");
+  }
+  document.addEventListener("pointerover", function (event) {
+    var link = event.pointerType === "mouse" ? ownLink(event.target) : null;   // (a finger has no corner for it)
+    if (link && !link.matches(":focus-visible")) takeOff(link);
+  });
+  document.addEventListener("pointerout", function (event) {
+    var link = event.target.closest && event.target.closest("a[data-wm-href]");
+    if (link && !(event.relatedTarget && link.contains(event.relatedTarget))) putBack(link);
+  });
+  document.addEventListener("pointerdown", function (event) { putBack(event.target); }, true);
+  document.addEventListener("focusin", function (event) {
+    if (event.target.matches && event.target.matches(":focus-visible")) putBack(event.target);
+  }, true);
+  ["click", "auxclick"].forEach(function (type) {   // pressed and let go, still under the pointer: off again
+    document.addEventListener(type, function (event) {
+      var link = ownLink(event.target);
+      if (!link) return;
+      setTimeout(function () {
+        if (link.isConnected && link.hasAttribute("href") && link.matches(":hover") && !link.matches(":focus-visible")) takeOff(link);
+      }, 0);
+    });
+  });
+
   window.wm = {
     request: request, toast: toast, board: board, icon: icon, copy: copy, loading: loading, spinner: spinner, menu: menu,
     closeMenus: closeMenus,
     confirm: confirmDialog, pickFolder: pickFolder, folders: folders, counts: counts, setTitle: setTitle,
-    currentFolder: currentFolder, reduceMotion: reduceMotion,
+    currentFolder: currentFolder, reduceMotion: reduceMotion, frameCss: frameCss, watchPictures: watchPictures,
+    contentOf: contentOf, reveal: reveal,
   };
 })();
