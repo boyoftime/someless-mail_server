@@ -556,6 +556,13 @@ def test_the_mailboxs_own_folders_follow_with_theirs_inside(signed_in, jmap):
     assert 'data-name="Clients" data-depth="1"' in page and "wm-folder-opener" in page   # its folders fold away
 
 
+def test_a_line_shows_where_the_folders_end(signed_in):
+    """(down the list's left edge, growing into place as the page opens; lit while dragged)"""
+    css = signed_in.get("/static/css/webmail-app.css").get_data(as_text=True)
+    assert re.search(r"\.wm-list::before \{[^}]*animation: wm-divider-grow", css)
+    assert "@keyframes wm-divider-grow" in css and "body.is-resizing .wm-list::before" in css
+
+
 def test_the_mail_list_never_scrolls_sideways(signed_in):
     css = signed_in.get("/static/css/webmail-app.css").get_data(as_text=True)
     assert re.search(r"\.wm-scroll \{[^}]*overflow-x: hidden", css)

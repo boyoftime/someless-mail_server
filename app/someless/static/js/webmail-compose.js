@@ -670,19 +670,16 @@
       self.sending = true;
       self.element.classList.add("is-sending");
       var body = self.message(false);
-      // off it goes: the rocket rises from Send while it goes, and blasts off once it's sent (webmail-rocket.js)
-      var flight = wm.rocket ? wm.rocket(self.element.querySelector('[data-cm="send"]')) : null;
       wm.request(data().sendUrl, { method: "POST", body: body, quiet: true }).then(function (answer) {
-        if (flight) flight.sent();
         self.sending = false;
         wm.counts(answer.counts, answer.unread);
-        wm.toast(answer.message || "Message has been successfully sent");
+        // sent: its toast flashes, and stars burst out round it (webmail-core.js)
+        wm.toast(answer.message || "Message has been successfully sent", { celebrate: true });
         self.close(true);
         refreshIf("sent");
         refreshIf("drafts");
         if (self.reply && wm.list) wm.list.refresh({ quiet: true });
       }, function (error) {
-        if (flight) flight.failed();
         self.sending = false;
         self.element.classList.remove("is-sending");
         if (error.name === "AbortError") return;

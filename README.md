@@ -560,5 +560,5 @@ The same thanks, and the donate button, are in the web interface too: **Credits*
 - The webmail's live new mail: [flask-sock](https://github.com/miguelgrinberg/flask-sock) 0.7.0 and [simple-websocket](https://github.com/miguelgrinberg/simple-websocket) 1.1.0 (MIT).
 - Cleaning the mail's HTML: [nh3](https://github.com/messense/nh3) 0.3.7 (MIT), built on [ammonia](https://github.com/rust-ammonia/ammonia).
 - Making attached pictures and PDFs smaller without losing anything: [libjpeg-turbo](https://libjpeg-turbo.org/)'s jpegtran (IJG and BSD licences) and [qpdf](https://github.com/qpdf/qpdf) (Apache-2.0), from Debian.
-- The webmail's animations are from [LottieFiles](https://lottiefiles.com/): the loading arrows, the unread-mail badge, and the rocket that takes a message off when it's sent (in the webmail's blues, with a flame of our own).
+- The webmail's animations are from [LottieFiles](https://lottiefiles.com/): the loading arrows and the unread-mail badge.
 - The new-mail sound: "Modern short message tone" by [digitalstore07](https://pixabay.com/users/digitalstore07/) on [Pixabay](https://pixabay.com/) (Pixabay Content License).

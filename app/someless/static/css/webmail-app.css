@@ -531,6 +531,29 @@ body.webmail-app .wm-folder-form input {
 
 /* The mail */
 .wm-list { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid var(--wm-line); background: var(--wm-list); }
+/* where the folders end: a line down the list's left edge, brightest near the top and fading as it
+   goes, that grows down into place as the page opens, and lights up in the pointer (the edge is
+   also where the folders are dragged wider: webmail-resize.js) */
+.wm-list::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  width: 1px;
+  background: linear-gradient(to bottom, var(--wm-divider-top), var(--wm-divider) 38%, var(--wm-divider-end));
+  pointer-events: none;
+  transform-origin: top;
+  animation: wm-divider-grow 0.9s var(--wm-ease) 0.15s both;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+:root { --wm-divider-top: rgba(59, 99, 230, 0.55); --wm-divider: #d5d9e2; --wm-divider-end: rgba(213, 217, 226, 0.4); }
+:root[data-theme="dark"] { --wm-divider-top: rgba(88, 156, 255, 0.75); --wm-divider: rgba(88, 156, 255, 0.3); --wm-divider-end: rgba(88, 156, 255, 0.08); }
+:root[data-theme="dark"] .wm-list::before { box-shadow: 0 0 8px rgba(88, 156, 255, 0.35); }
+.wm-list:has(> .wm-resize.is-side:hover)::before, body.is-resizing .wm-list::before { background: var(--wm-blue); box-shadow: 0 0 10px rgba(88, 156, 255, 0.7); }
+@keyframes wm-divider-grow { from { opacity: 0; transform: scaleY(0); } }
+html.wm-been .wm-list::before { animation: none; }   /* (grown already: the next folder doesn't grow it again) */
 .wm-list-head { position: relative; z-index: 3; display: flex; flex: none; align-items: center; justify-content: flex-end; gap: 0.75rem; height: 56px; padding: 0 1.5rem; border-bottom: 1px solid var(--wm-line); }
 .wm-list-head.has-results { justify-content: space-between; }
 .wm-results { min-width: 0; margin: 0; overflow: hidden; font-size: 1rem; text-overflow: ellipsis; white-space: nowrap; }
@@ -968,6 +991,38 @@ body.webmail-app .wm-picker-new input { width: 100%; height: 30px; padding: 0 0.
 .wm-toast.is-leaving { animation: wm-toast-out 0.2s ease both; }
 @keyframes wm-toast-in { from { opacity: 0; transform: translateY(12px) scale(0.98); } }
 @keyframes wm-toast-out { to { opacity: 0; transform: translateY(8px); } }
+/* A message sent (webmail-core.js, celebrate): the toast flashes with a ring of light, a light
+   sweeps across it, its tick pops, and stars burst out all round it: bright and glowing on the
+   dark theme, deep and strong on the light one */
+.wm-toast { position: relative; }
+.wm-toast.is-celebrating { animation: wm-toast-in 0.28s var(--wm-ease) both, wm-toast-flash 1.2s ease-out 0.1s both; }
+@keyframes wm-toast-flash {
+  0% { box-shadow: 0 12px 30px rgba(10, 14, 30, 0.3), 0 0 0 0 rgba(120, 180, 255, 0), 0 0 0 0 rgba(255, 196, 60, 0); }
+  16% { box-shadow: 0 12px 30px rgba(10, 14, 30, 0.3), 0 0 0 3px rgba(120, 180, 255, 0.95), 0 0 30px 10px rgba(255, 196, 60, 0.6); }
+  100% { box-shadow: 0 12px 30px rgba(10, 14, 30, 0.3), 0 0 0 7px rgba(120, 180, 255, 0), 0 0 44px 22px rgba(255, 196, 60, 0); }
+}
+.wm-toast.is-celebrating::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(110deg, transparent 38%, rgba(255, 255, 255, 0.75) 50%, transparent 62%) no-repeat 130% 0 / 250% 100%; pointer-events: none; animation: wm-toast-sheen 0.95s ease-out 0.15s both; }
+@keyframes wm-toast-sheen { from { background-position: 130% 0; } to { background-position: -30% 0; } }
+.wm-toast.is-celebrating > svg { animation: wm-tick-pop 0.55s var(--wm-ease) 0.1s both; }
+@keyframes wm-tick-pop { 0% { transform: scale(0.3) rotate(-35deg); } 60% { transform: scale(1.4) rotate(6deg); } 100% { transform: none; } }
+.wm-toast-stars { position: absolute; top: 50%; left: 50%; width: 0; height: 0; pointer-events: none; }
+.wm-toast-star { position: absolute; top: 0; left: 0; width: var(--size); height: var(--size); margin: calc(var(--size) / -2) 0 0 calc(var(--size) / -2); color: var(--star); filter: drop-shadow(0 0 3px var(--star-glow)) drop-shadow(0 0 9px var(--star-glow)); opacity: 0; animation: wm-star-burst 1.45s cubic-bezier(0.2, 0.8, 0.3, 1) var(--delay) both; }
+body.webmail-app .wm-toast-star svg { display: block; width: 100%; height: 100%; fill: currentColor; stroke: currentColor; stroke-width: 1; }   /* (solid: the webmail's icons are outlines) */
+.wm-toast-star.is-dot { width: calc(var(--size) / 2.2); height: calc(var(--size) / 2.2); border-radius: 50%; background: currentColor; }
+@keyframes wm-star-burst {   /* (out it bursts, big and bright; it holds; it fades as it slows) */
+  0% { opacity: 0; transform: translate(var(--x0), var(--y0)) scale(0.2) rotate(0deg); }
+  12% { opacity: 1; transform: translate(var(--x0), var(--y0)) scale(1.35) rotate(calc(var(--spin) * 0.15)); }
+  55% { opacity: 1; transform: translate(calc(var(--x0) + (var(--x1) - var(--x0)) * 0.8), calc(var(--y0) + (var(--y1) - var(--y0)) * 0.8)) scale(1) rotate(calc(var(--spin) * 0.7)); }
+  100% { opacity: 0; transform: translate(var(--x1), var(--y1)) scale(0.6) rotate(var(--spin)); }
+}
+.wm-toast-star.is-0 { --star: #f59e0b; --star-glow: rgba(245, 158, 11, 0.55); }
+.wm-toast-star.is-1 { --star: #2563eb; --star-glow: rgba(37, 99, 235, 0.5); }
+.wm-toast-star.is-2 { --star: #db2777; --star-glow: rgba(219, 39, 119, 0.45); }
+.wm-toast-star.is-3 { --star: #16a34a; --star-glow: rgba(22, 163, 74, 0.45); }
+:root[data-theme="dark"] .wm-toast-star.is-0 { --star: #ffd54a; --star-glow: rgba(255, 213, 74, 0.95); }
+:root[data-theme="dark"] .wm-toast-star.is-1 { --star: #7ab8ff; --star-glow: rgba(122, 184, 255, 0.95); }
+:root[data-theme="dark"] .wm-toast-star.is-2 { --star: #ff85c8; --star-glow: rgba(255, 133, 200, 0.9); }
+:root[data-theme="dark"] .wm-toast-star.is-3 { --star: #ffffff; --star-glow: rgba(255, 255, 255, 0.95); }
 
 /* Dialogs: asking first (Delete folder...), and the reading pane's own (a preview, the
    trackers, the source) */
@@ -1127,6 +1182,7 @@ body.webmail-app .tip::after { border-color: transparent; background: var(--wm-t
   }
   .wm-side.is-open { box-shadow: 16px 0 36px -16px rgba(0, 0, 0, 0.35); transform: none; }   /* (closed: no shadow at the edge) */
   .wm-list { border-right: 0; }
+  .wm-list::before { display: none; }   /* (the folders slide in over the list here: no edge between them) */
   body.is-reading .wm-list { display: none; }   /* a message open: it takes the list's place */
   body.is-reading .wm-reader { display: flex; }
   /* two or more ticked: what can be done to them, in a bar along the bottom, the list above it */
@@ -1171,6 +1227,8 @@ body.webmail-app .tip::after { border-color: transparent; background: var(--wm-t
 }
 @media (prefers-reduced-motion: reduce) {
   .wm-account, .wm-search-panel, .wm-sort, .wm-menu-pop, .wm-toast, .wm-dialog, .wm-choose { animation: none; }
+  .wm-toast.is-celebrating, .wm-toast.is-celebrating::after, .wm-toast.is-celebrating > svg { animation: none; }
+  .wm-toast.is-celebrating { box-shadow: 0 12px 30px rgba(10, 14, 30, 0.3), 0 0 0 2px rgba(120, 180, 255, 0.85), 0 0 22px 4px rgba(255, 196, 60, 0.45); }
   .wm-side, .wm-subfolders, .wm-files-body { transition: none; }
   .wm-files.is-saving .wm-files-head::after { background-size: 100% 100%; opacity: 0.55; animation: none; }
 }

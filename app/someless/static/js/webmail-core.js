@@ -101,6 +101,7 @@
     close.appendChild(icon("close"));
     item.appendChild(close);
     toasts.appendChild(item);
+    if (options.celebrate) celebrate(item);
     while (toasts.children.length > 3) toasts.firstElementChild.remove();
     var timer;
     function go() {
@@ -114,6 +115,41 @@
     item.addEventListener("mouseenter", function () { clearTimeout(timer); });
     item.addEventListener("mouseleave", wait);
     wait();
+  }
+
+  // A message sent ({celebrate}): its toast flashes, a light sweeps across it and its tick pops, and
+  // stars burst out all round it, in colours that stand out on the dark theme and the light alike
+  // (webmail-app.css). With less motion asked for: the glow only.
+  var STARS = 18;
+  var STAR = '<svg viewBox="0 0 24 24"><path d="M12 1.5c.9 5.6 4.9 9.6 10.5 10.5-5.6.9-9.6 4.9-10.5 10.5C11.1 16.9 7.1 12.9 1.5 12 7.1 11.1 11.1 7.1 12 1.5z"/></svg>';
+  function celebrate(item) {
+    item.classList.add("is-celebrating");
+    if (reduceMotion) return;
+    requestAnimationFrame(function () {   // (its size, once it's in the page)
+      var width = item.offsetWidth, height = item.offsetHeight;
+      var holder = document.createElement("span");
+      holder.className = "wm-toast-stars";
+      holder.setAttribute("aria-hidden", "true");
+      for (var index = 0; index < STARS; index++) {
+        var angle = index / STARS * Math.PI * 2 + (Math.random() - 0.5) * 0.35;
+        var cos = Math.cos(angle), sin = Math.sin(angle);
+        var fromX = cos * width * 0.45, fromY = sin * height * 0.5;   // from its edge...
+        var reach = 36 + Math.random() * 46;                          // ...out and away
+        var star = document.createElement("span");
+        star.className = "wm-toast-star is-" + (index % 4) + (index % 5 === 4 ? " is-dot" : "");
+        star.style.setProperty("--x0", fromX.toFixed(1) + "px");
+        star.style.setProperty("--y0", fromY.toFixed(1) + "px");
+        star.style.setProperty("--x1", (fromX + cos * reach * 1.5).toFixed(1) + "px");
+        star.style.setProperty("--y1", (fromY + sin * reach).toFixed(1) + "px");
+        star.style.setProperty("--size", Math.round(14 + Math.random() * 12) + "px");
+        star.style.setProperty("--spin", Math.round((Math.random() - 0.5) * 260) + "deg");
+        star.style.setProperty("--delay", Math.round(60 + Math.random() * 160) + "ms");
+        if (index % 5 !== 4) star.innerHTML = STAR;
+        holder.appendChild(star);
+      }
+      item.appendChild(holder);
+      setTimeout(function () { holder.remove(); }, 1900);
+    });
   }
 
   // --- copying: the clipboard, or on a plain http:// address (where browsers keep it shut) the

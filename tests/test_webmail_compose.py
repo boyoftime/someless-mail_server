@@ -486,6 +486,18 @@ def test_a_tables_borders_are_dragged_and_its_cells_right_clicked(mail):
     assert "cursor:col-resize" in compose and "cursor:row-resize" in compose
 
 
+def test_a_sent_message_is_celebrated_on_its_toast_not_by_a_rocket(mail):
+    page = mail.get("/mail/inbox").get_data(as_text=True)
+    assert "rocket" not in page   # (no rocket rising from Send any more)
+    assert mail.get("/static/js/webmail-rocket.js").status_code == 404
+    compose = mail.get("/static/js/webmail-compose.js").get_data(as_text=True)
+    assert 'wm.toast(answer.message || "Message has been successfully sent", { celebrate: true })' in compose
+    core = mail.get("/static/js/webmail-core.js").get_data(as_text=True)
+    assert "options.celebrate" in core and "wm-toast-stars" in core
+    css = mail.get("/static/css/webmail-app.css").get_data(as_text=True)
+    assert ".wm-toast.is-celebrating" in css and "@keyframes wm-star-burst" in css
+
+
 def test_the_mail_page_brings_the_tools_for_tables_before_the_composer(mail):
     page = mail.get("/mail/inbox").get_data(as_text=True)
     assert "js/webmail-tables.js" in page

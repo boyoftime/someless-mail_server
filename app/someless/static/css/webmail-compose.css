@@ -163,19 +163,6 @@ body.is-sizing-row, body.is-sizing-row * { cursor: row-resize !important; }
 .wm-cm-quote svg { width: 20px; height: 20px; }
 .wm-cm-quote:hover, .wm-cm-quote[aria-expanded="true"] { background: var(--wm-blue-soft); color: var(--wm-blue); }
 
-/* the rocket that takes a message off (webmail-rocket.js): out of Send's line (nothing of it below
-   there), then free up the screen, glowing; rumbling while it waits; sputtering out, not sent */
-.wm-rocket { position: fixed; z-index: 2147483000; width: 280px; height: 280px; pointer-events: none; clip-path: inset(-300vh -45% 0 -45%); filter: drop-shadow(0 0 10px rgba(88, 156, 255, 0.55)); }
-.wm-rocket[popover] { inset: auto; margin: 0; padding: 0; border: 0; overflow: visible; background: none; color: inherit; }
-.wm-rocket svg { overflow: visible; }
-.wm-rocket.is-holding svg { animation: wm-rumble 0.14s linear infinite; }
-@keyframes wm-rumble { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(-0.7px, 0.5px); } 50% { transform: translate(0.6px, -0.5px); } 75% { transform: translate(-0.5px, -0.4px); } }
-.wm-rocket.is-sputtering { opacity: 0; transform: translateY(18px) scale(0.92); transition: opacity 0.4s ease, transform 0.45s ease; }
-/* lift-off: a dome of light swelling from where it stood, and fading */
-.wm-rocket::after { content: ""; position: absolute; bottom: -60px; left: 50%; width: 240px; height: 120px; margin-left: -120px; border-radius: 50%; background: radial-gradient(closest-side, rgba(232, 246, 255, 0.95), rgba(92, 182, 255, 0.6) 45%, rgba(92, 182, 255, 0)); opacity: 0; transform: scale(0.4); pointer-events: none; }
-.wm-rocket.is-lifting::after { animation: wm-liftoff 0.8s cubic-bezier(0.12, 0.75, 0.3, 1) forwards; }
-@keyframes wm-liftoff { 0% { opacity: 0; transform: scale(0.4); } 16% { opacity: 1; } 100% { opacity: 0; transform: scale(1.7); } }
-
 /* along the bottom: Send, the tools, Discard */
 .wm-cm-foot { display: flex; flex: none; align-items: center; gap: 2px; min-height: 56px; padding: 0 8px; border-top: 1px solid var(--wm-line); }
 .wm-cm-send { height: 36px; margin-right: 4px; padding: 0 1.4rem; }
