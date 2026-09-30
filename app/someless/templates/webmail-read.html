@@ -52,7 +52,7 @@
     {%- if message.flagged %}{{ tool("unflag", "star-filled", "Unmark as favorite", " is-favorite") }}{% else %}{{ tool("flag", "star", "Mark as favorite") }}{% endif %}
     {%- if acts.archive %}{{ tool("archive", "archive", "Move to Archive") }}{% endif %}
     {%- if acts.inbox %}{{ tool("inbox", "inbox", "Move to Inbox") }}{% endif %}
-    {{ tool("delete", "trash", "Delete") }}
+    {%- if not kept_mail() %}{{ tool("delete", "trash", "Delete") }}{% endif %}{# (Disable delete: none) #}
     {%- if acts.not_spam %}{{ tool("notspam", "not-spam", "Not spam") }}
     {%- elif acts.spam %}{{ tool("spam", "spam", "Mark as spam. Our algorithms tailor your inbox to you and your selections.") }}{% endif %}
     {{ tool("print", "print", "Print") }}

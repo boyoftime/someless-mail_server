@@ -339,6 +339,32 @@ def test_a_mailbox_is_an_account_in_its_domain(app, engine):
     assert {alias["domainId"] for alias in box["aliases"].values()} == {domain}
 
 
+def test_a_mailbox_kept_from_deleting_in_mail_apps_cant_erase_there(app, engine):
+    """Disable delete, in mail apps (the Mailboxes page): the engine itself refuses erasing a
+    message (IMAP expunge, POP delete) or a folder (IMAP delete) for it; switched off, as before."""
+    domain_id = authenticated_domain(app)
+    mailbox_id = a_mailbox(app, "ceo@pineloop.online", domain_id)
+    sync_now(app)
+    assert engine.named("Account", "ceo")["permissions"] == {"@type": "Inherit"}
+
+    with app.app_context():
+        get_db().execute("UPDATE mailboxes SET no_delete_apps = 1 WHERE id = ?", (mailbox_id,))
+        get_db().commit()
+    sync_now(app)
+    kept = engine.named("Account", "ceo")["permissions"]
+    engine.calls.clear()
+    sync_now(app)
+    again = [call for call in engine.calls if call[0] != "get"]
+    with app.app_context():
+        get_db().execute("UPDATE mailboxes SET no_delete_apps = 0 WHERE id = ?", (mailbox_id,))
+        get_db().commit()
+    sync_now(app)
+
+    assert kept["@type"] == "Merge" and kept["disabledPermissions"] == {"imapExpunge": True, "imapDelete": True, "pop3Dele": True}
+    assert again == []   # (as it is already: nothing sent)
+    assert engine.named("Account", "ceo")["permissions"] == {"@type": "Inherit"}
+
+
 def test_a_mailbox_change_reaches_the_engine_and_only_then(app, engine):
     domain_id = authenticated_domain(app)
     mailbox_id = a_mailbox(app, "ceo@pineloop.online", domain_id)

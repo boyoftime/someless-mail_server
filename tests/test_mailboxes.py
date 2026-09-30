@@ -189,6 +189,41 @@ def test_edit_storage_starts_from_the_size_as_it_was_typed(app, client, login):
     assert sorted(found) == [("a", "15", "GB"), ("b", "14.87", "GB"), ("c", "500", "MB"), ("d", "1.5", "GB")]
 
 
+def test_each_mailbox_has_its_settings_with_disable_delete(app, client, login):
+    authenticated_domain(app)
+    login()
+    create(client)
+
+    page = text(client.get("/mailboxes"))
+
+    gear = re.search(r'<button [^>]*data-keep-for="ceo@pineloop.online"[^>]*>', page).group(0)
+    assert 'data-webmail="0"' in gear and 'data-apps="0"' in gear and 'data-tip="Mailbox settings"' in gear
+    dialog = page.split('id="keep-dialog"')[1].split("</dialog>")[0]
+    assert 'name="webmail"' in dialog and 'name="apps"' in dialog and "Disable delete" in dialog
+
+
+def test_deleting_is_switched_off_in_the_webmail_and_in_mail_apps(app, client, login):
+    authenticated_domain(app)
+    login()
+    create(client)
+    box = rows(app)[0]
+
+    both = client.post(f"/mailboxes/{box['id']}/keep", data={"webmail": "on", "apps": "on"})
+    both_page = plain(text(client.get("/mailboxes")))
+    webmail_only = client.post(f"/mailboxes/{box['id']}/keep", data={"webmail": "on"})
+    kept = rows(app)[0]
+    client.post(f"/mailboxes/{box['id']}/keep", data={})
+    again = rows(app)[0]
+    page = plain(text(client.get("/mailboxes")))
+
+    assert both.headers["Location"] == "/mailboxes" and webmail_only.headers["Location"] == "/mailboxes"
+    assert "Deleting is now switched off for ceo@pineloop.online in the webmail and in mail apps." in both_page
+    assert "Deleting is switched off in the webmail and in mail apps." in both_page   # (on its card)
+    assert (kept["no_delete_webmail"], kept["no_delete_apps"]) == (1, 0)
+    assert (again["no_delete_webmail"], again["no_delete_apps"]) == (0, 0)
+    assert "ceo@pineloop.online can delete messages again." in page and "Deleting is switched off" not in page
+
+
 def test_mailboxes_are_searched_by_address(app, client, login):
     authenticated_domain(app)
     login()

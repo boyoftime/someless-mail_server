@@ -3631,6 +3631,13 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
 .mailbox-storage-text { margin: 0.5rem 0 0; color: var(--muted); font-size: 0.88rem; }
 .mailbox-storage-text strong { color: var(--ink); }
 .mailbox-none { margin: 0; color: var(--muted); font-size: 0.9rem; }
+/* Disable delete: on the card, and its settings (the gear) */
+.mailbox-kept { display: flex; align-items: center; gap: 0.4rem; color: #f5b54a; font-weight: 600; }
+.mailbox-kept svg { flex: none; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.keep-group { display: grid; gap: 0.7rem; }
+.keep-title { display: flex; align-items: center; gap: 0.45rem; margin: 0; font-weight: 700; }
+.keep-title svg { width: 18px; height: 18px; fill: none; stroke: #f5b54a; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.keep-hint { margin: -0.35rem 0 0.1rem; color: var(--muted); font-size: 0.86rem; }
 .alias-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
 .alias-chips li {
   padding: 0.2rem 0.65rem;

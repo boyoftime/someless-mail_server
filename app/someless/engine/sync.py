@@ -85,7 +85,8 @@ def desired_state():
         aliases = [alias["email"] for alias in db.execute(
             "SELECT email FROM mailbox_aliases WHERE mailbox_id = ? ORDER BY email", (row["id"],))]
         mailboxes[row["email"]] = {"id": row["id"], "quota": row["quota_bytes"], "secret": row["password_hash"],
-                                   "version": row["password_version"], "aliases": aliases, "send_limit": row["send_limit_mb"]}
+                                   "version": row["password_version"], "aliases": aliases, "send_limit": row["send_limit_mb"],
+                                   "keep_mail": bool(row["no_delete_apps"])}
     senders = [row["email"] for row in db.execute(
         "SELECT senders.email FROM senders JOIN domains ON domains.id = senders.domain_id WHERE domains.authenticated = 1"
         " ORDER BY senders.email")]
@@ -228,15 +229,18 @@ def _mailboxes(engine, desired, domains, internal_id, everyone, done):
         local, domain = email.rsplit("@", 1)
         note = _mailbox_note(box)
         quotas = {"maxDiskQuota": box["quota"]}
+        permissions = KEEP_MAIL if box.get("keep_mail") else INHERIT
         if email not in boxes:
             attempt(f"create mailbox {email}", lambda: engine.create("Account", {
                 **_user(local, domains[domain]["id"], box["secret"]), "quotas": quotas, "aliases": aliases[email],
-                "description": note}))
+                "description": note, "permissions": permissions}))
             continue
         obj = boxes[email]
         change = {}
         if obj.get("quotas") != quotas:
             change["quotas"] = quotas
+        if _kept_from(obj.get("permissions")) != _kept_from(permissions):
+            change["permissions"] = permissions
         if _alias_set(obj.get("aliases")) != _alias_set(aliases[email]):
             change["aliases"] = aliases[email]
         if obj.get("description") != note:   # a new password
@@ -324,6 +328,19 @@ def ask_for_certificate():
 
 
 IMPERSONATE = {"@type": "Merge", "enabledPermissions": {"impersonate": True}}
+INHERIT = {"@type": "Inherit"}
+# Disable delete, in mail apps (the Mailboxes page): a mailbox whose mail is kept, whatever an app
+# asks. It can't erase a message over IMAP (expunge) or POP (delete), nor a folder (IMAP delete).
+# The webmail (JMAP) keeps its own rule (webmail/mail.py), and its drafts are saved over as usual.
+KEEP_MAIL = {"@type": "Merge", "disabledPermissions": {"imapExpunge": True, "imapDelete": True, "pop3Dele": True}}
+
+
+def _kept_from(permissions):
+    """What an account's permissions keep it from: the ones switched off (none, inherited)."""
+    permissions = permissions or {}
+    if permissions.get("@type") not in ("Merge", "Replace"):
+        return set()
+    return {name for name, off in (permissions.get("disabledPermissions") or {}).items() if off}
 
 
 def _internal_account(login, domain_id, password):

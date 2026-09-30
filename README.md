@@ -334,6 +334,9 @@ A mailbox is an inbox at one of your domains, like `ceo@example.com`. In **Mailb
 Each mailbox's card shows how much of its storage is used, and has buttons to open its webmail (in a new tab, already signed in: no password asked), to change its password or storage, to delete it (with all its mail), and:
 
 - **Sending limit** (the paper clip): how much a message it sends may carry in attachments, from 1 to 100 MB; new mailboxes start at 50 MB. It holds in the webmail and in mail apps alike. Many other mail services refuse messages over 25 MB, so a larger limit helps most between your own mailboxes.
+- **Mailbox settings** (the gear): **Disable delete**, to keep every message in a mailbox, with two switches.
+  - **In the webmail:** Delete, Empty Trash and deleting a folder are switched off, and nothing can be moved to the Trash. Messages can still be moved to other folders, and unsent drafts can still be discarded.
+  - **In mail apps:** the mail server itself refuses to erase messages or folders for that mailbox, whatever app asks. An app may still move a message to its Trash, but the Trash can't be emptied.
 - **Aliases:** other addresses whose mail lands in this mailbox, like `hello@example.com` or `sales@example.com`, at any of your authenticated domains. Add as many as you like.
 - **Configuration details:** what to type in a mail app (Outlook, Apple Mail, Thunderbird, the mail app on your phone), each with a copy button:
 

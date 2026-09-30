@@ -176,6 +176,8 @@ def _page(status=200, **context):
         boxes.append({
             "id": row["id"], "email": row["email"], "domain": row["domain"], "aliases": aliases,
             "found_by": found_by, "shown": query.lower() in found_by,
+            "keep_webmail": bool(row["no_delete_webmail"]), "keep_apps": bool(row["no_delete_apps"]),
+            "kept_where": _kept_where(row["no_delete_webmail"], row["no_delete_apps"]),
             "quota": size_text(quota), "size": size, "unit": unit, "send_limit": row["send_limit_mb"],
             "used": None if in_use is None else {
                 "percent": min(100.0, in_use * 100 / quota), "text": size_text(in_use),
@@ -342,6 +344,28 @@ def change_storage(mailbox_id):
     engine_sync.after_change()
     flash(f"{mailbox['email']} now has {size_text(size)} of storage.", "success")
     return redirect(url_for("mailboxes.index"))
+
+
+@bp.post("/<int:mailbox_id>/keep")
+@login_required
+def keep_mail(mailbox_id):
+    """Mailbox settings, Disable delete: in the webmail nothing is deleted or put in the Trash
+    (webmail/mail.py); in mail apps the engine refuses erasing (engine/sync.py). Each on its own."""
+    mailbox = _mailbox(mailbox_id)
+    webmail, apps = request.form.get("webmail") == "on", request.form.get("apps") == "on"
+    db = get_db()
+    db.execute("UPDATE mailboxes SET no_delete_webmail = ?, no_delete_apps = ? WHERE id = ?", (int(webmail), int(apps), mailbox_id))
+    db.commit()
+    engine_sync.after_change()
+    where = _kept_where(webmail, apps)
+    flash(f"Deleting is now switched off for {mailbox['email']} {where}." if where
+          else f"{mailbox['email']} can delete messages again.", "success")
+    return redirect(url_for("mailboxes.index"))
+
+
+def _kept_where(webmail, apps):
+    """Where a mailbox is kept from deleting, as its card and the notice say it."""
+    return " and ".join(place for place, on in (("in the webmail", webmail), ("in mail apps", apps)) if on)
 
 
 @bp.post("/<int:mailbox_id>/sending")

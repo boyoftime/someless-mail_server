@@ -116,7 +116,9 @@ CREATE TABLE IF NOT EXISTS mailboxes (
     password_hash TEXT NOT NULL,
     password_version INTEGER NOT NULL DEFAULT 1,   -- up by one with each new password: the engine gets it then
     created_at REAL NOT NULL,
-    send_limit_mb INTEGER NOT NULL DEFAULT 50      -- the most a message it sends may carry in files (1 to 100 MB)
+    send_limit_mb INTEGER NOT NULL DEFAULT 50,     -- the most a message it sends may carry in files (1 to 100 MB)
+    no_delete_webmail INTEGER NOT NULL DEFAULT 0,  -- Disable delete: nothing deleted in the webmail (moved elsewhere, yes)
+    no_delete_apps INTEGER NOT NULL DEFAULT 0      -- and nothing erased from mail apps (the engine refuses it)
 );
 -- The webmail's sign-in lock (Settings > Miscellaneous, webmail_lock.py): so many wrong passwords
 -- in a row, then a wait
@@ -272,6 +274,8 @@ LATER_COLUMNS = [("domains", "provider", "TEXT"), ("domain_keys", "mail_host", "
                  ("webmail_settings", "reply_end", "TEXT"), ("webmail_settings", "reply_subject", "TEXT"),
                  ("webmail_settings", "reply_html", "TEXT"),
                  ("mailboxes", "send_limit_mb", "INTEGER NOT NULL DEFAULT 50"),
+                 ("mailboxes", "no_delete_webmail", "INTEGER NOT NULL DEFAULT 0"),
+                 ("mailboxes", "no_delete_apps", "INTEGER NOT NULL DEFAULT 0"),
                  ("webmail_lock", "lock_on", "INTEGER NOT NULL DEFAULT 1")]
 
 

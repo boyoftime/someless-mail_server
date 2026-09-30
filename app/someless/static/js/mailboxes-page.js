@@ -7,6 +7,7 @@
 // - The trash button asks first, in a dialog; "Delete mailbox" there sends the mailbox's form.
 // - The password rules under a password get a tick the moment each is met. When they're changed
 //   (Password rules, password-rules-dialog.js), both lists follow at once.
+// - The gear opens the mailbox's settings: Disable delete, in the webmail and in mail apps.
 // - The search box filters the list as it's typed in, by address or alias.
 // Dialogs close with Cancel, Escape or a click outside, fading away.
 (function () {
@@ -163,6 +164,12 @@
     var limit = dialog.querySelector("input[name=limit]");
     limit.value = button.dataset.limit;
     setTimeout(function () { limit.select(); }, 0);
+  });
+
+  // Mailbox settings (the gear): Disable delete, in the webmail and in mail apps, as they are now
+  shared("keep-dialog", "data-keep-for", function (dialog, button) {
+    dialog.querySelector("input[name=webmail]").checked = button.dataset.webmail === "1";
+    dialog.querySelector("input[name=apps]").checked = button.dataset.apps === "1";
   });
 
   // Delete a mailbox: ask first

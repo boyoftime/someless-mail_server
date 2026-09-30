@@ -241,6 +241,7 @@ def create_webmail_app(test_config=None):
     app.add_url_rule("/enter", "enter", enter)
     app.add_url_rule("/healthz", "healthz", healthz)
     app.register_blueprint(mail.bp)
+    app.jinja_env.globals["kept_mail"] = mail.kept_mail   # (Disable delete: the delete buttons go)
     app.register_blueprint(compose.bp)
     app.register_blueprint(settings.bp)
     app.register_blueprint(contacts.bp)

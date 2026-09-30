@@ -597,6 +597,39 @@ def create(mail, name, parent=None):
     return mail.post("/folders", json={"name": name, "parent": parent})
 
 
+def keep_mail(app, on=True):
+    """Disable delete, in the webmail (the Mailboxes page), for ceo@"""
+    with app.app_context():
+        get_db().execute("UPDATE mailboxes SET no_delete_webmail = ? WHERE email = 'ceo@pineloop.online'", (int(on),))
+        get_db().commit()
+
+
+def test_a_mailbox_kept_from_deleting_deletes_nothing_in_the_webmail(app, signed_in, jmap):
+    keep_mail(app)
+    email_id = jmap.add()
+    folder = create(signed_in, "Clients", "inbox").get_json()["key"]
+
+    refused = [do(signed_in, "delete", [email_id]), do(signed_in, "move", [email_id], to="trash"),
+               folder_do(signed_in, folder, "delete"), folder_do(signed_in, folder, "delete_all"),
+               folder_do(signed_in, "trash", "empty"), folder_do(signed_in, folder, "move", to="trash")]
+    archived = do(signed_in, "archive", [email_id])
+
+    assert [answer.status_code for answer in refused] == [403] * 6
+    assert refused[0].get_json()["problem"].startswith("Deleting is switched off for this mailbox")
+    assert archived.status_code == 200 and email_id in jmap.emails and folder[2:] in jmap.mailboxes
+
+
+def test_a_mailbox_kept_from_deleting_offers_no_deleting(app, signed_in, jmap):
+    keep_mail(app)
+    email_id = jmap.add()
+
+    page = text(signed_in.get(f"/mail/inbox/{email_id}"))
+
+    menus = re.findall(r'data-menu="([^"]*)"', page)
+    assert menus and not any(set(menu.split()) & {"delete", "delete_all", "empty"} for menu in menus)
+    assert 'data-act="delete"' not in page and "data-no-delete" in page
+
+
 def test_a_folder_is_made_inside_another(signed_in, jmap):
     answer = create(signed_in, "  Clients  ", "inbox").get_json()
 

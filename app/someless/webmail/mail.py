@@ -65,9 +65,30 @@ def _mail():
 
 
 def _tree(mail):
-    """The folders, in the order and folded as this mailbox keeps them (views.py)."""
+    """The folders, in the order and folded as this mailbox keeps them (views.py). Kept from
+    deleting (kept_mail): their menus offer none."""
     mailbox_id = g.mailbox["id"]
-    return folder_lib.load(mail, views.folders_by_name(mailbox_id), views.collapsed(mailbox_id))
+    tree = folder_lib.load(mail, views.folders_by_name(mailbox_id), views.collapsed(mailbox_id))
+    if kept_mail():
+        for folder in tree.list:
+            folder["menu"] = [action for action in folder["menu"] if action not in DELETING]
+    return tree
+
+
+# Disable delete (the panel's Mailboxes page): nothing in the mailbox is deleted or put in the Trash
+# in the webmail; moved elsewhere, yes. Its own drafts, unsent, still go when discarded.
+KEPT = ("Deleting is switched off for this mailbox by its administrator. You can move messages to "
+        "another folder, like the Archive, instead.")
+DELETING = ("delete", "delete_all", "empty")
+
+
+def kept_mail():
+    """Whether the mailbox in sight is kept from deleting (a template global too)."""
+    return bool(g.get("mailbox") is not None and g.mailbox["no_delete_webmail"])
+
+
+def _to_trash(tree, folder):
+    return folder is not None and (folder["role"] == "trash" or tree.in_trash(folder))
 
 
 def _options(folder_key):
@@ -435,9 +456,13 @@ def act():
             return {"problem": f"'{names[action]}' folder data is missing." if action in names else GONE}, 404
         if action == "move" and target["role"] in ("drafts", "sent"):
             return {"problem": f"Messages can't be moved to {target['label']}."}, 400
+    if kept_mail() and _to_trash(tree, target):
+        return {"problem": KEPT}, 403
     emails = []
     for chunk in _in_chunks(ids):
         emails += mail.call(("Email/get", {"ids": chunk, "properties": ["mailboxIds", "keywords"]}))[0]["list"]
+    if kept_mail() and action == "delete" and not all("$draft" in (email.get("keywords") or {}) for email in emails):
+        return {"problem": KEPT}, 403   # (drafts, unsent, go as ever)
     if target is not None and emails and all(set(email["mailboxIds"]) == {target["id"]} for email in emails):
         return {"counts": _counts(tree), "unread": _inbox_unread(tree), "left": False, "warning": True,
                 "message": f'Message is already in "{tree.path(target)}" folder'}
@@ -574,6 +599,8 @@ def folder_act(folder):
     chosen = tree.by_key.get(folder)
     if chosen is None:
         return {"problem": GONE}, 404
+    if kept_mail() and (action in DELETING or (action == "move" and _to_trash(tree, tree.by_key.get(data.get("to") or "")))):
+        return {"problem": KEPT}, 403
     if action not in chosen["menu"] and action not in ("move", "collapse", "expand"):
         return {"problem": f'"{chosen["label"]}" can\'t do that.'}, 400
     if action == "move" and not chosen["own"]:

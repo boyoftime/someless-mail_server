@@ -258,7 +258,14 @@
     });
   }
 
+  // Disable delete (the panel): nothing but drafts is deleted here; asked (the Delete key), it says why
+  var noDelete = shell.hasAttribute("data-no-delete");
   function deleteSome(target) {
+    if (noDelete && !allowedNow().drafts) {
+      wm.board("Deleting is switched off", "Deleting is switched off for this mailbox by its administrator. " +
+               "You can move messages to another folder, like the Archive, instead.");
+      return Promise.resolve();
+    }
     return act("delete", target);
   }
 
@@ -346,7 +353,7 @@
       { label: "Clear selection", icon: "clear-box", hidden: ticked().filter(function (r) { return !boxOf(r).hasAttribute("data-auto"); }).length === 0,
         act: function () { choose.querySelector("[data-wm-clear]").click(); } },
       "-",
-      { label: "Delete", icon: "trash", act: function () { deleteSome(target); } },
+      { label: "Delete", icon: "trash", hidden: noDelete && !allowedNow().drafts, act: function () { deleteSome(target); } },
       "-",
       { label: "Print", icon: "print", hidden: !single, act: function () { window.open(printUrl(row), "_blank", "noopener"); } },
       { label: "Download", icon: "download", hidden: !single, act: function () { download(sourceUrl(row) + "?download=1"); } },

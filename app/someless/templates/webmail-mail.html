@@ -28,7 +28,8 @@
      data-create-url="{{ url_for('mail.create_folder') }}" data-order-url="{{ url_for('mail.folder_order') }}"
      data-folder-url="{{ url_for('mail.folder_act', folder='__key__') }}"
      data-live-url="{{ request.script_root }}/live" data-sound="{{ 1 if preferences.new_mail_sound else 0 }}" data-notify="{{ 1 if preferences.notifications else 0 }}"
-     data-sound-url="{{ url_for('static', filename='sounds/new-mail.mp3') }}" data-icon-url="{{ url_for('static', filename='img/favicon.png') }}">
+     data-sound-url="{{ url_for('static', filename='sounds/new-mail.mp3') }}" data-icon-url="{{ url_for('static', filename='img/favicon.png') }}"
+     {%- if kept_mail() %} data-no-delete{% endif %}>
   <aside class="wm-side" id="wm-side" aria-label="Folders">
     <button type="button" class="wm-compose" data-wm-compose>Compose</button>
     {# the folders: their menus, folding, and messages or folders dropped on them (webmail-folders.js) #}
@@ -133,7 +134,9 @@
         {%- endif %}
         {%- if actions.archive %}<button type="button" class="wm-icon" data-act="archive" aria-label="Move to Archive" data-tip="Move to Archive">{{ icon("archive") }}</button>{% endif %}
         {%- if actions.inbox %}<button type="button" class="wm-icon" data-act="inbox" aria-label="Move to Inbox" data-tip="Move to Inbox">{{ icon("inbox") }}</button>{% endif %}
+        {%- if not kept_mail() or actions.drafts %}{# (Disable delete: none, but for drafts) #}
         <button type="button" class="wm-icon" data-act="delete" aria-label="Delete message" data-tip="Delete message">{{ icon("trash") }}</button>
+        {%- endif %}
         {%- if actions.not_spam %}<button type="button" class="wm-icon" data-act="notspam" aria-label="Not spam" data-tip="Not spam">{{ icon("not-spam") }}</button>
         {%- elif actions.spam %}<button type="button" class="wm-icon" data-act="spam" aria-label="Mark as spam" data-tip="Mark as spam. Our algorithms tailor your inbox to you and your selections.">{{ icon("spam") }}</button>{% endif %}
       </div>
