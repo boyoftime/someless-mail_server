@@ -22,8 +22,8 @@ from flask_wtf import CSRFProtect
 from flask_wtf.csrf import CSRFError, generate_csrf
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from .. import (DEFAULT_THEME, FLOAT_ICONS, STATIC_CACHE_SECONDS, THEMES, VERSION, db, fingerprint_static_links,
-                mail_password, webmail_lock, webmail_site)
+from .. import (FLOAT_ICONS, STATIC_CACHE_SECONDS, VERSION, db, fingerprint_static_links, mail_password, picked_theme,
+                webmail_lock, webmail_site)
 from ..db import get_db
 from . import accounts
 
@@ -261,7 +261,6 @@ def create_webmail_app(test_config=None):
 
     @app.context_processor
     def inject_globals():
-        theme = request.cookies.get("theme")
-        return {"version": VERSION, "theme": theme if theme in THEMES else DEFAULT_THEME, "float_icons": FLOAT_ICONS}
+        return {"version": VERSION, "theme": picked_theme(request.cookies), "float_icons": FLOAT_ICONS}
 
     return app

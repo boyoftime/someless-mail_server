@@ -10,10 +10,19 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 VERSION = "1.0.0"
 
-# The admin picks the theme in the side menu (theme.js keeps it in the "theme" cookie).
+# The admin picks the theme in the side menu (theme.js keeps it in the "someless_theme" cookie).
 # Every page is drawn in it from the start, the login page after logging out included.
 THEMES = ("dark", "light")
 DEFAULT_THEME = "dark"
+
+
+def picked_theme(cookies):
+    """The theme picked, for the panel and the webmail alike: someless_theme, kept for secure and
+    plain pages both (the webmail on http://...:17090 beside the panel on https shares its
+    cookies, and a secure-only one never reached it: it went back to dark on each refresh), or
+    theme, as an older switch kept it; else dark."""
+    theme = cookies.get("someless_theme") or cookies.get("theme")
+    return theme if theme in THEMES else DEFAULT_THEME
 
 # Mail icons that float behind the login card (static/img/float/<name>.webp).
 FLOAT_ICONS = ["gmail-m", "gmail-envelope", "mail-app", "inbox", "paper-plane", "yahoo"]
@@ -152,10 +161,9 @@ def create_app(test_config=None):
 
     @app.context_processor
     def inject_globals():
-        theme = request.cookies.get("theme")
         return {
             "version": VERSION,
-            "theme": theme if theme in THEMES else DEFAULT_THEME,
+            "theme": picked_theme(request.cookies),
             "float_icons": FLOAT_ICONS,
             "preload_files": PRELOAD_FILES,
             "avatar_url": avatar.url,   # the profile picture, where there is one (shell.html)

@@ -1,6 +1,8 @@
 // The theme switch in the side menu: dark (the default) or light, for every page. The choice
-// is kept in the "theme" cookie, so the server draws each page in it from the start, the
-// login page after logging out included. Switching recolours the page on the spot, with a
+// is kept in the "someless_theme" cookie, so the server draws each page in it from the start, the
+// login page after logging out included. It's kept for plain http pages as well as secure ones:
+// the webmail on http://...:17090 shares its cookies with the panel on https, and a secure-only
+// cookie never reached it (someless/__init__.py, picked_theme). Switching recolours the page on the spot, with a
 // soft cross-fade where the browser can do one; animations that have a light version follow
 // along (lottie-autoplay.js listens for "someless:theme").
 (function () {
@@ -14,8 +16,9 @@
     root.dataset.theme = theme;
     if (meta) meta.content = theme;
     toggle.setAttribute("aria-checked", theme === "dark" ? "true" : "false");
-    document.cookie = "theme=" + theme + "; path=/; max-age=31536000; samesite=lax" +
-      (location.protocol === "https:" ? "; secure" : "");
+    document.cookie = "someless_theme=" + theme + "; path=/; max-age=31536000; samesite=lax";
+    // (the older cookie, kept for secure pages only, goes where it can: from a secure page)
+    if (location.protocol === "https:") document.cookie = "theme=; path=/; max-age=0; samesite=lax; secure";
     document.dispatchEvent(new CustomEvent("someless:theme", { detail: theme }));
   }
 

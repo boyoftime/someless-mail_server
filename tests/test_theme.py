@@ -54,6 +54,22 @@ def test_switch_shows_light_as_off(client, login):
     assert re.search(r'<button [^>]*data-theme-switch[^>]*aria-checked="false"', html)
 
 
+def test_the_theme_is_kept_where_http_and_https_share_the_address(client, app):
+    """The webmail on http://panel.example.com:17090 beside the panel on https: a cookie kept for
+    secure pages only never reaches the webmail, and it can't be written over from there, so the
+    choice went back to dark on every refresh. It's kept in someless_theme now, for both; theme,
+    as it was, still counts until the switch is used."""
+    from someless.webmail import create_webmail_app
+    webmail = create_webmail_app({"TESTING": True, "DATA_DIR": app.config["DATA_DIR"]}).test_client()
+    for one in (client, webmail):
+        one.set_cookie("theme", "dark")
+        one.set_cookie("someless_theme", "light")
+        assert theme_of(one.get("/login").get_data(as_text=True)) == "light"   # (the new one first)
+    script = client.get("/static/js/theme.js").get_data(as_text=True)
+    assert '"someless_theme=" + theme + "; path=/; max-age=31536000; samesite=lax"' in script
+    assert "secure" not in script.split("someless_theme=")[1].split(";\n")[0]   # (for http and https alike)
+
+
 def test_colours_follow_the_picked_theme_not_the_device(client):
     css = client.get("/static/css/style.css").get_data(as_text=True)
     lottie = client.get("/static/js/lottie-autoplay.js").get_data(as_text=True)
