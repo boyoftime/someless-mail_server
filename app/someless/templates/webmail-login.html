@@ -15,9 +15,16 @@
       <img class="auth-logo" src="{{ url_for('static', filename='img/logo.webp') }}" alt="Someless Mail" width="96" height="96">
       <form method="post" action="{{ url_for('login') }}" class="form" novalidate>
         <div class="form-head">
+          {%- if adding %}
+          {# Add another account (webmail/accounts.py): once in, a tap on the account menu switches to it #}
+          <h1 id="webmail-login-title" class="auth-title">Add another account</h1>
+          <p class="auth-hint">Log in to another mailbox once. Then switch between them from the account menu, without logging out.</p>
+          {%- else %}
           <h1 id="webmail-login-title" class="auth-title">Log in to your mailbox</h1>
           <p class="auth-hint">Read and send your mail, with your email address and its password.</p>
+          {%- endif %}
         </div>
+        {%- if adding %}<input type="hidden" name="add" value="1">{% endif %}
         {% if problem %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't log you in">{{ problem }}</p>{% endif %}
         {% if notice and not problem %}<p class="alert" role="status">{{ notice }}</p>{% endif %}
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -35,10 +42,13 @@
             </button>
           </div>
         </div>
-        <button class="button button-block" type="submit" data-busy-label="Logging in…">
+        <button class="button button-block" type="submit" data-busy-label="{{ 'Adding…' if adding else 'Logging in…' }}">
           <span class="button-spinner" aria-hidden="true"></span>
-          <span class="button-label">Log in</span>
+          <span class="button-label">{{ "Add account" if adding else "Log in" }}</span>
         </button>
+        {%- if adding %}
+        <a class="button button-quiet button-block auth-back" href="{{ url_for('mail.home') }}">Cancel</a>
+        {%- endif %}
       </form>
     </section>
   </div>

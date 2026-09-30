@@ -3,7 +3,9 @@
 // anything else changed (read on a phone, moved in a mail app). New mail rings (the new-mail
 // sound, unless it's switched off in Settings), shows the computer's own notification when that's
 // switched on and the tab is out of sight, and comes in at the top of the list; the counts and
-// the tab's title follow. When the connection drops, it tries again, a little later each time.
+// the tab's title follow. What's deleted or moved on another device leaves the list (and the
+// reading pane, if it's open there), and the folders follow too. When the connection drops, it
+// tries again, a little later each time, and at once when the network is back; then it catches up.
 (function () {
   var shell = document.querySelector("[data-wm-shell]");
   if (!shell || !window.WebSocket || !window.wm) return;
@@ -51,7 +53,11 @@
   function refresh(soon) {
     clearTimeout(refreshTimer);
     refreshTimer = setTimeout(function () {
-      if (wm.list) wm.list.refresh({ quiet: true }).catch(function () {});
+      if (!wm.list) return;
+      wm.list.refresh({ quiet: true }).catch(function (error) {
+        // the folder in sight deleted on another device: the Inbox, saying so
+        if (error && error.status === 404) location.assign(wm.root + "/mail/inbox?gone=folder");
+      });
     }, soon ? 150 : 600);
   }
 
@@ -94,15 +100,19 @@
     setTimeout(connect, Math.min(30000, 1000 * Math.pow(2, Math.min(tries, 5))));
   }
 
-  // back to the tab after a while (a laptop woken up): brought up to date
-  document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState !== "visible") return;
+  // back to the tab after a while (a laptop woken up), or the network back: connected again at
+  // once, and brought up to date (what came, what went, the folders)
+  function again() {
     if (!socket || socket.readyState > 1) {
       tries = 0;
       connect();
     }
     refresh(true);
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") again();
   });
+  window.addEventListener("online", again);
 
   // the preferences, as Settings changes them (webmail-settings.js)
   window.wm.live = {

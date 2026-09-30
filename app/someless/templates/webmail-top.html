@@ -74,6 +74,27 @@
             </button>
           </p>
         </div>
+        {#- the accounts at hand (webmail/accounts.py): the one signed in with, then the ones it added;
+            the one in sight ticked; a tap on another switches to it (webmail-app.js) #}
+        <div class="wm-accounts" data-wm-accounts data-unread-url="{{ url_for('accounts.unread') }}">
+          <ul class="wm-account-list">
+            {%- for one in account_card() %}
+            <li class="wm-account-item">
+              <a class="wm-switch-account{% if one.active %} is-active{% endif %}" href="{{ one.url }}" data-wm-switch data-id="{{ one.id }}" data-email="{{ one.email }}"{% if one.active %} aria-current="true"{% endif %}>
+                <span class="wm-account-mini" style="--hue: {{ one.hue }};" aria-hidden="true">{{ one.initial }}</span>
+                <span class="wm-account-who"><span class="wm-account-who-name">{{ one.name }}</span><span class="wm-account-who-email">{{ one.email }}</span></span>
+                <span class="wm-account-unread" data-wm-unread hidden></span>
+                {%- if one.active %}<span class="wm-account-tick" role="img" aria-label="In use">{{ icon("check") }}</span>{% endif %}
+              </a>
+              {%- if not one.own and not one.active %}
+              <button type="button" class="wm-icon wm-mini wm-account-remove" data-wm-remove-account data-url="{{ url_for('accounts.remove', mailbox_id=one.id) }}"
+                      data-email="{{ one.email }}" aria-label="Take {{ one.email }} off this list" data-tip="Take off this list">{{ icon("close") }}</button>
+              {%- endif %}
+            </li>
+            {%- endfor %}
+          </ul>
+          <a class="wm-account-row wm-add-account" href="{{ url_for('login', add=1) }}">{{ icon("user-plus") }}<span>Add another account</span></a>
+        </div>
         <div class="wm-account-rows">
           <a class="wm-account-row" href="{{ url_for('settings.index') }}" data-wm-page-link>{{ icon("settings") }}<span>Settings</span></a>
           <button type="button" class="wm-account-row wm-theme" role="switch" data-theme-switch aria-checked="{{ 'true' if theme == 'dark' else 'false' }}">

@@ -3562,6 +3562,9 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
 /* Mailboxes (mailboxes.html): a card per inbox, in teal, with its storage as a bar that fills
    from teal to blue, and its aliases as chips. The dialogs are the domains' blue ones. */
 .mailbox-list { display: grid; gap: 0.9rem; margin-top: 1.25rem; }
+.mailbox-search { margin: 1.25rem 0 0; }
+.mailbox-search + .mailbox-list { margin-top: 1rem; }
+.mailbox-no-match { margin: 0; color: var(--muted); }
 .mailbox-row {
   --tone: #14b8a6;
   border: 1px solid var(--line);

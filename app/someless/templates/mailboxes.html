@@ -6,6 +6,8 @@
 {% macro icon(name) %}
   {%- if name == "plus" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  {%- elif name == "search" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
   {%- elif name == "inbox" -%}
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 13.5l2.6-7.3a2 2 0 0 1 1.9-1.2h8a2 2 0 0 1 1.9 1.2l2.6 7.3"/><path d="M3.5 13.5V18a1.5 1.5 0 0 0 1.5 1.5h14a1.5 1.5 0 0 0 1.5-1.5v-4.5h-5l-1.5 2.5h-4l-1.5-2.5z"/></svg>
   {%- elif name == "mail" -%}
@@ -172,9 +174,16 @@
 {% endfor %}
 
 {% if mailboxes %}
+{# Filters as you type (mailboxes-page.js); Enter asks the server, which works without JavaScript #}
+<form method="get" class="domain-search mailbox-search" role="search" data-mailbox-search>
+  <label class="visually-hidden" for="mailbox-search">Search mailboxes by address or alias</label>
+  <span class="input-icon">{{ icon("search") }}</span>
+  <input id="mailbox-search" name="q" type="search" placeholder="Search mailboxes by address or alias" autocomplete="off" value="{{ query }}">
+</form>
+
 <div class="mailbox-list">
   {% for box in mailboxes %}
-  <article class="mailbox-row" data-mailbox-id="{{ box.id }}">
+  <article class="mailbox-row" data-mailbox-id="{{ box.id }}" data-mailbox="{{ box.found_by }}"{% if not box.shown %} hidden{% endif %}>
     <div class="mailbox-head">
       <span class="mailbox-badge" aria-hidden="true">{{ icon("inbox") }}</span>
       <h2 class="mailbox-who">{{ box.email }}</h2>
@@ -222,6 +231,7 @@
     </div>
   </article>
   {% endfor %}
+  <p class="mailbox-no-match"{% if mailboxes | selectattr("shown") | list %} hidden{% endif %}>No mailboxes match “<span data-search-text>{{ query }}</span>”.</p>
 </div>
 {% elif domains %}
 <section class="empty-state" aria-labelledby="no-mailboxes-title">

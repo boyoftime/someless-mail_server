@@ -99,3 +99,5 @@ def forget(mailbox_id):
     database = get_db()
     for table in ("webmail_views", "webmail_settings", "webmail_signatures", "webmail_rules", "webmail_logins"):
         database.execute(f"DELETE FROM {table} WHERE mailbox_id = ?", (mailbox_id,))
+    # its list of other accounts, and its place on the others' lists
+    database.execute("DELETE FROM webmail_accounts WHERE owner_id = ? OR mailbox_id = ?", (mailbox_id, mailbox_id))

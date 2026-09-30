@@ -11,12 +11,12 @@
   var asking = null;
 
   function ours(url) {
-    return url.origin === location.origin && /^\/(mail\/[^/]+(\/[^/]+)?|search)$/.test(url.pathname);
+    return url.origin === location.origin && /^(\/u\/\d+)?\/(mail\/[^/]+(\/[^/]+)?|search)$/.test(url.pathname);
   }
 
   // the folder a /mail/ address is about ("search" for the results), and the message, if any
   function parts(url) {
-    var match = /^\/mail\/([^/]+)(?:\/([^/]+))?$/.exec(url.pathname);
+    var match = /^(?:\/u\/\d+)?\/mail\/([^/]+)(?:\/([^/]+))?$/.exec(url.pathname);   // (the account's own address before it)
     if (match) return { folder: decodeURIComponent(match[1]), message: match[2] ? decodeURIComponent(match[2]) : null };
     return { folder: "search", message: null };
   }

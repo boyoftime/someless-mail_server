@@ -236,13 +236,17 @@ def _page(folder_key, email_id=None, text=None, scope=None):
     tree = _tree(mail)
     searching = folder_key == SEARCH
     folder = tree.by_key.get(scope) if searching else tree.by_key.get(folder_key)
+    # gone meanwhile (deleted or moved from another device, a draft saved again under a new id):
+    # its folder, or the Inbox, saying so (webmail-read.js), never a bare error page
     if not searching and folder is None:
-        abort(404)
+        return redirect(url_for("mail.folder", folder="inbox", gone="folder"))
     opened = None
     if email_id is not None:
         opened = _open(mail, tree, email_id)
         if opened is None:
-            abort(404)
+            if searching:
+                return redirect(url_for("mail.search", q=text or "", **({"in": scope} if scope else {}), gone="message"))
+            return redirect(url_for("mail.folder", folder=folder_key, gone="message"))
     sort, filters = _options(folder_key)
     rows, after, total = _list(mail, tree, folder, sort, filters, text=text if searching else None)
     next_url = _list_url(folder_key, after, text, scope) if after else None
@@ -322,9 +326,12 @@ def rows(folder):
         found, after, total = _list(mail, tree, shown_folder, sort, filters, anchor=request.args.get("after") or None, text=text)
     except MailError:
         return {"problem": "Not a message in the list."}, 400
-    return {"html": _rows_html(found, folder, _search_args(text, scope) if searching else None),
-            "next": _list_url(folder, after, text, scope) if after else None, "total": total,
-            "counts": _counts(tree), "unread": _inbox_unread(tree)}
+    answer = {"html": _rows_html(found, folder, _search_args(text, scope) if searching else None),
+              "next": _list_url(folder, after, text, scope) if after else None, "total": total,
+              "counts": _counts(tree), "unread": _inbox_unread(tree)}
+    if not request.args.get("after"):   # the list from its start (a refresh, live): the folders as they are now too
+        answer["folders"] = _folders_html(tree, None if searching else folder)
+    return answer
 
 
 @bp.post("/view/<folder>")

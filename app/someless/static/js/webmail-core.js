@@ -16,7 +16,10 @@
 //     of the folder chosen, or null
 //   wm.counts(counts, unread) : the folders' counts, and the Inbox's unread in the tab's title
 //   wm.folders() : the folders as the side column lists them
+//   wm.root : the start of the tab's addresses: "/u/<id>" for the account it shows (webmail/
+//     accounts.py), or "" at a plain address; an address a script makes starts with it
 (function () {
+  var root = (location.pathname.match(/^\/u\/\d+(?=\/|$)/) || [""])[0];
   var csrf = document.querySelector('meta[name="csrf-token"]');
   var toasts = document.querySelector("[data-wm-toasts]");
   var icons = document.getElementById("wm-icons");
@@ -46,6 +49,11 @@
         if (response.status === 401 && answer.login) {
           location.href = answer.login;
           return new Promise(function () {});
+        }
+        if (response.status === 400 && answer.csrf && answer.token && !options.retried) {
+          // the page's token wasn't taken: with the fresh one it came with, again at once (nobody's stopped)
+          if (csrf) csrf.content = answer.token;
+          return request(url, Object.assign({}, options, { retried: true }));
         }
         if (!response.ok) {
           var problem = answer.problem || "Something went wrong. Try to reload the page.";
@@ -927,7 +935,7 @@
   });
 
   window.wm = {
-    request: request, toast: toast, board: board, icon: icon, copy: copy, loading: loading, spinner: spinner, menu: menu,
+    root: root, request: request, toast: toast, board: board, icon: icon, copy: copy, loading: loading, spinner: spinner, menu: menu,
     closeMenus: closeMenus,
     confirm: confirmDialog, pickFolder: pickFolder, folders: folders, counts: counts, setTitle: setTitle,
     currentFolder: currentFolder, reduceMotion: reduceMotion, frameCss: frameCss, watchPictures: watchPictures,

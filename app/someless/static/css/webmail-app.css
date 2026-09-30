@@ -329,6 +329,32 @@ body.webmail-app .wm-copy { position: relative; flex: none; width: 26px; height:
 }
 .wm-account-row:hover { background: var(--wm-hover); }
 .wm-account-row svg { flex: none; width: 19px; height: 19px; }
+/* the accounts at hand (webmail/accounts.py): each in its own colour, with its unread mail; the
+   one in sight with a bright blue tick; another a tap away */
+.wm-accounts { padding: 0.35rem 0; border-top: 1px solid var(--wm-line); }
+.wm-account-list { margin: 0; padding: 0; list-style: none; }
+.wm-account-item { position: relative; }
+.wm-switch-account { display: flex; align-items: center; gap: 0.7rem; padding: 0.55rem 2.7rem 0.55rem 1.1rem; color: var(--wm-ink); text-decoration: none; transition: background-color 0.12s ease; }
+.wm-switch-account:hover { background: var(--wm-hover); }
+.wm-switch-account.is-active { padding-right: 1.1rem; background: color-mix(in srgb, var(--wm-blue) 11%, transparent); cursor: default; }
+.wm-account-mini { display: grid; flex: none; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: hsl(var(--hue, 220) 52% 44%); color: #fff; font-size: 0.9rem; font-weight: 700; }
+:root[data-theme="dark"] .wm-account-mini { background: hsl(var(--hue, 220) 46% 36%); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+.wm-account-who { display: grid; flex: 1; min-width: 0; line-height: 1.3; }
+.wm-account-who-name { overflow: hidden; font-size: 0.86rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.wm-account-who-email { overflow: hidden; color: var(--wm-soft); font-size: 0.76rem; text-overflow: ellipsis; white-space: nowrap; }
+.wm-account-unread { flex: none; min-width: 1.4rem; padding: 0.08rem 0.42rem; border-radius: 999px; background: var(--wm-blue); color: #fff; font-size: 0.7rem; font-weight: 700; text-align: center; }
+.wm-account-unread[hidden] { display: none; }
+.wm-account-tick { display: grid; flex: none; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #2f8bff; color: #fff; box-shadow: var(--wm-lit-glow-small); animation: wm-tick-in 0.35s var(--wm-ease) both; }
+.wm-account-tick svg { width: 13px; height: 13px; stroke-width: 3; }
+@keyframes wm-tick-in { from { opacity: 0; transform: scale(0.4); } }
+.wm-account-remove { position: absolute; top: 50%; right: 0.6rem; width: 26px; height: 26px; margin-top: -13px; color: var(--wm-soft); opacity: 0; transition: opacity 0.12s ease; }
+.wm-account-item:hover .wm-account-remove, .wm-account-remove:focus-visible { opacity: 1; }
+@media (hover: none) { .wm-account-remove { opacity: 1; } }
+.wm-add-account { color: var(--wm-link); font-weight: 600; }
+/* switching (webmail-app.js): the page fades behind the turning arrows, "Switching to …" under them */
+.wm-switching { position: fixed; inset: 0; z-index: 200; background: color-mix(in srgb, var(--wm-reader) 72%, transparent); backdrop-filter: blur(6px); opacity: 0; transition: opacity 0.25s ease; }
+.wm-switching.is-in { opacity: 1; }
+.wm-switching .wm-loader-label { color: var(--wm-ink); font-size: 0.95rem; }
 :root[data-theme="dark"] .wm-theme-sun, :root:not([data-theme="dark"]) .wm-theme-moon { display: none; }
 .wm-switch { position: relative; flex: none; width: 36px; height: 20px; margin-left: auto; border-radius: 999px; background: var(--wm-bar); transition: background-color 0.2s ease; }
 .wm-switch span { position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); transition: transform 0.22s var(--menu-ease); }

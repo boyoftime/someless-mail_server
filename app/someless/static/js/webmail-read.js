@@ -259,6 +259,27 @@
     document.dispatchEvent(new CustomEvent("wm:closed"));
   }
 
+  // Deleted or moved on another device (or in a mail app) while it was open here: it closes,
+  // saying so, as the list is brought up to date (webmail-list.js, live: webmail-live.js)
+  var GONE_ELSEWHERE = "That message was moved or deleted on another device.";
+  document.addEventListener("wm:gone-elsewhere", function (event) {
+    if (openId && event.detail.ids.indexOf(openId) >= 0 && !asking) {
+      close();
+      history.replaceState(history.state, "", reader.dataset.home);
+      wm.toast(GONE_ELSEWHERE, { warning: true });
+    }
+  });
+  // opened at the address of one gone meanwhile (a bookmark, a refresh): its folder, saying so
+  (function () {
+    var address = new URL(location.href);
+    var gone = address.searchParams.get("gone");
+    if (!gone) return;
+    address.searchParams.delete("gone");
+    history.replaceState(history.state, "", address.pathname + address.search + address.hash);
+    wm.toast(gone === "folder" ? "That folder isn't there any more: it was deleted or renamed, maybe on another device."
+                               : GONE_ELSEWHERE, { warning: true });
+  })();
+
   function open(url, id, remember) {
     if (asking) asking.abort();
     var ask = asking = new AbortController();
@@ -281,10 +302,11 @@
         reader.classList.remove("is-loading");
         wm.loading(reader, false);
         pickOut(openId);   // back to the one that's open
-        if (error.status === 404) {
-          wm.board("This message isn't there any more", "It was moved or deleted, maybe from another app.");
+        if (error.status === 404) {   // gone meanwhile, elsewhere: out of the list, and the list brought up to date
+          wm.toast(GONE_ELSEWHERE, { warning: true });
           var row = rowFor(id);
           if (row) wm.list.remove([id]);
+          if (wm.list) wm.list.refresh({ quiet: true }).catch(function () {});
         } else {
           wm.board("Error occured. Email has not been loaded", error.problem || "The webmail didn't answer. Check your connection and try again.");
         }

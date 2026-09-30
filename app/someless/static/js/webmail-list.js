@@ -148,6 +148,20 @@
     holder.innerHTML = answer.html;
     var fresh = Array.prototype.slice.call(holder.content.querySelectorAll(".wm-message"));
     var came = [];
+    // Gone meanwhile (deleted or moved on another device, or in a mail app): out of the list, as
+    // far as the fresh piece reaches (the whole list, when it's all of the folder); rows further
+    // down, loaded as the list was scrolled, are left as they are
+    var freshIds = {};
+    fresh.forEach(function (row) { freshIds[row.dataset.id] = true; });
+    var here = rows();
+    var reach = -1;
+    here.forEach(function (row, index) { if (freshIds[row.dataset.id]) reach = index; });
+    var gone = here.filter(function (row, index) { return !freshIds[row.dataset.id] && (!answer.next || index < reach); })
+                   .map(function (row) { return row.dataset.id; });
+    if (gone.length) {
+      remove(gone);
+      document.dispatchEvent(new CustomEvent("wm:gone-elsewhere", { detail: { ids: gone } }));
+    }
     fresh.forEach(function (row, index) {
       var there = rowFor(row.dataset.id);
       if (there) {
@@ -193,6 +207,9 @@
     return wm.request(firstPiece(), { quiet: !!options.quiet })
       .then(function (answer) {
         wm.counts(answer.counts, answer.unread);
+        // the folders as they are now (made, renamed or deleted on another device): the rows stay
+        // as they are when they're the same (webmail-folders.js)
+        if (answer.folders && wm.folderActions) wm.folderActions.put(answer.folders);
         var came = merge(answer);
         document.dispatchEvent(new CustomEvent("wm:refreshed", { detail: { came: came } }));
         return came;

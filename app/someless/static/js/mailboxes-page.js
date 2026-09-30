@@ -7,6 +7,7 @@
 // - The trash button asks first, in a dialog; "Delete mailbox" there sends the mailbox's form.
 // - The password rules under a password get a tick the moment each is met. When they're changed
 //   (Password rules, password-rules-dialog.js), both lists follow at once.
+// - The search box filters the list as it's typed in, by address or alias.
 // Dialogs close with Cancel, Escape or a click outside, fading away.
 (function () {
   var main = document.getElementById("app-main") || document; // the page, not the side menu's dialog
@@ -192,5 +193,23 @@
     reopen.showModal();
     focusFirst(reopen, "input:not([type=hidden])");
     if (window.somelessBoard) window.somelessBoard.fromPage(main);
+  }
+
+  // Search as you type: by address or alias
+  var search = main.querySelector("[data-mailbox-search] input");
+  if (search) {
+    var boxes = main.querySelectorAll(".mailbox-row");
+    var none = main.querySelector(".mailbox-no-match");
+    search.addEventListener("input", function () {
+      var query = search.value.trim().toLowerCase();
+      var shown = 0;
+      boxes.forEach(function (box) {
+        var match = box.dataset.mailbox.indexOf(query) !== -1;
+        box.hidden = !match;
+        if (match) shown += 1;
+      });
+      none.hidden = shown > 0;
+      none.querySelector("[data-search-text]").textContent = search.value.trim();
+    });
   }
 })();

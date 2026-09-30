@@ -897,7 +897,7 @@
     var typed = peopleInput.value.trim();
     if (!typed) return;
     suggestTimer = setTimeout(function () {
-      wm.request("/compose/suggest?q=" + encodeURIComponent(typed), { quiet: true }).then(function (answer) {
+      wm.request(wm.root + "/compose/suggest?q=" + encodeURIComponent(typed), { quiet: true }).then(function (answer) {
         if (peopleInput.value.trim() !== typed || !answer.people.length) return;
         wm.menu(peopleInput, answer.people.slice(0, 6).map(function (person) {
           return { label: person.name ? person.name + " <" + person.email + ">" : person.email, icon: "user",

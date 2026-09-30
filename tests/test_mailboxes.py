@@ -189,6 +189,34 @@ def test_edit_storage_starts_from_the_size_as_it_was_typed(app, client, login):
     assert sorted(found) == [("a", "15", "GB"), ("b", "14.87", "GB"), ("c", "500", "MB"), ("d", "1.5", "GB")]
 
 
+def test_mailboxes_are_searched_by_address(app, client, login):
+    authenticated_domain(app)
+    login()
+    for local in ("amy", "zed"):
+        create(client, local=local)
+
+    page = text(client.get("/mailboxes?q=ZED"))
+
+    assert "data-mailbox-search" in page and 'value="ZED"' in page
+    assert re.search(r'data-mailbox="amy@pineloop\.online[^"]*" hidden', page)   # (filtered out)
+    assert re.search(r'data-mailbox="zed@pineloop\.online[^"]*">', page)
+    assert re.search(r'class="mailbox-no-match" hidden', page)
+
+
+def test_a_mailbox_is_found_by_its_alias_and_a_search_finding_none_says_so(app, client, login):
+    authenticated_domain(app)
+    login()
+    create(client, local="amy")
+    box = rows(app)[0]
+    client.post(f"/mailboxes/{box['id']}/aliases", data={"local": "hello", "domain": "pineloop.online"})
+
+    found = text(client.get("/mailboxes?q=hello"))
+    none = text(client.get("/mailboxes?q=nobody"))
+
+    assert re.search(r'data-mailbox="amy@pineloop\.online hello@pineloop\.online">', found)
+    assert re.search(r'class="mailbox-no-match">No mailboxes match “<span data-search-text>nobody</span>”', none)
+
+
 def test_the_newest_mailbox_is_listed_first(app, client, login):
     authenticated_domain(app)
     login()

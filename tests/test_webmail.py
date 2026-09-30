@@ -224,6 +224,31 @@ def test_its_scripts_send_the_token_too(app, jmap, mailbox):
     assert done.status_code == 200 and "$seen" in jmap.emails[email_id]["keywords"]
 
 
+def test_a_page_left_open_for_hours_keeps_working(app):
+    """The token on a mail page lasts as long as the sign-in, however long the page is open."""
+    webmail = create_webmail_app({"TESTING": True, "DATA_DIR": app.config["DATA_DIR"]})
+    assert webmail.config["WTF_CSRF_TIME_LIMIT"] is None
+
+
+def test_a_call_whose_token_went_stale_gets_a_fresh_one_and_goes_again(app, jmap, mailbox):
+    webmail = create_webmail_app({"TESTING": True, "DATA_DIR": app.config["DATA_DIR"], "JMAP": lambda email: jmap})
+    client = webmail.test_client()
+    login_page = text(client.get("/login"))
+    token = re.search(r'name="csrf_token" [^>]*value="([^"]+)"', login_page).group(1)
+    client.post("/login", data={"email": "ceo@pineloop.online", "password": PASSWORD, "csrf_token": token})
+    email_id = jmap.add()
+
+    stale = client.post("/do", json={"action": "read", "ids": [email_id]}, headers={"X-CSRFToken": "stale"})
+    answer = stale.get_json()
+    again = client.post("/do", json={"action": "read", "ids": [email_id]}, headers={"X-CSRFToken": answer["token"]})
+
+    assert stale.status_code == 400 and answer["csrf"] is True
+    assert again.status_code == 200 and "$seen" in jmap.emails[email_id]["keywords"]
+    # (the page's scripts do so by themselves: webmail-core.js)
+    core = client.get("/static/js/webmail-core.js").get_data(as_text=True)
+    assert "answer.csrf" in core and "retried" in core
+
+
 def test_a_sign_in_page_left_open_too_long_asks_again_nicely(app):
     """Its form's token runs out after an hour: the page says to sign in again, on its own look."""
     webmail = create_webmail_app({"TESTING": True, "DATA_DIR": app.config["DATA_DIR"]})
@@ -511,8 +536,10 @@ def test_the_folders_are_privateemails(signed_in, jmap):
     assert re.search(r'<div class="wm-folder is-current"[^>]*data-folder="inbox"', page)
 
 
-def test_a_folder_that_isnt_there_is_not_found(signed_in):
-    assert signed_in.get("/mail/f-nope").status_code == 404
+def test_a_folder_that_isnt_there_opens_the_inbox(signed_in):
+    """(deleted from another device meanwhile, a bookmark to it): the Inbox, saying so, never a bare error page"""
+    response = signed_in.get("/mail/f-nope")
+    assert response.status_code == 302 and response.headers["Location"] == "/mail/inbox?gone=folder"
 
 
 def test_the_mailboxs_own_folders_follow_with_theirs_inside(signed_in, jmap):
@@ -939,8 +966,31 @@ def test_the_reading_panes_buttons_are_privateemails(signed_in, jmap):
     assert tools("archive", archived)[5:7] == ["inbox", "delete"]
 
 
-def test_a_message_that_isnt_there_is_not_found(signed_in):
-    assert signed_in.get("/mail/inbox/nope").status_code == 404
+def test_a_message_that_isnt_there_opens_its_folder(signed_in):
+    """(deleted or moved from another device, a draft saved again under a new id): its folder, saying so"""
+    response = signed_in.get("/mail/drafts/nope")
+    assert response.status_code == 302 and response.headers["Location"] == "/mail/drafts?gone=message"
+    assert signed_in.get("/mail/inbox/nope", headers=JSON).status_code == 404   # (the reading pane's own ask: it says so itself)
+
+
+def test_the_list_brings_the_folders_as_they_are_now(signed_in, jmap):
+    """(a folder made, renamed or deleted on another device shows at the next live refresh)"""
+    signed_in.get("/mail/inbox")
+    jmap.add_mailbox("Invoices 2027")
+
+    first = signed_in.get("/list/inbox", headers=JSON).get_json()
+
+    assert "Invoices 2027" in first["folders"]
+
+
+def test_the_list_takes_out_what_went_elsewhere(signed_in):
+    """Live (webmail-live.js): a refresh brings what came, and takes out what was deleted or moved
+    on another device, as far as the fresh piece of the list reaches; the open message, if it
+    went, closes, saying so (webmail-read.js)."""
+    script = signed_in.get("/static/js/webmail-list.js").get_data(as_text=True)
+    reader = signed_in.get("/static/js/webmail-read.js").get_data(as_text=True)
+    assert "wm:gone-elsewhere" in script and "wm:gone-elsewhere" in reader
+    assert "moved or deleted on another device" in reader
     assert signed_in.get("/mail/inbox/nope", headers=JSON).get_json() == {"problem": "This message isn't there any more."}
 
 

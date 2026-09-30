@@ -19,14 +19,15 @@ from pathlib import Path
 from flask import Flask, g, redirect, render_template, request, session, url_for
 from markupsafe import Markup, escape
 from flask_wtf import CSRFProtect
-from flask_wtf.csrf import CSRFError
+from flask_wtf.csrf import CSRFError, generate_csrf
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .. import (DEFAULT_THEME, FLOAT_ICONS, STATIC_CACHE_SECONDS, THEMES, VERSION, db, fingerprint_static_links,
                 mail_password, webmail_lock, webmail_site)
 from ..db import get_db
+from . import accounts
 
-WRONG = "The email or password is wrong."
+WRONG ="The email or password is wrong."
 LEFT_OPEN = "This page was open for a long time. Log in again."
 # checked when the address isn't a mailbox, so a wrong address takes as long as a wrong password
 _DUMMY_HASH = mail_password.hash_password(secrets.token_hex(16))
@@ -68,8 +69,10 @@ def _forget_tries(email):
 
 
 def _load_mailbox():
-    """The logged-in mailbox, while its password is the one it logged in with."""
-    g.mailbox = None
+    """The mailbox this request is for: the one signed in with, while its password is the one it
+    signed in with, or one on its list (accounts.py): the tab's own (/u/<id>/...), else the one
+    used last. g.mailbox is it; g.owner the one signed in with; g.accounts all of them."""
+    g.mailbox, g.owner, g.accounts, g.account_gone = None, None, [], False
     if request.endpoint in ("static", "healthz"):
         return
     mailbox_id = session.get("mailbox_id")
@@ -79,16 +82,39 @@ def _load_mailbox():
     if row is None or row["password_version"] != session.get("password_version"):
         session.clear()   # deleted, or its password changed: log in again
         return
-    g.mailbox = row
+    g.owner = row
+    g.accounts = [row, *accounts.linked(row["id"])]
+    by_id = {one["id"]: one for one in g.accounts}
+    asked = request.environ.get("someless.account")
+    if asked is not None and asked not in by_id:
+        g.account_gone = True   # (taken off the list, or its password changed, since the tab opened)
+        return
+    wanted = asked if asked is not None else session.get("current")
+    g.mailbox = by_id.get(wanted, row)
+    if asked is not None and request.method == "GET" and request.accept_mimetypes.best == "text/html":
+        session["current"] = asked   # (a page opened on it: plain addresses open it next)
+
+
+def _keep_account_in_address():
+    """With more than one account, a page opened at a plain address (a bookmark, a new tab) goes
+    to its account's own address, so the tab keeps it whatever the others switch to."""
+    if (g.mailbox is None or len(g.accounts) < 2 or "someless.account" in request.environ or request.method != "GET"
+            or request.endpoint in (None, "static", "healthz", "login", "logout", "enter")
+            or (request.blueprint or "") == "dav" or request.headers.get("Upgrade", "").lower() == "websocket"):
+        return None
+    query = request.query_string.decode("utf-8", "replace")
+    return redirect(accounts.home(g.mailbox["id"]).rstrip("/") + request.path + (f"?{query}" if query else ""))
 
 
 def login_required(view):
     @functools.wraps(view)
     def wrapped(**kwargs):
         if g.mailbox is None:
+            # an account no longer on the list: to the webmail's own address, the account used last
+            login = "/" if g.account_gone else url_for("login")
             if request.method != "GET" or request.accept_mimetypes.best == "application/json":
-                return {"problem": "Log in again.", "login": url_for("login")}, 401
-            return redirect(url_for("login"))
+                return {"problem": "Log in again.", "login": login}, 401
+            return redirect(login)
         return view(**kwargs)
     return wrapped
 
@@ -102,26 +128,41 @@ def _signed_in(row):
     return redirect(url_for("mail.home"))
 
 
+def _added(row):
+    """Add another account: the mailbox put on the list of the one signed in with (at most
+    accounts.MOST), and in sight, in its own address. One on the list already: in sight."""
+    from .settings import remember_login
+    if row["id"] not in {one["id"] for one in g.accounts}:
+        if len(g.accounts) >= accounts.MOST:
+            return render_template("webmail-login.html", email=row["email"], adding=True, problem=(
+                f"You can keep up to {accounts.MOST} accounts here. Take one off the list first, in the account menu.")), 400
+        accounts.add(g.owner["id"], row)
+    remember_login(row["id"])
+    session["current"] = row["id"]
+    return redirect(accounts.home(row["id"]))
+
+
 def login():
-    if g.mailbox is not None:
+    adding = g.mailbox is not None and request.values.get("add") == "1"   # (Add another account)
+    if g.mailbox is not None and not adding:
         return redirect(url_for("mail.home"))
     if request.method == "GET":   # a shared link can fill the address in; a new password says so
         return render_template("webmail-login.html", email=request.args.get("email", "").strip().lower()[:254],
-                               notice=session.pop("notice", None))
+                               notice=session.pop("notice", None), adding=adding)
     email = request.form.get("email", "").strip().lower()[:254]
     password = request.form.get("password", "")
     if _locked(email):
         wait = webmail_lock.describe(webmail_lock.settings()[1])
-        return render_template("webmail-login.html", email=email, problem=(
+        return render_template("webmail-login.html", email=email, adding=adding, problem=(
             f"Too many tries with a wrong password. Wait {wait}, then try again.")), 429
     row = get_db().execute("SELECT * FROM mailboxes WHERE email = ?", (email,)).fetchone()
     right = mail_password.password_ok(row["password_hash"] if row else _DUMMY_HASH, password)
     if not (row and right):
         if email:
             _wrong_try(email)
-        return render_template("webmail-login.html", email=email, problem=WRONG), 400
+        return render_template("webmail-login.html", email=email, adding=adding, problem=WRONG), 400
     _forget_tries(email)
-    return _signed_in(row)
+    return _added(row) if adding else _signed_in(row)
 
 
 def enter():
@@ -155,12 +196,15 @@ def highlight(text, query):
 
 
 def page_left_open(error):
-    """A form's token runs out after an hour: signing in asks again, on the webmail's own page;
-    logging out just logs out; the mail's own scripts are told to reload."""
+    """A form's token not taken (its sign-in's token lasts as long as the sign-in, however long a
+    page stays open; it goes with a new sign-in): signing in asks again, on the webmail's own page;
+    logging out just logs out; the mail's own scripts get a fresh token, and go again with it at
+    once (webmail-core.js), so nobody is stopped."""
     if request.endpoint == "logout":
         return logout()
     if request.endpoint != "login":
-        return {"problem": "This page was open for a long time. Reload it and try again."}, 400
+        return {"problem": "This page was open for a long time. Reload it and try again.", "csrf": True,
+                "token": generate_csrf()}, 400
     return render_template("webmail-login.html", email=request.form.get("email", "").strip().lower()[:254],
                            problem=LEFT_OPEN), 400
 
@@ -174,6 +218,7 @@ def create_webmail_app(test_config=None):
         SESSION_COOKIE_SAMESITE="Lax",
         SEND_FILE_MAX_AGE_DEFAULT=STATIC_CACHE_SECONDS,
         MAX_CONTENT_LENGTH=30 * 1024 * 1024,   # the biggest request: attachments on their way (compose)
+        WTF_CSRF_TIME_LIMIT=None,   # a page's token lasts as long as the sign-in: left open for hours, it still sends
         ENGINE_ENABLED=os.environ.get("SOMELESS_ENGINE") == "1",   # (a new password goes to the engine)
     )
     if test_config:
@@ -181,7 +226,7 @@ def create_webmail_app(test_config=None):
     data_dir = Path(app.config["DATA_DIR"])
     data_dir.mkdir(parents=True, exist_ok=True)
     app.config["SECRET_KEY"] = _load_secret_key(data_dir)
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+    app.wsgi_app = accounts.AccountPaths(ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1))   # (/u/<id>/...)
     csrf = CSRFProtect(app)
     db.init_app(app)
     fingerprint_static_links(app)
@@ -189,6 +234,8 @@ def create_webmail_app(test_config=None):
     from . import calendar, compose, contacts, dav, mail, settings
     from .live import sock
     app.before_request(_load_mailbox)
+    app.before_request(_keep_account_in_address)
+    app.jinja_env.globals["account_card"] = accounts.card   # (the account card's list: webmail-top.html)
     app.add_url_rule("/login", "login", login, methods=["GET", "POST"])
     app.add_url_rule("/logout", "logout", logout, methods=["POST"])
     app.add_url_rule("/enter", "enter", enter)
@@ -199,6 +246,7 @@ def create_webmail_app(test_config=None):
     app.register_blueprint(contacts.bp)
     app.register_blueprint(calendar.bp)
     app.register_blueprint(dav.bp)
+    app.register_blueprint(accounts.bp)
     csrf.exempt(dav.bp)   # (calendar and contacts apps sign in with a password, and have no page to carry a token)
     sock.init_app(app)
     app.register_error_handler(CSRFError, page_left_open)

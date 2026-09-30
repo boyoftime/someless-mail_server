@@ -14,7 +14,7 @@ import time
 
 from flask import Blueprint, g, render_template, request, session, url_for
 
-from . import login_required, views
+from . import accounts, login_required, views
 from . import sieve
 from .compose import _own_addresses, clean_outgoing
 from .jmap import MailError, for_mailbox
@@ -532,6 +532,10 @@ def password():
                      (mail_password.hash_password(new), row["id"]))
     database.commit()
     engine_sync.after_change()
+    if g.owner is not None and row["id"] != g.owner["id"]:
+        # one on the list of another account, which stays signed in: it stays on the list, with it
+        accounts.keep(g.owner["id"], row["id"], row["password_version"] + 1)
+        return {"message": "Your password was changed. Mail apps will ask for the new one."}
     session.clear()
     session["notice"] = "Your password was changed. Log in with the new one."
     return {"message": "Your password was changed. Log in again with the new one.", "login": url_for("login")}

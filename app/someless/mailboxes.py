@@ -160,6 +160,9 @@ def _receive_notes(domains):
 def _page(status=200, **context):
     db = get_db()
     used = _usage()
+    # Every mailbox is on the page; the ones the search doesn't match (by address or alias) are
+    # hidden, so typing in the search box filters the whole list on the spot (mailboxes-page.js).
+    query = request.args.get("q", "").strip()
     boxes = []
     for row in db.execute("SELECT mailboxes.*, domains.name AS domain FROM mailboxes"
                           " JOIN domains ON domains.id = mailboxes.domain_id"
@@ -169,8 +172,10 @@ def _page(status=200, **context):
         quota = row["quota_bytes"]
         in_use = used.get(row["email"])
         size, unit = _in_unit(quota)
+        found_by = " ".join([row["email"], *(alias["email"] for alias in aliases)]).lower()
         boxes.append({
             "id": row["id"], "email": row["email"], "domain": row["domain"], "aliases": aliases,
+            "found_by": found_by, "shown": query.lower() in found_by,
             "quota": size_text(quota), "size": size, "unit": unit, "send_limit": row["send_limit_mb"],
             "used": None if in_use is None else {
                 "percent": min(100.0, in_use * 100 / quota), "text": size_text(in_use),
@@ -190,7 +195,7 @@ def _page(status=200, **context):
                      for box in boxes]
     free = _free_space()
     return render_template(
-        "mailboxes.html", mailboxes=boxes, domains=[domain["name"] for domain in domains],
+        "mailboxes.html", mailboxes=boxes, query=query, domains=[domain["name"] for domain in domains],
         server=server, ports=MAIL_APPS, free=size_text(free) if free else None,
         webmail_login=webmail_login, webmail_links=webmail_links, free_senders=free_senders,
         rules=password_checks(password_rules()), saved_rules=password_rules(), min_length=password_rules()["min_length"],

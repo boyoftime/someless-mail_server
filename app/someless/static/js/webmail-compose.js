@@ -452,7 +452,7 @@
       }
       file.cid = newCid();
       var picture = doc.createElement("img");
-      picture.src = "/compose/blob/" + encodeURIComponent(file.blobId) + "?type=" + encodeURIComponent(file.type);
+      picture.src = wm.root + "/compose/blob/" + encodeURIComponent(file.blobId) + "?type=" + encodeURIComponent(file.type);
       picture.alt = file.name;
       picture.setAttribute("data-cid", file.cid);
       picture.style.maxWidth = "100%";
@@ -541,7 +541,7 @@
       wm.loading(wrap, false);
       if (!file || !picture.isConnected) return;
       file.cid = newCid();
-      picture.src = "/compose/blob/" + encodeURIComponent(file.blobId) + "?type=" + encodeURIComponent(file.type);
+      picture.src = wm.root + "/compose/blob/" + encodeURIComponent(file.blobId) + "?type=" + encodeURIComponent(file.type);
       picture.alt = file.name;
       picture.setAttribute("data-cid", file.cid);
       picture.removeAttribute("height");

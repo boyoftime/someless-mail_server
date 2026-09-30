@@ -208,6 +208,16 @@ CREATE TABLE IF NOT EXISTS webmail_logins (
     agent TEXT
 );
 -- A mailbox's signatures (Settings > Signatures): one may be its default, added to new mail
+-- The webmail's other accounts (webmail/accounts.py): each mailbox's own list of the mailboxes
+-- added to it, each with the password it had then (changed since: it drops off)
+CREATE TABLE IF NOT EXISTS webmail_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_id INTEGER NOT NULL,
+    mailbox_id INTEGER NOT NULL,
+    password_version INTEGER NOT NULL,
+    added_at REAL NOT NULL,
+    UNIQUE (owner_id, mailbox_id)
+);
 CREATE TABLE IF NOT EXISTS webmail_signatures (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     mailbox_id INTEGER NOT NULL,
