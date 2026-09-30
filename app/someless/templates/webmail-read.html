@@ -83,8 +83,9 @@
           {%- if not acts.draft %}
           <button type="button" class="wm-icon wm-mini" data-act="reply" aria-label="Reply" data-tip="Reply">{{ icon("reply") }}</button>
           {%- endif %}
-          <button type="button" class="wm-icon wm-mini wm-read-paper" data-wm-paper aria-pressed="false"
-                  aria-label="Show in light colors" data-tip="Show in light colors"
+          {#- its own colours on white to begin with, as its sender made it; the sun switches the dark theme's in (webmail-read.js) #}
+          <button type="button" class="wm-icon wm-mini wm-read-paper" data-wm-paper aria-pressed="true"
+                  aria-label="Show in dark colors" data-tip="Show in dark colors"
                   data-tip-on="Show in dark colors" data-tip-off="Show in light colors">{{ icon("light") }}</button>
           {%- set trackers = message.cleaned | length %}
           <button type="button" class="wm-read-shield{% if not trackers %} is-none{% endif %}" data-wm-shield

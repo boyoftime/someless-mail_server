@@ -202,6 +202,13 @@ def test_logging_out_ends_them_all(ceo, boxes):
     assert ceo.get(f"/u/{boxes['info']}/mail/inbox").headers["Location"].endswith("/login")
 
 
+def test_the_account_menus_links_are_plain_rows(webmail):
+    """(Settings and Add another account: no link underline, rows like the others)"""
+    css = webmail.test_client().get("/static/css/webmail-app.css").get_data(as_text=True)
+    assert re.search(r"\.wm-account-row \{[^}]*text-decoration: none", css)
+    assert re.search(r"\.wm-switch-account \{[^}]*text-decoration: none", css)
+
+
 def test_the_scripts_find_the_tabs_account_in_its_address(webmail):
     core = webmail.test_client().get("/static/js/webmail-core.js").get_data(as_text=True)
     nav = webmail.test_client().get("/static/js/webmail-nav.js").get_data(as_text=True)

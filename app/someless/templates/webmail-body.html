@@ -2,9 +2,10 @@
 {# What a message says, as a page of its own inside the reading pane (webmail-read.html): it runs
    no scripts (the frame's sandbox) and loads nothing but pictures, so a message can't reach into
    the webmail. Its HTML was cleaned first (content.py). In the dark theme the webmail turns its
-   light colours dark (webmail-read.js, is-dark); the sun shows it in its own colours on white
-   (is-paper). kind: html, or text (a message in plain text, its lines as they came). #}
-<html lang="en" class="{{ 'is-dark' if theme == 'dark' else 'is-light' }}">
+   light colours dark (webmail-read.js, is-dark) only when asked (the sun): to begin with it's in
+   its own colours on white, as its sender made it (is-paper). kind: html, or text (a message in
+   plain text, its lines as they came). #}
+<html lang="en" class="{{ 'is-dark is-paper' if theme == 'dark' else 'is-light' }}">
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: http:">

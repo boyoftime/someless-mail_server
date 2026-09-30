@@ -178,9 +178,30 @@
   }
   document.addEventListener("someless:theme", colours);
 
+  // A message is in its own colours on white to begin with (the sun lit), as its sender made it;
+  // switched to the dark theme's, the next ones open so too, on this computer, till it's switched back
+  var COLOURS = "wm-reader-colours";
+  function remembered() {
+    try { return localStorage.getItem(COLOURS); } catch (error) { return null; }
+  }
+  function remember(own) {
+    try {
+      if (own) localStorage.removeItem(COLOURS);
+      else localStorage.setItem(COLOURS, "dark");
+    } catch (error) { /* (a private window: this message only) */ }
+  }
+  function ownColoursFirst() {
+    var sun = view.querySelector("[data-wm-paper]");
+    if (!sun || remembered() !== "dark") return;
+    sun.setAttribute("aria-pressed", "false");
+    sun.dataset.tip = sun.dataset.tipOff;
+    sun.setAttribute("aria-label", sun.dataset.tipOff);
+  }
+
   function setUp() {
     var body = frame();
     if (!body) return;
+    ownColoursFirst();
     // its page as soon as it's all there, not only once its pictures have come (the frame's load
     // waits for them): in its colours, each picture's place with the turning arrows till it's
     // there, and taller as each one comes
@@ -438,6 +459,7 @@
     if (paper) {
       var pressed = paper.getAttribute("aria-pressed") !== "true";
       paper.setAttribute("aria-pressed", String(pressed));
+      remember(pressed);
       colours();
       flipTip(paper, pressed);
       return;

@@ -1064,6 +1064,21 @@ def test_save_all_turns_while_it_comes_and_the_whole_bar_opens_the_files(signed_
     assert re.search(r"\.wm-files-head \{[^}]*cursor: pointer", css)
 
 
+def test_a_message_shows_in_its_own_colours_on_white_to_begin_with(signed_in, jmap):
+    """(in the dark theme too, as its sender made it: the sun switches it to dark colours, and
+    that choice is kept for the next ones: webmail-read.js)"""
+    email_id = jmap.add(html="<p>Hello</p>")
+    signed_in.set_cookie("theme", "dark")
+
+    page = text(signed_in.get(f"/mail/inbox/{email_id}"))
+
+    sun = page.split("data-wm-paper")[1].split(">")[0]
+    assert 'aria-pressed="true"' in sun and 'aria-label="Show in dark colors"' in sun
+    assert '<html lang="en" class="is-dark is-paper">' in page   # (its frame's page, white from the start)
+    script = signed_in.get("/static/js/webmail-read.js").get_data(as_text=True)
+    assert "wm-reader-colours" in script
+
+
 def test_a_file_downloads_or_shows(signed_in, jmap):
     email_id = jmap.add(attachments=[("photo.png", "image/png", b"\x89PNG-data"), ("doc.pdf", "application/pdf", b"%PDF-1"),
                                      ("tool.exe", "application/x-msdownload", b"MZ")])
