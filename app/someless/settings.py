@@ -8,7 +8,7 @@ from . import avatar, domain_checks, engine, first_password, two_factor, webmail
 from .auth import login_required
 from .db import get_db
 from .domain_records import server_address
-from .engine import checks, names
+from .engine import certificate, checks, names
 from .engine import sync as engine_sync
 
 bp = Blueprint("settings", __name__, url_prefix="/settings")
@@ -257,9 +257,10 @@ def save_mail_server():
 @bp.post("/mail-server/check")
 @login_required
 def check_mail_server():
-    """Check again: nothing cached, and Let's Encrypt asked again (at most every 10 minutes)."""
+    """Check again: nothing cached; and Let's Encrypt asked again only if the proxy host lets its
+    check through, at most every 10 minutes (certificate.py)."""
     checks.forget()
-    engine_sync.ask_for_certificate()
+    certificate.watch()
     return redirect(url_for("settings.mail_server"))
 
 

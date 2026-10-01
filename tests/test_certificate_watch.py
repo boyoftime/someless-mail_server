@@ -47,17 +47,31 @@ def test_while_the_proxy_host_is_missing_it_waits_and_asks_nothing(app, ready, p
 
 def test_the_moment_the_proxy_host_works_the_certificate_is_asked_for(app, ready, proxy, client, login):
     login()
-    client.post("/smtp/checks")   # (a Check again a moment ago, while it didn't work: not 10 minutes since)
-    assert len(orders(ready)) == 1
-    watch(app)
+    client.post("/smtp/checks")   # (Check again clicked while it didn't work: nothing asked, it could only fail)
+    assert orders(ready) == []
 
     proxy["works"] = True
     found = watch(app)
 
     assert found["state"] == "getting" and "Let's Encrypt" in found["detail"]
-    assert len(orders(ready)) == 2   # (asked at once all the same: now the check can pass)
+    assert len(orders(ready)) == 1   # (asked at once)
     watch(app)
-    assert len(orders(ready)) == 2   # (once: an order takes a minute or so)
+    client.post("/smtp/checks")
+    assert len(orders(ready)) == 1   # (once: an order takes a minute or so; asked again after 10 minutes)
+
+
+def test_asked_at_once_even_if_it_was_asked_lately_before_the_proxy_host_worked(app, ready, proxy):
+    """(Stalwart's own order, when the domain turned Automatic, or an older one: it failed; this
+    one can pass)"""
+    with app.app_context():
+        from someless.engine import remember
+        import time
+        remember(certificate_asked_at=time.time() - 60)
+
+    proxy["works"] = True
+    watch(app)
+
+    assert len(orders(ready)) == 1
 
 
 def test_once_the_certificate_is_in_it_says_so_and_asks_nothing(app, ready, proxy):
@@ -95,10 +109,18 @@ def test_the_pages_follow_it_live(app, ready, proxy, client, login):
         assert 'src="/static/js/certificate-watch.js?v=' in page, path
 
 
-def test_a_check_again_still_waits_ten_minutes_between_asks(app, ready, proxy, client, login):
+def test_check_again_never_asks_while_the_proxy_host_doesnt_work(app, ready, proxy, client, login):
+    """Clicked for the other checks (DNS, ports, reverse DNS) as often as you like: no order goes to
+    Let's Encrypt until its check can pass; then one, and at most one every 10 minutes."""
     login()
-    client.post("/smtp/checks")
-    client.post("/smtp/checks")
+    for _ in range(5):
+        client.post("/smtp/checks")
+        client.post("/settings/mail-server/check")
+    assert orders(ready) == []
+
+    proxy["works"] = True
+    for _ in range(5):
+        client.post("/smtp/checks")
 
     assert len(orders(ready)) == 1
     assert sync_module.ASK_AGAIN_AFTER == 600

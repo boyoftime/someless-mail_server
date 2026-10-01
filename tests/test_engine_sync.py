@@ -264,16 +264,23 @@ def test_engine_status_command(app, engine):
     assert result.exit_code == 0 and "ready" in result.output and "synced" in result.output
 
 
-def test_check_again_asks_lets_encrypt_again(app, engine, client, login):
+def test_check_again_asks_lets_encrypt_again_once_the_proxy_host_works(app, engine, client, login, monkeypatch):
     """Stalwart orders the certificate once, when the domain turns Automatic; if the proxy
-    host came later, "Check again" asks for a new order, at most every 10 minutes."""
+    host came later, "Check again" asks for a new order, at most every 10 minutes; and never
+    while the proxy host doesn't let Let's Encrypt's check through (the order could only fail)."""
+    from someless.engine import checks
     authenticated_domain(app)
     sync_now(app)
     domain = engine.named("Domain", "pineloop.online")["id"]
     login()
 
+    client.post("/smtp/checks")   # (no proxy host yet: the checks looked at again, nothing ordered)
+    client.post("/settings/mail-server/check")
+    assert [call for call in engine.calls if call[:2] == ("create", "Task")] == []
+
+    monkeypatch.setattr(checks, "relay_reached", lambda name: True)
     client.post("/smtp/checks")
-    client.post("/smtp/checks")   # straight after: not again (Let's Encrypt allows 5 failed checks an hour)
+    client.post("/smtp/checks")   # straight after: not again
 
     orders = [call for call in engine.calls if call[:2] == ("create", "Task")]
     assert orders == [("create", "Task", {"@type": "AcmeRenewal", "domainId": domain})]

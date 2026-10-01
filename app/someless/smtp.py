@@ -156,8 +156,10 @@ def certificate_state():
 @bp.post("/checks")
 @login_required
 def check_again():
+    """Every check looked at afresh; and Let's Encrypt asked for the certificate only if the proxy
+    host lets its check through (else the order could only fail): certificate.py."""
     checks.forget()
-    engine_sync.ask_for_certificate()   # the proxy host may be there now (README, Step 5)
+    certificate.watch()
     return redirect(url_for("smtp.index"))
 
 
