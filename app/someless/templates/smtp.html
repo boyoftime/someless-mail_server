@@ -47,7 +47,8 @@
   {% if engine_error %}<p class="ready-catching-up">Mail engine catching up… ({{ engine_error }})</p>{% endif %}
   <ul class="ready-list">
     {% for check in checks %}
-    <li class="ready-item is-{{ check.state }}">
+    {# the certificate, while it's missing, followed live (certificate-watch.js) #}
+    <li class="ready-item is-{{ check.state }}"{% if check.key == "certificate" and check.state != "ok" %} data-certificate-watch="{{ url_for('smtp.certificate_state') }}"{% endif %}>
       <span class="ready-mark" aria-hidden="true"></span>
       <span class="ready-title">{{ check.title }}<span class="visually-hidden">: {{ {"ok": "done", "missing": "to do", "warning": "warning"}[check.state] }}</span></span>
       {% if check.detail %}<span class="ready-detail">{{ check.detail }}</span>{% endif %}
@@ -235,4 +236,5 @@
 </dialog>
 
 <script src="{{ url_for('static', filename='js/smtp-page.js') }}"></script>
+<script src="{{ url_for('static', filename='js/certificate-watch.js') }}"></script>
 {% endblock %}

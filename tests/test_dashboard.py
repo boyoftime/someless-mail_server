@@ -45,7 +45,7 @@ def test_the_boards_hang_from_a_metal_beam(client, login):
 
 
 def test_a_helicopter_flies_over_the_boards_now_and_then(client, login):
-    """The boards hang nearly still; every 30 seconds a helicopter flies across (dashboard.js), and its
+    """The boards hang nearly still; every 15 seconds a helicopter flies across (dashboard.js), and its
     downwash swings each board as it passes. Not with less motion asked for (motion only)."""
     main = main_area(client, login)
 

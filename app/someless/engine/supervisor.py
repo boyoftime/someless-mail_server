@@ -7,6 +7,9 @@
 - Stalwart started again whenever it stops, waiting longer each time it keeps stopping
 - a sync every hour (keys expiring, anything that drifted), and the automatic domain
   checks when they're switched on (Settings > Miscellaneous)
+- every half minute, while the server name has no certificate: whether the proxy host lets
+  Let's Encrypt's check through yet, and the certificate asked for the moment it does
+  (certificate.py)
 - the Let's Encrypt relay on 17081: only /.well-known/acme-challenge/<token>, answered by
   Stalwart's own HTTP side on 127.0.0.1:17880, which is never published
 - SIGTERM stops them all; if the panel or the webmail stops, so does everything (Docker starts
@@ -29,6 +32,7 @@ NOT_HERE = b"Someless Mail: nothing here but Let's Encrypt's checks.\n"   # the 
 STALWART_DATA = "/data/stalwart"
 RELAY_PORT = 17081
 SYNC_EVERY = 3600      # seconds
+CERTIFICATE_EVERY = 30   # seconds: how often the server name's certificate is looked after, while it has none
 FORGIVEN_AFTER = 300   # seconds up before a stop counts as the first again
 # --preload builds the app once before the workers start, so first-start setup
 # (secret key, default admin) runs exactly once.
@@ -116,6 +120,16 @@ def check_domains_if_due(app):
                 _say(f"{name} is {'authenticated' if now else 'no longer authenticated'} (automatic domain check)")
 
 
+def watch_certificate(app):
+    """The server name's certificate: asked for the moment the proxy host lets Let's Encrypt's
+    check through (certificate.py)."""
+    from . import certificate
+    with app.app_context():
+        found = certificate.watch()
+    if found and found.get("state") == "getting":
+        _say("Let's Encrypt's check gets through: the certificate is asked for")
+
+
 def main():
     from someless import create_app
 
@@ -135,7 +149,7 @@ def main():
     up = bring_up(app, stalwart)
     restarts = 0 if up else 1
     retry_at = time.monotonic() + (0 if up else backoff(0))
-    up_since = next_sync = next_look = time.monotonic()
+    up_since = next_sync = next_look = next_certificate = time.monotonic()
     next_sync += SYNC_EVERY
     while not stopping.is_set() and panel.poll() is None and webmail.poll() is None:
         now = time.monotonic()
@@ -155,6 +169,9 @@ def main():
         if now >= next_look:   # the automatic domain checks' time, looked at every minute
             check_domains_if_due(app)
             next_look = now + 60
+        if now >= next_certificate and stalwart.running():
+            watch_certificate(app)
+            next_certificate = time.monotonic() + CERTIFICATE_EVERY
         stopping.wait(1)
 
     # docker stop gives ten seconds: all are asked to stop at once

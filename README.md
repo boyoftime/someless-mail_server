@@ -153,7 +153,7 @@ Change it to one of your own right after your first login, in **Settings**: from
 docker exec -u someless someless-mail flask --app someless reset-password
 ```
 
-The **Dashboard** shows your domains, mailboxes, senders and mail server at a glance, and under them the server itself, refreshed every 15 seconds while it's open: its RAM and disk (how much is used of how much), Someless Mail's share of the RAM, and whether it's healthy (the mail engine running and up to date). Its boards hang nearly still; every 30 seconds a little helicopter flies over them, and they swing in its downwash.
+The **Dashboard** shows your domains, mailboxes, senders and mail server at a glance, and under them the server itself, refreshed every 15 seconds while it's open: its RAM and disk (how much is used of how much), Someless Mail's share of the RAM, and whether it's healthy (the mail engine running and up to date). Its boards hang nearly still; every 15 seconds a little helicopter flies over them, and they swing in its downwash.
 
 ### Two-factor authentication
 
@@ -253,7 +253,7 @@ SSL stays off here on purpose: Someless Mail gets this certificate itself, and w
 
 **Without a proxy**, and with nothing else on port 80: uncomment the `"80:17081"` line in your `docker-compose.yml` and run `docker compose up -d`.
 
-Then, on **SMTP & API**, click **Check again**: Someless Mail asks Let's Encrypt again straight away, so you don't wait for its next try, which can be hours after a failed check. Let's Encrypt allows only a few failed checks of a name an hour, so **Check again** asks at most every 10 minutes. The certificate usually arrives within a few minutes after that, and Someless Mail renews it by itself. **SMTP & API** shows when it's there (see [Step 8](#step-8-check-ready-to-send)).
+That's all: there's nothing to click. Every 30 seconds, Someless Mail looks whether Let's Encrypt's check gets through, and the moment your proxy host works, it asks Let's Encrypt for the certificate straight away. It usually arrives a minute or two after you save the proxy host, and Someless Mail renews it by itself. **SMTP & API** and **Settings → Mail server name** follow it live: *waiting for the proxy host*, then *getting it* (a turning blue ring), then ticked (see [Step 8](#step-8-check-ready-to-send)). **Check again** still asks at once, at most every 10 minutes, since Let's Encrypt allows only a few failed checks of a name an hour.
 
 **More than one domain?** The mail server has one name, whichever domain your mail comes from. It takes the first authenticated domain's mail name; choose another one in **Settings → Mail server name**. That page also shows what the name needs (its A record, the proxy host, reverse DNS and the certificate) and how each stands.
 

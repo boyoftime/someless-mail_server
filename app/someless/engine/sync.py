@@ -301,16 +301,17 @@ def _certificate(engine, desired, domains, settings, done):
             break
 
 
-def ask_for_certificate():
-    """A new certificate order for the server name, now. Stalwart orders one by itself only
-    when the domain first turns Automatic, and after a failed check (the proxy host not there
-    yet) waits longer and longer, up to hours; so "Check again" asks once more, not more than
-    every 10 minutes. True when an order went in."""
+def ask_for_certificate(now=False):
+    """A new certificate order for the server name. Stalwart orders one by itself only when the
+    domain first turns Automatic, and after a failed check (the proxy host not there yet) waits
+    longer and longer, up to hours; so "Check again" asks once more, not more than every 10
+    minutes. now: at once all the same, the moment Let's Encrypt's check is seen getting through
+    (engine/certificate.py), since then it can pass. True when an order went in."""
     server_name = names.server_name()
     if not enabled() or not server_name or not current_app.config.get("ENGINE_ACME_DIRECTORY", ACME_DIRECTORY):
         return False
     asked = state()["certificate_asked_at"]
-    if asked and time.time() - asked < ASK_AGAIN_AFTER:
+    if not now and asked and time.time() - asked < ASK_AGAIN_AFTER:
         return False
     try:
         engine = client()

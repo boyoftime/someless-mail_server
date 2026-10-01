@@ -64,6 +64,7 @@ SIGNED_IN_PAGE_FILES = [
     "js/mailboxes-page.js",
     "js/disable-dialog.js",
     "js/smtp-page.js",
+    "js/certificate-watch.js",
     "js/settings-mail-server.js",
     "js/celebrate.js",
     "js/settings-misc.js",

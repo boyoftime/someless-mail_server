@@ -121,7 +121,8 @@ CREATE TABLE IF NOT EXISTS engine (
     setup_step TEXT NOT NULL DEFAULT 'new',   -- new, bootstrapped, provisioned, ready
     synced_at REAL,
     sync_error TEXT,
-    certificate_asked_at REAL   -- the last time "Check again" asked Let's Encrypt for the server name's certificate
+    certificate_asked_at REAL,  -- the last time "Check again" asked Let's Encrypt for the server name's certificate
+    certificate_relay_ok INTEGER NOT NULL DEFAULT 0   -- Let's Encrypt's check got through at the last look (engine/certificate.py)
 );
 INSERT OR IGNORE INTO engine (id) VALUES (1);
 -- Mailboxes (the Mailboxes page, mailboxes.py): each one an account in the mail engine, at one of
@@ -299,6 +300,7 @@ LATER_COLUMNS = [("domains", "provider", "TEXT"), ("domain_keys", "mail_host", "
                  ("senders", "disabled", "INTEGER NOT NULL DEFAULT 0"),
                  ("mailboxes", "disabled", "INTEGER NOT NULL DEFAULT 0"),
                  ("mailboxes", "refuse_mail", "INTEGER NOT NULL DEFAULT 0"),
+                 ("engine", "certificate_relay_ok", "INTEGER NOT NULL DEFAULT 0"),
                  ("webmail_lock", "lock_on", "INTEGER NOT NULL DEFAULT 1")]
 
 

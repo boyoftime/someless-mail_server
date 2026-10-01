@@ -15,7 +15,7 @@ from flask import Blueprint, flash, make_response, redirect, render_template, re
 from . import domain_records, engine, smtp_guide
 from .auth import login_required
 from .db import get_db
-from .engine import checks, names
+from .engine import certificate, checks, names
 from .engine import sync as engine_sync
 from .logins import make_login
 
@@ -143,6 +143,14 @@ def generate():
     response = make_response(_page(new_key=key, new_name=typed["name"], new_login=login))
     response.headers["Cache-Control"] = "no-store"  # the key is in it: nothing keeps a copy
     return response
+
+
+@bp.get("/certificate")
+@login_required
+def certificate_state():
+    """How the server name's certificate stands, asked for at once if the proxy host has just
+    started working: the open SMTP & API and Mail server name pages follow it (certificate-watch.js)."""
+    return certificate.watch()
 
 
 @bp.post("/checks")

@@ -17,7 +17,7 @@ import dns.reversename
 
 from ..db import get_db
 from ..domain_records import fresh_lookup
-from . import client, enabled
+from . import client, enabled, state
 from .client import EngineError, EngineUnavailable
 from .names import server_name
 from .supervisor import NOT_HERE
@@ -139,7 +139,8 @@ def name_checks(address):
                            f"Add its A record on the domain's Authenticate page, pointing to {address}."))
     else:
         found.append(Check("server-name", "Points to this server", "ok", f"{name} leads to this server."))
-    if _cached(f"relay {name}", lambda: relay_reached(name)):
+    # (seen getting through by the watch, certificate.py, it counts at once; else asked now and then)
+    if state()["certificate_relay_ok"] or _cached(f"relay {name}", lambda: relay_reached(name)):
         found.append(Check("proxy-host", "Proxy host", "ok",
                            f"{name} → http://someless-mail:17081, SSL off: Let's Encrypt's check gets through."))
     else:   # the page lists the proxy host's settings under it
@@ -150,11 +151,12 @@ def name_checks(address):
         ptr = _cached(f"ptr {address}", lambda: reverse_name(address))
         found.append(Check("reverse-dns", "Reverse DNS", "ok", f"{address} answers with {name}.") if ptr == name else Check(
             "reverse-dns", "Reverse DNS", "warning", f"At your VPS provider, set the reverse DNS of {address} to {name}."))
+    from .certificate import DONE, GETTING
     if _has_certificate(name, _certificates()):
-        found.append(Check("certificate", "Certificate", "ok", "From Let's Encrypt. Someless Mail renews it by itself."))
+        found.append(Check("certificate", "Certificate", "ok", DONE))
     else:
-        found.append(Check("certificate", "Certificate", "missing",
-                           "Let's Encrypt gives it once the proxy host works. Then click Check again."))
+        found.append(Check("certificate", "Certificate", "missing", GETTING if state()["certificate_relay_ok"] else (
+            "Let's Encrypt gives it once the proxy host works: it's asked for by itself as soon as it does.")))
     return found
 
 
@@ -181,11 +183,13 @@ def run_checks(address):
                            f"{name} doesn't point to {address} yet: add its A record on the domain's Authenticate page."))
     else:
         found.append(Check("server-name", "Server name points here", "ok", name))
+    from .certificate import GETTING
     has_certificate = _has_certificate(name, certificates)
     found.append(Check("certificate", "Certificate", "ok" if has_certificate else "missing", "" if has_certificate else (
+        GETTING if name and state()["certificate_relay_ok"] else
         f"Let's Encrypt checks {name or 'the server name'} on port 80. In Nginx Proxy Manager, add a proxy host for it: "
         "scheme http, forward hostname someless-mail, forward port 17081, SSL left off (Someless Mail gets this "
-        "certificate itself). Without a proxy, map port 80 to 17081.")))
+        "certificate itself, as soon as that works). Without a proxy, map port 80 to 17081.")))
     found.append(_cached("port25", lambda: Check("port25", "Outgoing port 25", "ok", "") if port25_open() else Check(
         "port25", "Outgoing port 25", "warning",
         "Your VPS provider blocks outgoing port 25. Ask them to open it; mail can't reach other servers until then.")))

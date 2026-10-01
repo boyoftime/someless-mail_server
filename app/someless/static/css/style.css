@@ -458,7 +458,7 @@ body.is-ready .preparing-main { opacity: 0; transform: translateY(-6px); }
 }
 /* one over the other: the beam, the ropes (tied to a bolt in the beam's middle), the boards */
 .dash-sky { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
-/* the helicopter (dashboard.js flies it across every 30 seconds), over the ropes and the boards;
+/* the helicopter (dashboard.js flies it across every 15 seconds), over the ropes and the boards;
    out of sight between flights. It flies in a lane from the menu's edge to the window's (the main
    area's padding taken back), which hides it past them: it never makes the page scroll sideways. */
 .dash-heli-lane {
@@ -2908,6 +2908,12 @@ body.app { transition: padding-left 0.38s var(--menu-ease); }
   font-size: 0.72rem;
   font-weight: 800;
   line-height: 1;
+}
+/* the certificate being got (certificate-watch.js): its mark a turning blue ring */
+.ready-item.is-getting .ready-mark { border-color: rgba(1, 149, 251, 0.25); border-top-color: #0195fb; box-shadow: 0 0 10px rgba(1, 149, 251, 0.6); animation: ready-turn 0.9s linear infinite; }
+@keyframes ready-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .ready-item.is-getting .ready-mark { animation: none; border-color: #0195fb; }
 }
 .ready-title { font-weight: 600; }
 .ready-detail { grid-column: 2; color: var(--muted); font-size: 0.9rem; }

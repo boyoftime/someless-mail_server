@@ -1,7 +1,7 @@
 // The Dashboard's boards (dashboard.html): the domains, the mailboxes, the senders and the mail
 // server, and under them the server itself (its RAM, disk and health, refreshed), each hanging
 // from two ropes. As the page opens they drop in one after another and bounce on their ropes, then
-// hang nearly still, barely stirring. Every 30 seconds a helicopter flies across over them, and its
+// hang nearly still, barely stirring. Every 15 seconds a helicopter flies across over them, and its
 // downwash swings each board as it passes, each in its own way. A board under the pointer calms
 // down, to be clicked. PixiJS draws the ropes, following each board as it moves, and the breeze drifting
 // by; the boards are the page's own links, moved each frame. Leaving the page (page-swap.js) stops
@@ -151,11 +151,11 @@
     }
     measure();
 
-    // The air: so calm the boards barely stir. Every 30 seconds a helicopter flies across, from left to
+    // The air: so calm the boards barely stir. Every 15 seconds a helicopter flies across, from left to
     // right, nose down a little and bobbing, just over the boards' ropes; its downwash reaches each
     // board as it passes over it, pushing it away from the rotor, fluttering it, then lets it swing
     // back on its own, the nearest ones most
-    var HELI_EVERY = 30;     // s between flights (the first 30 s after the page opens)
+    var HELI_EVERY = 15;     // s between flights (the first 15 s after the page opens)
     var HELI_CROSSING = 8;   // s to fly across
     var DOWNWASH = 7;        // how hard it pushes a board right under it
     var heliEl = hang.querySelector(".dash-heli");
@@ -180,7 +180,7 @@
       var flutter = 0.55 * Math.sin(time * 9 * one.pace + one.phase[1] * 3);   // (each in its own way)
       return DOWNWASH * near * (away + flutter);
     }
-    function fly(time) {   // the helicopter: setting off every 30 seconds, across, then gone
+    function fly(time) {   // the helicopter: setting off every 15 seconds, across, then gone
       if (!heliEl) return;
       if (!heli.flying && time >= heli.next) {
         heli.flying = true;
