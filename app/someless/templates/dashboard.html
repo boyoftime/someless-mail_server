@@ -37,8 +37,11 @@
 <section class="dash-hang" data-dash-hang aria-label="Your mail server at a glance"
          data-pixi="{{ url_for('static', filename='js/pixi.min.js') }}" data-stats="{{ url_for('pages.dashboard_stats') }}">
   <div class="dash-sky" data-dash-sky aria-hidden="true"></div>
-  {# every 30 seconds it flies across, its downwash swinging the boards it passes (dashboard.js) #}
-  <div class="dash-heli" aria-hidden="true" data-lottie="{{ url_for('static', filename='lottie/helicopter.json') }}" data-lottie-motion-only></div>
+  {# every 30 seconds it flies across, its downwash swinging the boards it passes (dashboard.js); in
+     a lane as wide as the main area, so setting off or gone, past its edges, it never widens the page #}
+  <div class="dash-heli-lane" aria-hidden="true">
+    <div class="dash-heli" data-lottie="{{ url_for('static', filename='lottie/helicopter.json') }}" data-lottie-motion-only></div>
+  </div>
   <div class="dash-boards">
     {%- for board in boards %}
     <a class="dash-board" href="{{ board.url }}" data-dash-board data-key="{{ board.key }}" style="--i: {{ loop.index0 }};">

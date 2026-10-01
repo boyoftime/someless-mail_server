@@ -49,10 +49,16 @@ def test_a_helicopter_flies_over_the_boards_now_and_then(client, login):
     downwash swings each board as it passes. Not with less motion asked for (motion only)."""
     main = main_area(client, login)
 
-    heli = re.search(r'<div class="dash-heli" aria-hidden="true" data-lottie="([^"]+)" data-lottie-motion-only></div>', main)
+    heli = re.search(r'<div class="dash-heli" data-lottie="([^"]+)" data-lottie-motion-only></div>', main)
     assert heli and heli.group(1).startswith("/static/lottie/helicopter.json")
     assert client.get("/static/lottie/helicopter.json").status_code == 200
     assert main.index('class="dash-heli"') > main.index("data-dash-hang")   # (it flies inside the boards' space)
+    # in a lane of its own, as wide as the main area and hiding what's past it: setting off or gone,
+    # past the window's edge, it never makes the page scroll sideways
+    assert re.search(r'<div class="dash-heli-lane" aria-hidden="true">\s*<div class="dash-heli"', main)
+    css = client.get("/static/css/style.css").get_data(as_text=True)
+    lane = re.search(r"\.dash-heli-lane \{[^}]*\}", css).group(0)
+    assert "overflow: hidden" in lane and "calc(-1 * var(--page-pad))" in lane
 
 
 def test_the_boards_are_made_of_sand(client):

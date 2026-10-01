@@ -459,12 +459,22 @@ body.is-ready .preparing-main { opacity: 0; transform: translateY(-6px); }
 /* one over the other: the beam, the ropes (tied to a bolt in the beam's middle), the boards */
 .dash-sky { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 /* the helicopter (dashboard.js flies it across every 30 seconds), over the ropes and the boards;
-   out of sight between flights */
+   out of sight between flights. It flies in a lane from the menu's edge to the window's (the main
+   area's padding taken back), which hides it past them: it never makes the page scroll sideways. */
+.dash-heli-lane {
+  position: absolute;
+  top: 0;
+  left: calc(-1 * var(--page-pad));
+  right: calc(-1 * var(--page-pad));
+  z-index: 4;
+  height: calc(var(--beam) + var(--rope) + 40px);
+  overflow: hidden;
+  pointer-events: none;
+}
 .dash-heli {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 4;
   width: 116px;
   height: 84px;
   visibility: hidden;

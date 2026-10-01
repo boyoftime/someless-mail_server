@@ -180,7 +180,7 @@
       var flutter = 0.55 * Math.sin(time * 9 * one.pace + one.phase[1] * 3);   // (each in its own way)
       return DOWNWASH * near * (away + flutter);
     }
-    function fly(time, width) {   // the helicopter: setting off every minute, across, then gone
+    function fly(time) {   // the helicopter: setting off every 30 seconds, across, then gone
       if (!heliEl) return;
       if (!heli.flying && time >= heli.next) {
         heli.flying = true;
@@ -194,14 +194,17 @@
         heli.next = time + HELI_EVERY;
         heli.cx = -9999;
         heliEl.classList.remove("is-flying");
+        heliEl.style.transform = "";   // (back at the start, out of sight)
         return;
       }
-      var w = heliEl.offsetWidth, h = heliEl.offsetHeight;
-      heli.cx = -w + (width + 2 * w) * progress;
+      // across its lane, from past the menu's edge to past the window's (the lane reaches past the
+      // boards' space on both sides: its left is where 0 is, in the lane's own terms)
+      var lane = heliEl.parentElement, w = heliEl.offsetWidth, h = heliEl.offsetHeight;
+      heli.cx = lane.offsetLeft - w + (lane.offsetWidth + 2 * w) * progress;   // (in the boards' terms, for the downwash)
       heli.cy = firstRowY - rope * 0.55 + Math.sin(time * 2.6) * 5;   // (over the first row's ropes, bobbing)
       var tilt = 7 + Math.sin(time * 1.7) * 2;                         // (nose down, as it flies forward)
-      heliEl.style.transform = "translate(" + (heli.cx - w / 2).toFixed(1) + "px, " + (heli.cy - h / 2).toFixed(1) + "px) rotate("
-        + tilt.toFixed(2) + "deg) scaleX(-1)";   // (it's drawn facing left: turned to face where it flies)
+      heliEl.style.transform = "translate(" + (heli.cx - lane.offsetLeft - w / 2).toFixed(1) + "px, " + (heli.cy - h / 2).toFixed(1)
+        + "px) rotate(" + tilt.toFixed(2) + "deg) scaleX(-1)";   // (it's drawn facing left: turned to face where it flies)
     }
 
     var time = 0;
@@ -221,7 +224,7 @@
       var dt = Math.min(ticker.deltaMS / 1000, 1 / 30);
       time += dt;
       var width = sky.clientWidth, height = sky.clientHeight;
-      fly(time, width);
+      fly(time);
       breeze.clear();
       streaks.forEach(function (streak) {   // the air drifting by, faint; stirred up round the helicopter
         var x = streak.x * width, y = streak.y * height;
