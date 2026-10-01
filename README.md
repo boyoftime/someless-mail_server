@@ -11,7 +11,7 @@ Welcome to **Someless Mail Server**: your own mail server in a single Docker ima
 
 **Version:** 1.0.0
 
-> **Status:** sending and receiving work, and so does the webmail. Connect and authenticate your domain, add the addresses your mail comes from, create mailboxes, and read them in the webmail or any mail app: mail, calendar and contacts, with new mail arriving as it lands.
+> **Status:** complete. Connect and authenticate your domains, add the addresses your mail comes from, send from your apps with SMTP keys, create mailboxes and read them in the webmail or any mail app (mail, calendar and contacts, with new mail arriving as it lands), and run it all from your own code with the API. The Dashboard shows your server's health, RAM and disk at a glance.
 
 ## Why Someless Mail
 
@@ -22,6 +22,8 @@ Hosted suites charge for every user, every month, and keep your mail on their se
 - **Trusted delivery.** Every message is signed with DKIM, with SPF and DMARC in place, so it lands like mail from the big providers.
 - **DNS made simple.** The panel shows the exact records for your provider, checks them for you, and can hand them over as a file or a link for your developer.
 - **Built for your apps.** Websites and apps send through SMTP keys of their own, with expiry dates, apart from your team's mailboxes.
+- **An API for everything.** Your own apps add and authenticate domains, add senders, make mailboxes with every option, reset forgotten passwords and disable accounts, with API keys of their own. Its guide shows every call in cURL, JavaScript, Python and PHP, and hands the whole API to an AI assistant in one link.
+- **In control.** Disable a mailbox and its sender at once (and refuse its mail if you like), keep a mailbox's mail from being deleted, and see your server's health, RAM and disk on the Dashboard.
 - **A complete webmail.** Mail, calendar and contacts in the browser, light or dark: folders, search, a compose window with formatting and attachments, filters, auto-reply, forwarding and signatures, and new mail that arrives with a sound, without reloading.
 - **On every device.** IMAP, POP3 and SMTP for any mail app, CalDAV and CardDAV for calendars and contacts, with quick setup for Android, iPhone and Windows.
 - **Secure by design.** Two-factor sign-in for the web interface, a lock after wrong passwords in the webmail, and encrypted connections for every mail app.
@@ -29,11 +31,11 @@ Hosted suites charge for every user, every month, and keep your mail on their se
 
 Try it now: it takes minutes to install, and your first message goes out as soon as your domain is authenticated.
 
-This guide takes you from installing to your first email landing in a Gmail inbox, and your first reply landing in your own mailbox. Follow the steps in order; each one takes a few minutes, apart from waiting for DNS changes to show up.
+This guide takes you from installing to your first email landing in a Gmail inbox, and your first reply landing in your own mailbox; then to the webmail and [the API](#the-api-domains-senders-and-mailboxes-from-your-apps). Follow the steps in order; each one takes a few minutes, apart from waiting for DNS changes to show up.
 
 ## How it fits together
 
-- **The web interface** (port 17080) is where you set everything up: domains, senders, SMTP keys.
+- **The web interface** (port 17080) is where you set everything up: domains, senders, mailboxes, SMTP keys and API keys. **The API** answers at the same address, under `/api/s1`, for your own apps.
 - **The mail engine**, [Stalwart](https://github.com/stalwartlabs/stalwart), runs in the same container: it sends the mail, receives it into your mailboxes, and serves your mail apps. You never set it up yourself: the web interface does it for you.
 - **The webmail** (port 17090) is where the people with a mailbox sign in with its address and password, to read and send mail and to keep their calendar and contacts.
 - **[Nginx Proxy Manager](https://nginxproxymanager.com/)** (optional, recommended) puts the web interface on HTTPS, and passes Let's Encrypt's check through to the mail engine so your mail server gets its own certificate.
@@ -151,6 +153,8 @@ Change it to one of your own right after your first login, in **Settings**: from
 docker exec -u someless someless-mail flask --app someless reset-password
 ```
 
+The **Dashboard** shows your domains, mailboxes, senders and mail server at a glance, and under them the server itself, refreshed every 15 seconds while it's open: its RAM and disk (how much is used of how much), Someless Mail's share of the RAM, and whether it's healthy (the mail engine running and up to date). Its boards hang nearly still; every 30 seconds a little helicopter flies over them, and they swing in its downwash.
+
 ### Two-factor authentication
 
 In **Settings → Two-factor authentication**, switch on **Use PIN**. Scan the QR code with any authenticator app (Google Authenticator, Microsoft Authenticator, Authy…), or copy the key into it, then enter the 6-digit PIN the app shows. From then on, logging in asks for your password and then the PIN. The password is always required.
@@ -201,6 +205,8 @@ In **Domains**, click **Add domain** and type the part of your email address aft
 | MX | Sends the domain's incoming mail to your server, into its mailboxes ([Step 11](#step-11-mailboxes-receive-mail)) |
 
 Add them all, then click **Authenticate this email domain**. Someless Mail looks the records up and marks each one found, missing or different; once all six are right, the domain shows as **Authenticated**, and the mail engine starts signing its mail. Someless Mail asks your domain's own name servers (at Namecheap, Cloudflare…), not a DNS cache, so a change shows up as soon as your provider publishes it: usually within minutes, sometimes longer. The page looks again when you open it (if its last look is over a minute old), and **Authenticate this email domain** checks right away.
+
+Your own apps can do the same through the API: add a domain, get its records, and authenticate it ([The API](#the-api-domains-senders-and-mailboxes-from-your-apps)).
 
 The **MX** record is needed too: a domain is authenticated once its mail comes to your server. From then on, all new mail for the domain comes here, so create its mailboxes right after ([Step 11](#step-11-mailboxes-receive-mail)): mail to an address without one is refused.
 
@@ -321,7 +327,7 @@ The key is shown only once, so copy it then: Someless Mail keeps only its finger
 
 The round button with the animation beside **Generate SMTP key** opens the guide: a working example for Python, Node.js, PHP, Java, C# and Go, filled in with your settings, and what to type into apps and plugins (WordPress, shops, CRMs…). The examples read the login and the key from the `SOMELESS_SMTP_LOGIN` and `SOMELESS_SMTP_KEY` environment variables, so the key never ends up in your code.
 
-**API keys**, for using Someless Mail from your own code, are coming too.
+To add domains and senders and make mailboxes from your own apps, see [The API](#the-api-domains-senders-and-mailboxes-from-your-apps).
 
 ## Step 11: Mailboxes: receive mail
 
@@ -338,6 +344,7 @@ Each mailbox's card shows how much of its storage is used, and has buttons to op
   - **In the webmail:** Delete, Empty Trash and deleting a folder are switched off, and nothing can be moved to the Trash. Messages can still be moved to other folders, and unsent drafts can still be discarded.
   - **In mail apps:** the mail server itself refuses to erase messages or folders for that mailbox, whatever app asks. An app may still move a message to its Trash, but the Trash can't be emptied.
 - **Aliases:** other addresses whose mail lands in this mailbox, like `hello@example.com` or `sales@example.com`, at any of your authenticated domains. Add as many as you like.
+- **Disable** (the power button; on the Senders page too): nobody can sign in to the mailbox (the webmail, mail apps, calendar and contacts apps; anyone signed in is signed out), and nothing can send as its address. A sender and its mailbox go together: disabling or enabling one does the other. Turn on **Refuse new mail** to have new mail to it bounce back to whoever sent it; otherwise it still arrives and waits. Its mail stays, and **Enable** brings it all back.
 - **Configuration details:** what to type in a mail app (Outlook, Apple Mail, Thunderbird, the mail app on your phone), each with a copy button:
 
   | Setting | Value |
@@ -389,6 +396,27 @@ Then, in **Settings → Miscellaneous → Webmail address**, type `https://webma
 
 Signing in to the webmail and to the web interface are separate: a mailbox's password never opens the web interface.
 
+## The API: domains, senders and mailboxes from your apps
+
+Your own apps (a client portal, a signup page, an HR tool) can add and authenticate domains, add senders and make mailboxes, with every option the web interface has. In **API keys**, click **Create API key**, give it a name, and choose when it expires. Like an SMTP key, it's shown only once, and the list shows when each key was last used.
+
+The API is at your web interface's address, followed by `/api/s1`, like `https://panel.example.com/api/s1`. Every call sends the key in a header, `Authorization: Bearer <your API key>`, and everything is JSON:
+
+| Call | What it does |
+|---|---|
+| `GET`, `POST /domains`; `GET`, `DELETE /domains/{name}` | list your domains (saying whether each is authenticated), add one (the answer lists the DNS records to add at its domain provider), read one with its records and how each checked, delete one |
+| `POST /domains/{name}/authenticate` | look its records up in DNS now, as **Authenticate** does: authenticated when they're all there, else what's still to add or fix |
+| `GET`, `POST /senders`; `GET`, `PATCH`, `DELETE /senders/{id}` | list, add, read, change and delete senders |
+| `GET`, `POST /mailboxes`; `GET`, `PATCH`, `DELETE /mailboxes/{id}` | list, make, read, change and delete mailboxes: storage, password, send limit, Disable delete, aliases |
+| `POST /mailboxes/password` | reset a mailbox's password by its address (`email`, `password`, `confirm_password`), for someone who has forgotten theirs |
+| `POST /mailboxes/{id}/aliases`; `DELETE /mailboxes/{id}/aliases/{alias}` | add and delete aliases |
+
+One call can make a mailbox and its sender together. `PATCH` on a sender or a mailbox takes `"disabled": true` (and `"refuse_mail": true`) to disable them, together, and `"disabled": false` to enable them again. Every call is checked as the web interface checks it (authenticated domains only, your mailbox password rules), and does all it was asked or nothing. The round button beside **Create API key** opens the guide: every call with its fields and answers, and a working example in cURL, JavaScript, Python and PHP, filled in with your address.
+
+Getting help from an AI assistant (ChatGPT, Claude, Gemini…)? The guide's **Get help from AI** card has a link to the whole API in plain text, `https://panel.example.com/api/s1/docs.md`: send it to the assistant. Anyone can open that link, so your own domains aren't in it. If your web interface isn't reachable from the internet, **Copy the whole guide** and paste it in instead.
+
+Keep the key on your server, never in a web page where anyone could read it. Too many wrong keys from one address make it wait 10 minutes. The web interface's login never works for the API on its own.
+
 ## Troubleshooting
 
 - **The certificate doesn't arrive.** Check that `mail.example.com` points to your server ([Step 4](#step-4-connect-and-authenticate-your-domain)), that its proxy host forwards to port `17081` with SSL off ([Step 5](#step-5-your-mail-servers-certificate)), and that port 80 is open in your firewall; then click **Check again** on **SMTP & API** (it asks Let's Encrypt at most every 10 minutes). Opening `http://mail.example.com/.well-known/acme-challenge/test` should say *Someless Mail: nothing here but Let's Encrypt's checks.* If you see a page from Nginx Proxy Manager instead, the request isn't reaching Someless Mail.
@@ -396,6 +424,8 @@ Signing in to the webmail and to the web interface are separate: a mailbox's pas
 - **"501 You are not allowed to send from this address":** the app sends from an address that isn't on your **Senders** list. Add it there, or change the app's "from" address.
 - **"Connection refused" or a timeout in an app:** ports `587`/`465` aren't open in your firewall, or the network your app runs on blocks them.
 - **A test email bounced:** the dialog and the sender's card show the receiving server's reason.
+- **The API answers 401:** the `Authorization: Bearer <your API key>` header is missing, or the key is wrong, deleted or expired: make a new one in **API keys**. **429** means too many wrong keys came from that address: wait the seconds its `Retry-After` header says. Any other refusal says why in its `error`, in the web interface's words.
+- **A mailbox can't sign in anywhere:** it may be disabled (its card on **Mailboxes** says so): click **Enable**.
 - **Mail doesn't arrive in a mailbox.** Check that the domain's MX record points to `mail.example.com` (the Mailboxes page says when it doesn't), that port `25` is open in your firewall, and that the address is a mailbox or an alias of one. Look in the mailbox's **Junk Mail** folder too. From another server, `timeout 5 bash -c '</dev/tcp/mail.example.com/25' && echo open` should print *open*.
 - **A mail app can't connect:** ports `993`/`995` (reading) or `465`/`587` (sending) aren't open in your firewall, or the username isn't the whole address, like `ceo@example.com`.
 - **The mail engine's state**, from the server:
@@ -412,7 +442,7 @@ Inside the container, Someless Mail uses its own port numbers so it never clashe
 
 | What it's for | Port inside the container | Port on your server |
 |---|---|---|
-| Web interface | 17080 | 17080, or none behind a proxy ([Step 3](#step-3-https-for-the-web-interface)) |
+| Web interface, and its API (`/api/s1`) | 17080 | 17080, or none behind a proxy ([Step 3](#step-3-https-for-the-web-interface)) |
 | Webmail | 17090 | 17090, or none behind a proxy ([Step 12](#step-12-the-webmail)) |
 | Receiving mail from other servers | 25 | 25 |
 | Your apps and mail apps send mail (STARTTLS) | 17587 | 587 |
@@ -432,7 +462,7 @@ your-folder/
 ├── docker-compose.yml
 └── data/
     ├── someless/
-    │   ├── someless.db    ← login, settings, domains, senders, mailboxes, SMTP keys (their fingerprints)
+    │   ├── someless.db    ← login, settings, domains, senders, mailboxes, SMTP and API keys (their fingerprints)
     │   ├── secret_key     ← signs your login, so it survives restarts
     │   ├── webmail_secret_key  ← the same, for the webmail
     │   ├── initial_password    ← your first password, until you change it (Step 2)
@@ -530,7 +560,7 @@ All the credit goes to **Someless Tricks**, who brought this mail server to life
 
 > *"Every business deserves mail it truly owns: fast, trusted and private, on its own server. That's why I built Someless Mail."*
 
-I've been a web developer for more than three years. I build my tools with the help of AI, to move faster as technology grows day by day, and Someless Mail is the biggest of them yet.
+I've been a web developer for more than three years, and Someless Mail is the biggest tool I've built yet.
 
 It was never easy to make. A mail server has to get countless small things right before the rest of the internet trusts it, and Someless Mail brings them all together: a mail engine built from source, DNS checks that know how each provider works, a signing key for every domain, mailboxes and aliases, the webmail, two-factor sign-in, and a web interface that makes all of it simple. Every piece was built, tested, and built again, over many long nights, until it felt effortless to use. And it isn't finished: more updates will keep coming to make it even more powerful.
 
@@ -550,7 +580,8 @@ The same thanks, and the donate button, are in the web interface too: **Credits*
 - Profile pictures: [Pillow](https://github.com/python-pillow/Pillow) 12.3.0 (MIT-CMU).
 - Font: [Google Sans](https://github.com/googlefonts/googlesans), SIL Open Font License 1.1 (`app/someless/static/fonts/OFL.txt`).
 - Animation player: [lottie-web](https://github.com/airbnb/lottie-web) 5.13.0 (MIT).
-- Login background: [PixiJS](https://github.com/pixijs/pixijs) 8.21.0 (MIT).
+- Login background: [PixiJS](https://github.com/pixijs/pixijs) 8.21.0 (MIT). PixiJS also swings the Dashboard's hanging boards.
+- The Dashboard's metal beam, sand and cake boards, and the API guide's grass: [Kenney](https://kenney.nl/)'s Platformer Art Extended Tileset (CC0, public domain).
 - QR codes for two-factor authentication: [segno](https://github.com/heuer/segno) 1.6.6 (BSD-3-Clause).
 - DKIM signing keys: [cryptography](https://github.com/pyca/cryptography) 50.0.1 (Apache-2.0 or BSD-3-Clause).
 - DNS checks: [dnspython](https://github.com/rthalley/dnspython) 2.8.0 (ISC).
@@ -560,5 +591,5 @@ The same thanks, and the donate button, are in the web interface too: **Credits*
 - The webmail's live new mail: [flask-sock](https://github.com/miguelgrinberg/flask-sock) 0.7.0 and [simple-websocket](https://github.com/miguelgrinberg/simple-websocket) 1.1.0 (MIT).
 - Cleaning the mail's HTML: [nh3](https://github.com/messense/nh3) 0.3.7 (MIT), built on [ammonia](https://github.com/rust-ammonia/ammonia).
 - Making attached pictures and PDFs smaller without losing anything: [libjpeg-turbo](https://libjpeg-turbo.org/)'s jpegtran (IJG and BSD licences) and [qpdf](https://github.com/qpdf/qpdf) (Apache-2.0), from Debian.
-- The webmail's animations are from [LottieFiles](https://lottiefiles.com/): the loading arrows and the unread-mail badge.
+- The webmail's animations are from [LottieFiles](https://lottiefiles.com/): the loading arrows and the unread-mail badge. So are the Dashboard's helicopter and the API guide's sparkle animations.
 - The new-mail sound: "Modern short message tone" by [digitalstore07](https://pixabay.com/users/digitalstore07/) on [Pixabay](https://pixabay.com/) (Pixabay Content License).

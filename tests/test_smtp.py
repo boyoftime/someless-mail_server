@@ -51,18 +51,7 @@ def test_the_menu_has_smtp_and_api_keys(client, login):
 
     menu = page[page.index('<dialog class="side-menu"'):page.index("</dialog>")]
     assert re.search(r'<a [^>]*href="/smtp"[^>]*aria-current="page"', menu)
-    assert 'href="/api-keys"' in menu and "Soon" in plain(menu[menu.index('href="/api-keys"'):])
-
-
-def test_api_keys_are_coming_soon(client, login):
-    login()
-
-    page = text(client.get("/api-keys"))
-
-    assert "<title>API keys | Someless Mail</title>" in page
-    assert "Coming soon" in plain(page)
-    menu = page[page.index('<dialog class="side-menu"'):page.index("</dialog>")]
-    assert re.search(r'<a [^>]*href="/api-keys"[^>]*aria-current="page"', menu)
+    assert 'href="/api-keys"' in menu   # (API keys: test_api_keys.py)
 
 
 def test_the_smtp_settings_say_how_to_connect(client, login, app):

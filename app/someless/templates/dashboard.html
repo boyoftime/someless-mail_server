@@ -1,5 +1,26 @@
 {% extends "shell.html" %}
 {% block title %}Dashboard | Someless Mail{% endblock %}
+
+{% macro icon(name) %}
+  {%- if name == "globe" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.3 2.5 3.5 5.3 3.5 8.5s-1.2 6-3.5 8.5c-2.3-2.5-3.5-5.3-3.5-8.5s1.2-6 3.5-8.5z"/></svg>
+  {%- elif name == "inbox" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 13.5l2.6-7.3a2 2 0 0 1 1.9-1.2h8a2 2 0 0 1 1.9 1.2l2.6 7.3"/><path d="M3.5 13.5V18a1.5 1.5 0 0 0 1.5 1.5h14a1.5 1.5 0 0 0 1.5-1.5v-4.5h-5l-1.5 2.5h-4l-1.5-2.5z"/></svg>
+  {%- elif name == "sender" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 19.5c.8-3.4 3.3-5.5 6.5-5.5s5.7 2.1 6.5 5.5"/><path d="M15.5 9.5h6M18.5 6.5v6"/></svg>
+  {%- elif name == "server" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="17" height="7" rx="2"/><rect x="3.5" y="13" width="17" height="7" rx="2"/><path d="M7.5 7.5h.01M7.5 16.5h.01M11 7.5h5.5M11 16.5h5.5"/></svg>
+  {%- elif name == "ram" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="9" rx="1.5"/><path d="M7 10.5v2M10.5 10.5v2M14 10.5v2M17.5 10.5v2M6 16v2.5M10 16v2.5M14 16v2.5M18 16v2.5"/></svg>
+  {%- elif name == "disk" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="6.5" rx="7.5" ry="3"/><path d="M4.5 6.5v11c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-11"/><path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/></svg>
+  {%- elif name == "app-ram" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5H12z"/><path d="M15 3.9A8.5 8.5 0 0 1 20.1 9H15z"/></svg>
+  {%- elif name == "health" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.4a4.3 4.3 0 0 1 7.5 2.4c0 .8-.1 1.5-.4 2.2"/><path d="M3.5 13.5h4l1.5-2.5 2.5 5 2-3.5h7"/></svg>
+  {%- endif -%}
+{% endmacro %}
+
 {% block content %}
 <h1 class="page-title">Dashboard</h1>
 {% if g.admin.default_password %}
@@ -8,11 +29,48 @@
   <a href="{{ url_for('settings.index') }}">Change your password</a>
 </p>
 {% endif %}
-<section class="empty-state" aria-labelledby="dashboard-soon-title">
-  <span class="empty-state-badge" aria-hidden="true">
-    <svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg>
-  </span>
-  <h2 id="dashboard-soon-title" class="empty-state-title">Coming soon</h2>
-  <p class="empty-state-text">Your mail server at a glance: domains, inboxes and the mail going in and out.</p>
+
+{# The mail server at a glance: boards hanging from ropes (dashboard.js). As the page opens they
+   drop in one after another, bounce on their ropes, then sway as if a light wind plays with them;
+   PixiJS draws the ropes and the breeze. The boards are the page's own links, so they read and
+   click as any; with less motion asked for, or no PixiJS, they hang still (their ropes in CSS). #}
+<section class="dash-hang" data-dash-hang aria-label="Your mail server at a glance"
+         data-pixi="{{ url_for('static', filename='js/pixi.min.js') }}" data-stats="{{ url_for('pages.dashboard_stats') }}">
+  <div class="dash-sky" data-dash-sky aria-hidden="true"></div>
+  {# every 30 seconds it flies across, its downwash swinging the boards it passes (dashboard.js) #}
+  <div class="dash-heli" aria-hidden="true" data-lottie="{{ url_for('static', filename='lottie/helicopter.json') }}" data-lottie-motion-only></div>
+  <div class="dash-boards">
+    {%- for board in boards %}
+    <a class="dash-board" href="{{ board.url }}" data-dash-board data-key="{{ board.key }}" style="--i: {{ loop.index0 }};">
+      <span class="dash-board-ring is-left" aria-hidden="true"></span>
+      <span class="dash-board-ring is-right" aria-hidden="true"></span>
+      <span class="dash-board-icon" aria-hidden="true">{{ icon(board.icon) }}</span>
+      <span class="dash-board-text">
+        <span class="dash-board-count">{{ board.count }}</span>
+        <span class="dash-board-label">{{ board.name }}</span>
+      </span>
+    </a>
+    {%- endfor %}
+    {#- The server itself (server_stats.py), on boards of cake: its RAM and disk, each with a meter,
+        Someless Mail's share of the RAM, and its health (a link to Ready to send, on SMTP & API).
+        The open page asks for the figures again every so often (dashboard.js). #}
+    {%- for key, card in server.items() %}
+    {%- set health = key == "health" %}
+    {%- set count = card.title if health else card.count %}
+    <{{ "a" if health else "div" }} class="dash-board is-cake"{% if health %} href="{{ url_for('smtp.index') }}" data-state="{{ card.state }}"{% endif %} data-dash-board data-key="{{ key }}" data-stat="{{ key }}">
+      <span class="dash-board-ring is-left" aria-hidden="true"></span>
+      <span class="dash-board-ring is-right" aria-hidden="true"></span>
+      <span class="dash-board-icon" aria-hidden="true">{{ icon(key) }}</span>
+      <span class="dash-board-text">
+        <span class="dash-board-count{% if health or count == 'Can\'t tell here' %} is-word{% endif %}" data-stat-count>{{ count }}</span>
+        <span class="dash-board-label" data-stat-label>{{ card.detail if health else card.label }}</span>
+        {%- if card.used is defined and card.used is not none %}
+        <span class="dash-board-meter{% if card.used >= 85 %} is-high{% endif %}" data-stat-meter aria-hidden="true" style="--used: {{ '%.1f' | format(card.used) }}%"><span></span></span>
+        {%- endif %}
+      </span>
+    </{{ "a" if health else "div" }}>
+    {%- endfor %}
+  </div>
 </section>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endblock %}

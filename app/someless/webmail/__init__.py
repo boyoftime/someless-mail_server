@@ -22,8 +22,8 @@ from flask_wtf import CSRFProtect
 from flask_wtf.csrf import CSRFError, generate_csrf
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from .. import (FLOAT_ICONS, STATIC_CACHE_SECONDS, VERSION, db, fingerprint_static_links, mail_password, picked_theme,
-                webmail_lock, webmail_site)
+from .. import (FLOAT_ICONS, STATIC_CACHE_SECONDS, VERSION, db, disabling, fingerprint_static_links, mail_password,
+                picked_theme, webmail_lock, webmail_site)
 from ..db import get_db
 from . import accounts
 
@@ -81,6 +81,10 @@ def _load_mailbox():
     row = get_db().execute("SELECT * FROM mailboxes WHERE id = ?", (mailbox_id,)).fetchone()
     if row is None or row["password_version"] != session.get("password_version"):
         session.clear()   # deleted, or its password changed: log in again
+        return
+    if row["disabled"]:   # disabled since (disabling.py): signed out, and the login page says why
+        session.clear()
+        session["notice"] = disabling.NOTICE
         return
     g.owner = row
     g.accounts = [row, *accounts.linked(row["id"])]
@@ -162,6 +166,8 @@ def login():
             _wrong_try(email)
         return render_template("webmail-login.html", email=email, adding=adding, problem=WRONG), 400
     _forget_tries(email)
+    if row["disabled"]:   # (said only to the right password)
+        return render_template("webmail-login.html", email=email, adding=adding, problem=disabling.NOTICE), 403
     return _added(row) if adding else _signed_in(row)
 
 
@@ -174,6 +180,8 @@ def enter():
         return render_template("webmail-login.html", email="", problem=(
             "This link to the webmail was used already, or is too old. Open the webmail from the Mailboxes page "
             "again, or log in with the mailbox's password.")), 400
+    if row["disabled"]:
+        return render_template("webmail-login.html", email=row["email"], problem=disabling.NOTICE), 403
     return _signed_in(row)
 
 

@@ -86,10 +86,11 @@ def desired_state():
             "SELECT email FROM mailbox_aliases WHERE mailbox_id = ? ORDER BY email", (row["id"],))]
         mailboxes[row["email"]] = {"id": row["id"], "quota": row["quota_bytes"], "secret": row["password_hash"],
                                    "version": row["password_version"], "aliases": aliases, "send_limit": row["send_limit_mb"],
-                                   "keep_mail": bool(row["no_delete_apps"])}
-    senders = [row["email"] for row in db.execute(
+                                   "keep_mail": bool(row["no_delete_apps"]), "disabled": bool(row["disabled"]),
+                                   "refuse_mail": bool(row["disabled"] and row["refuse_mail"])}
+    senders = [row["email"] for row in db.execute(   # (a disabled one is sent as by nothing: disabling.py)
         "SELECT senders.email FROM senders JOIN domains ON domains.id = senders.domain_id WHERE domains.authenticated = 1"
-        " ORDER BY senders.email")]
+        " AND senders.disabled = 0 ORDER BY senders.email")]
     accounts = {row["login"]: sha256_secret(row["key_hash"]) for row in db.execute(
         "SELECT login, key_hash FROM smtp_keys WHERE login IS NOT NULL AND (expires_at IS NULL OR expires_at > ?)",
         (time.time(),))}
@@ -229,7 +230,7 @@ def _mailboxes(engine, desired, domains, internal_id, everyone, done):
         local, domain = email.rsplit("@", 1)
         note = _mailbox_note(box)
         quotas = {"maxDiskQuota": box["quota"]}
-        permissions = KEEP_MAIL if box.get("keep_mail") else INHERIT
+        permissions = mailbox_permissions(box)
         if email not in boxes:
             attempt(f"create mailbox {email}", lambda: engine.create("Account", {
                 **_user(local, domains[domain]["id"], box["secret"]), "quotas": quotas, "aliases": aliases[email],
@@ -333,6 +334,20 @@ INHERIT = {"@type": "Inherit"}
 # asks. It can't erase a message over IMAP (expunge) or POP (delete), nor a folder (IMAP delete).
 # The webmail (JMAP) keeps its own rule (webmail/mail.py), and its drafts are saved over as usual.
 KEEP_MAIL = {"@type": "Merge", "disabledPermissions": {"imapExpunge": True, "imapDelete": True, "pop3Dele": True}}
+
+
+# A disabled mailbox (disabling.py): no mail app signs in to it; with Refuse new mail, none is
+# delivered to it either: the engine takes it, then can't put it in, and it bounces back.
+DISABLED = {"authenticate": True}
+REFUSING = {"emailReceive": True}
+
+
+def mailbox_permissions(box):
+    """What a mailbox's account may not do: Disable delete, disabled, refusing mail; else all a
+    user may (inherited)."""
+    off = {**(KEEP_MAIL["disabledPermissions"] if box.get("keep_mail") else {}),
+           **(DISABLED if box.get("disabled") else {}), **(REFUSING if box.get("refuse_mail") else {})}
+    return {"@type": "Merge", "disabledPermissions": off} if off else INHERIT
 
 
 def _kept_from(permissions):

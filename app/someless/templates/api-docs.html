@@ -1,0 +1,196 @@
+{% extends "shell.html" %}
+{% from "copy-box.html" import copy_box %}
+{% block title %}The Someless Mail API | Someless Mail{% endblock %}
+
+{% macro copy_button(text, label) %}
+<button type="button" class="copy-button api-copy" data-copy="{{ text }}" aria-label="{{ label }}" data-tip="Copy">
+  <svg class="copy-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 5.5V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h.5"/></svg>
+  <svg class="copy-done" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+</button>
+{% endmacro %}
+
+{% macro icon(name) %}
+  {%- if name == "domains" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.3 2.5 3.5 5.3 3.5 8.5s-1.2 6-3.5 8.5c-2.3-2.5-3.5-5.3-3.5-8.5s1.2-6 3.5-8.5z"/></svg>
+  {%- elif name == "senders" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 19.5c.8-3.4 3.3-5.5 6.5-5.5s5.7 2.1 6.5 5.5"/><path d="M15.5 9.5h6M18.5 6.5v6"/></svg>
+  {%- elif name == "mailboxes" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 13.5l2.6-7.3a2 2 0 0 1 1.9-1.2h8a2 2 0 0 1 1.9 1.2l2.6 7.3"/><path d="M3.5 13.5V18a1.5 1.5 0 0 0 1.5 1.5h14a1.5 1.5 0 0 0 1.5-1.5v-4.5h-5l-1.5 2.5h-4l-1.5-2.5z"/></svg>
+  {%- endif -%}
+{% endmacro %}
+
+{% block content %}
+{# Down the right of the cards, five glowing ropes waving, with a branch into each card (api-wires.js) #}
+<div class="api-docs" data-api-wires>
+<canvas class="api-wires" aria-hidden="true"></canvas>
+{# turns the page back over to API keys (page-flip.js) #}
+<a class="back-link" href="{{ url_for('api_keys.index') }}" data-page-flip="back">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5.5"/><path d="M11 6l-6 6 6 6"/></svg>
+  <span>Back to API keys</span>
+</a>
+{# From the title down, the guide stands on a floating island of grass (Kenney's, public domain) #}
+<div class="api-land">
+<div class="api-land-art" aria-hidden="true"></div>
+<header class="page-header page-header-row">
+  <div>
+    <h1 class="page-title">The Someless Mail API</h1>
+    <p class="page-subtitle">Your apps can add senders and make mailboxes at your authenticated domains, with every option the panel has. Each call shows what it takes, the request to send, and the response that comes back, filled in with your own address.</p>
+  </div>
+  <div class="page-header-actions">
+    {# Get help from AI: the animation in a glowing ring, which pops the card below up (api-docs.js) #}
+    <button type="button" class="docs-button api-ai-button" data-dialog-open="ai-dialog" aria-haspopup="dialog" aria-label="Get help from AI">
+      <span class="docs-button-anim" aria-hidden="true" data-lottie="{{ url_for('static', filename='lottie/ai-loading.json') }}"></span>
+      <svg class="docs-button-still" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l1.9 5.1 5.1 1.9-5.1 1.9-1.9 5.1-1.9-5.1-5.1-1.9 5.1-1.9z"/></svg>
+    </button>
+  </div>
+</header>
+
+{# For someone getting help from an AI assistant: a link to this whole guide in plain text, open
+   to anyone (api.py, /docs.md), or the text itself to paste in where the link can't be opened.
+   In a pop-up over the page, the page blurred behind it. #}
+<dialog class="api-ai-dialog" id="ai-dialog" aria-labelledby="api-ai-title">
+<button type="button" class="api-ai-close" data-dialog-close aria-label="Close">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>
+</button>
+<section class="api-ai" aria-labelledby="api-ai-title">
+  {# the AI animation (lottie-autoplay.js); the sparkles till it plays, or with less motion asked for #}
+  <span class="api-ai-badge" aria-hidden="true">
+    <span class="api-ai-badge-anim" data-lottie="{{ url_for('static', filename='lottie/ai.json') }}" data-lottie-motion-only></span>
+    <svg class="api-ai-badge-still" viewBox="0 0 24 24"><path d="M12 3.5l1.9 5.1 5.1 1.9-5.1 1.9-1.9 5.1-1.9-5.1-5.1-1.9 5.1-1.9z"/><path d="M18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>
+  </span>
+  <div class="api-ai-words">
+    <h2 class="api-ai-title" id="api-ai-title">Get help from AI</h2>
+    <p class="api-ai-text">Send this link to your AI assistant, like ChatGPT, Claude or Gemini. It holds this whole guide in plain text, so the assistant can explain the API and help you connect your app. Anyone can open it, so your own domains aren't in it.</p>
+    <div class="api-ai-actions">
+      {{ copy_box(ai_link, "Copy the link for your AI") }}
+      <button type="button" class="button button-quiet api-ai-copy" data-copy="{{ ai_text }}">
+        <span class="api-ai-copy-label">Copy the whole guide</span>
+        <span class="api-ai-copy-done" aria-hidden="true">Copied</span>
+      </button>
+      <a class="button button-quiet" href="{{ url_for('api.docs_text') }}" target="_blank" rel="noopener">Open it</a>
+    </div>
+    <p class="api-ai-note">An assistant can open the link only when this panel is reachable from the internet. If it isn't, copy the whole guide and paste it in instead.</p>
+  </div>
+</section>
+</dialog>
+
+<section class="smtp-card" aria-labelledby="api-basics-title">
+  <h2 class="smtp-title" id="api-basics-title">What every call uses</h2>
+  <dl class="dns-fields smtp-fields">
+    <dt>Address</dt>
+    <dd>{{ copy_box(base, "Copy the API's address") }}<span class="dns-full">Each call's path goes after it: {{ base }}/mailboxes.</span></dd>
+    <dt>Key</dt>
+    <dd><span class="dns-box is-placeholder">Authorization: Bearer &lt;your API key&gt;</span><span class="dns-full">In this header, on every call. Make a key on <a href="{{ url_for('api_keys.index') }}" data-page-flip="back">API keys</a>, and keep it in the SOMELESS_API_KEY environment variable where your code runs.</span></dd>
+    <dt>Format</dt>
+    <dd><span class="dns-box is-placeholder">Content-Type: application/json</span><span class="dns-full">What you send, and every response, is JSON.</span></dd>
+  </dl>
+</section>
+
+{# Every call at a glance, as in Postman's sidebar: each group with its icon and how many calls,
+   each call named in words with its path under it; a click glides down to it (api-docs.js) #}
+<nav class="api-index" aria-labelledby="api-index-title">
+  <div class="api-index-head">
+    <h2 class="smtp-title" id="api-index-title">All calls</h2>
+    <p class="api-index-hint">Pick one to go straight to it.</p>
+  </div>
+  {% for group in groups %}
+  <section class="api-index-group is-{{ group.id }}" aria-labelledby="api-index-{{ group.id }}">
+    <div class="api-index-group-head">
+      <span class="api-index-icon" aria-hidden="true">{{ icon(group.id) }}</span>
+      <h3 class="api-index-title" id="api-index-{{ group.id }}">{{ group.title }}</h3>
+      <span class="api-index-count">{{ group.calls | length }} call{{ "" if group.calls | length == 1 else "s" }}</span>
+    </div>
+    <ul class="api-index-list">
+      {% for call in group.calls %}
+      <li>
+        <a class="api-index-link" href="#{{ call.id }}">
+          <span class="api-method is-{{ call.method | lower }}">{{ call.method }}</span>
+          <span class="api-index-words"><span class="api-index-name">{{ call.name }}</span> <code class="api-index-path">{{ call.path.split("/") | join("/<wbr>" | safe) }}</code></span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endfor %}
+</nav>
+
+{# Each call as in Postman: what it does and takes on the left; on the right, its request in the
+   language picked (the same for every call, remembered: api-docs.js) and its response. Without
+   JavaScript, every language shows, one under another. #}
+{% for group in groups %}
+<section class="api-group" aria-labelledby="api-{{ group.id }}-title">
+  <h2 class="smtp-title" id="api-{{ group.id }}-title">{{ group.title }}</h2>
+  {% for call in group.calls %}
+  <article class="api-call" id="{{ call.id }}">
+    <div class="api-call-doc">
+      <h3 class="api-call-head"><span class="api-method is-{{ call.method | lower }}">{{ call.method }}</span> <code class="api-path">{{ call.path }}</code></h3>
+      <p class="api-call-text">{{ call.text }}</p>
+      {% if call.fields %}
+      <div class="api-fields-wrap">
+        <table class="api-fields">
+          <thead><tr><th scope="col">Field</th><th scope="col">Type</th><th scope="col">What it is</th></tr></thead>
+          <tbody>
+            {% for name, kind, text, required in call.fields %}
+            <tr>
+              <td><code>{{ name }}</code>{% if required %}<span class="api-required">required</span>{% endif %}</td>
+              <td>{{ kind }}</td>
+              <td>{{ text }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="api-no-fields">No fields: nothing to send but the key.</p>
+      {% endif %}
+    </div>
+    <div class="api-call-code">
+      <div class="api-console is-request">
+        <div class="api-console-head">
+          <span class="api-console-title">Request</span>
+          <div class="api-langs" role="tablist" aria-label="Language">
+            <span class="api-langs-glider" aria-hidden="true"></span>
+            {% for request in call.requests %}
+            <button type="button" class="api-lang" role="tab" id="{{ call.id }}-{{ request.key }}-tab" aria-controls="{{ call.id }}-{{ request.key }}" aria-selected="{{ 'true' if loop.first else 'false' }}" tabindex="{{ 0 if loop.first else -1 }}" data-api-lang="{{ request.key }}">{{ request.name }}</button>
+            {% endfor %}
+          </div>
+          {{ copy_button(call.requests[0].code, "Copy the request") }}
+        </div>
+        <div class="api-codes">
+          {% for request in call.requests %}
+          <div class="api-code" role="tabpanel" id="{{ call.id }}-{{ request.key }}" aria-labelledby="{{ call.id }}-{{ request.key }}-tab" data-api-code="{{ request.key }}" data-code="{{ request.code }}">
+            <pre class="code-block" tabindex="0"><code>{{ request.html }}</code></pre>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="api-console is-response">
+        <div class="api-console-head">
+          <span class="api-console-title">Response</span>
+          <span class="api-status is-ok">{{ call.status }}</span>
+          {{ copy_button(call.answer.code, "Copy the response") }}
+        </div>
+        <pre class="api-json" tabindex="0"><code>{{ call.answer.html }}</code></pre>
+      </div>
+    </div>
+  </article>
+  {% endfor %}
+</section>
+{% endfor %}
+
+<section class="guide-notes" aria-labelledby="api-errors-title">
+  <h2 class="smtp-title" id="api-errors-title">When a call is turned down</h2>
+  <p class="api-call-text">The response is {"error": "…"}, saying why in the same words as the panel. A call does all it was asked or nothing at all: a mailbox is never half made.</p>
+  <ul class="guide-list">
+    <li><strong>400</strong>: refused, like an address at a domain that isn't authenticated, a password your rules don't take, or an address that's already taken.</li>
+    <li><strong>401</strong>: no key, a wrong one, or one that has expired or been deleted.</li>
+    <li><strong>404</strong>: there's no sender, mailbox or alias with that id or address, or no such call.</li>
+    <li><strong>429</strong>: too many wrong keys from your address. Wait the seconds the Retry-After header says, then try again.</li>
+  </ul>
+</section>
+</div>
+</div>
+
+<script src="{{ url_for('static', filename='js/api-docs.js') }}"></script>
+<script src="{{ url_for('static', filename='js/api-wires.js') }}"></script>
+{% endblock %}

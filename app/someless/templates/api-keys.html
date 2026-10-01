@@ -1,12 +1,188 @@
 {% extends "shell.html" %}
+{% from "copy-box.html" import copy_box %}
 {% block title %}API keys | Someless Mail{% endblock %}
+
+{% macro icon(name) %}
+  {%- if name == "plus" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  {%- elif name == "search" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+  {%- elif name == "trash" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.9 12.2a1.5 1.5 0 0 0 1.5 1.3h6.2a1.5 1.5 0 0 0 1.5-1.3L17.5 7M10 11v6M14 11v6"/></svg>
+  {%- elif name == "key" -%}
+  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15.5" r="4"/><path d="M10.9 12.6l8.6-8.6"/><path d="M16.5 7l2.5 2.5"/><path d="M14.3 9.2l2 2"/></svg>
+  {%- endif -%}
+{% endmacro %}
+
 {% block content %}
-<h1 class="page-title">API keys</h1>
-<section class="empty-state" aria-labelledby="api-soon-title">
-  <span class="empty-state-badge" aria-hidden="true">
-    <svg viewBox="0 0 24 24"><circle cx="8" cy="15.5" r="4"/><path d="M10.9 12.6l8.6-8.6"/><path d="M16.5 7l2.5 2.5"/><path d="M14.3 9.2l2 2"/></svg>
-  </span>
-  <h2 id="api-soon-title" class="empty-state-title">Coming soon</h2>
-  <p class="empty-state-text">Keys that let your own apps use Someless Mail directly: send mail, make inboxes and more, without the panel.</p>
+<header class="page-header page-header-row">
+  <div>
+    <h1 class="page-title">API keys</h1>
+    <p class="page-subtitle">Let your own apps add senders and make mailboxes on this server, without the panel. Each app calls the API with one of your API keys.</p>
+  </div>
+  <div class="page-header-actions">
+    {# The guide to every call: a flash, and the page turns over to it (page-flip.js) #}
+    <a class="docs-button" href="{{ url_for('api_keys.docs') }}" data-page-flip aria-label="The API guide" data-tip="The API guide: every call, with examples in cURL, JavaScript, Python and PHP">
+      <span class="docs-button-anim" aria-hidden="true" data-lottie="{{ url_for('static', filename='lottie/programming.json') }}"></span>
+      <svg class="docs-button-still" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 8l-4 4 4 4"/><path d="M15 8l4 4-4 4"/><path d="M13 6l-2 12"/></svg>
+    </a>
+    <button type="button" class="button add-button" data-dialog-open="generate-dialog" aria-haspopup="dialog">
+      {{ icon("plus") }}<span>Create API key</span>
+    </button>
+  </div>
+</header>
+
+<section class="smtp-card" aria-labelledby="api-settings-title">
+  <h2 class="smtp-title" id="api-settings-title">Your API</h2>
+  <dl class="dns-fields smtp-fields">
+    <dt>Address</dt>
+    <dd>{{ copy_box(base, "Copy the API's address") }}</dd>
+    <dt>Key</dt>
+    <dd><span class="dns-box is-placeholder">Authorization: Bearer &lt;your API key&gt;</span><span class="dns-full">Every call sends it in this header. Keep the key on your server: never in a web page, where anyone could read it.</span></dd>
+  </dl>
 </section>
+
+<section class="smtp-keys" aria-labelledby="api-keys-title">
+  <h2 class="smtp-title" id="api-keys-title">Your API keys</h2>
+  {% if keys %}
+  {# Filters as you type (smtp-page.js); Enter asks the server, which works without JavaScript #}
+  <form method="get" class="domain-search" role="search" data-key-search>
+    <label class="visually-hidden" for="key-search">Search API keys by name</label>
+    <span class="input-icon">{{ icon("search") }}</span>
+    <input id="key-search" name="q" type="search" placeholder="Search your API keys" autocomplete="off" value="{{ query }}">
+  </form>
+  <div class="domain-table-wrap">
+    <table class="domain-table key-table">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Key</th>
+          <th scope="col">Created</th>
+          <th scope="col">Expires</th>
+          <th scope="col">Last used</th>
+          <th scope="col">Status</th>
+          <th scope="col"><span class="visually-hidden">Delete</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for key in keys %}
+        <tr class="domain-row key-row" data-key-name="{{ key.name | lower }}"{% if not key.shown %} hidden{% endif %}>
+          <td class="domain-name">{{ key.name }}</td>
+          <td><code class="key-hint" title="The key's last characters">…{{ key.hint }}</code></td>
+          {# dates in the admin's own time zone (local-time.js) #}
+          <td><span class="key-label">Created </span><time datetime="{{ key.created_at }}" data-local-date>{{ key.created }}</time></td>
+          <td><span class="key-label">Expires </span>{% if key.expires %}<time datetime="{{ key.expires_at }}" data-local-date>{{ key.expires }}</time>{% else %}Never{% endif %}</td>
+          <td><span class="key-label">Last used </span>{% if key.used %}<time datetime="{{ key.used_at }}" data-local-date>{{ key.used }}</time>{% else %}Never used{% endif %}</td>
+          <td>
+            {% if key.expired %}
+            <span class="domain-status"><span class="status-dot" aria-hidden="true"></span>Expired</span>
+            {% else %}
+            <span class="domain-status is-ok"><span class="status-dot" aria-hidden="true"></span>Active</span>
+            {% endif %}
+          </td>
+          <td class="domain-delete-cell">
+            <form method="post" action="{{ url_for('api_keys.delete', key_id=key.id) }}" class="domain-delete">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="icon-button is-danger" data-key-name="{{ key.name }}" aria-label="Delete {{ key.name }}" data-tip="Delete">{{ icon("trash") }}</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+        <tr class="domain-none"{% if keys | selectattr("shown") | list %} hidden{% endif %}>
+          <td colspan="7">No keys match “<span data-search-text>{{ query }}</span>”.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <span class="empty-state-badge" aria-hidden="true">{{ icon("key") }}</span>
+    <h3 class="empty-state-title">No API keys yet</h3>
+    <p class="empty-state-text">Use Create API key above to make your first one.</p>
+  </div>
+  {% endif %}
+</section>
+
+{# Create a key (smtp-page.js). It opens again by itself when the server sends it back with a
+   problem (data-open), keeping what was typed. #}
+<dialog class="rules-dialog domain-dialog is-wide" id="generate-dialog" aria-labelledby="generate-title"{% if generate_error %} data-open{% endif %}>
+  {# once a key is made, the form starts afresh for the next one (page-swap.js) #}
+  <form method="post" action="{{ url_for('api_keys.create') }}" class="rules-form"{% if new_key %} data-swap-fresh{% endif %}>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("key") }}</span>
+      <div>
+        <h2 id="generate-title" class="rules-title">Create an API key</h2>
+        <p class="rules-hint">For one of your apps: it can then add, change and delete senders and mailboxes.</p>
+      </div>
+    </div>
+    {% if generate_error %}<p class="alert alert-error" role="alert" data-board="error" data-board-title="Couldn't create the key">{{ generate_error }}</p>{% endif %}
+    <div class="field">
+      <label class="field-label" for="key-name">Name</label>
+      <div class="input-wrap">
+        <span class="input-icon">{{ icon("key") }}</span>
+        <input id="key-name" name="name" required maxlength="60" autocomplete="off" placeholder="e.g. Client portal" value="{{ typed.name }}">
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="key-expiry">Expiry</label>
+      {# a plain list without JavaScript; dropdown.js makes it one in the panel's look, and
+         local-time.js counts each date from the admin's own clock #}
+      <select id="key-expiry" name="expiry" data-dropdown>
+        {% for choice in expiries %}
+        <option value="{{ choice.value }}" data-label="{{ choice.label }}"{% if choice.days %} data-days="{{ choice.days }}"{% endif %}{% if choice.months %} data-months="{{ choice.months }}"{% endif %}{% if choice.value == typed.expiry %} selected{% endif %}>{{ choice.label }}{% if choice.until %} ({{ choice.until }}){% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet" data-dialog-close>Cancel</button>
+      <button class="button rules-save" type="submit" data-busy-label="Creating…">
+        <span class="button-spinner" aria-hidden="true"></span>
+        <span class="button-label">Create</span>
+      </button>
+    </div>
+  </form>
+</dialog>
+
+{# The new key, shown this once (smtp-page.js takes it off the page when the dialog closes) #}
+{% if new_key %}
+<dialog class="rules-dialog domain-dialog is-success is-wide" id="key-dialog" aria-labelledby="key-title" data-open>
+  <div class="rules-form">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("key") }}</span>
+      <div>
+        <h2 id="key-title" class="rules-title">Your API key</h2>
+        <p class="rules-hint">{{ new_name }}: copy it now and keep it somewhere safe. For your security, it's shown only this once.</p>
+      </div>
+    </div>
+    <div class="field">
+      <span class="field-label">API key</span>
+      {{ copy_box(new_key, "Copy the key") }}
+      <span class="dns-full">Send it with every call, in the header Authorization: Bearer &lt;this key&gt;.</span>
+    </div>
+    <div class="rules-actions">
+      <button type="button" class="button rules-save" data-dialog-close>OK</button>
+    </div>
+  </div>
+</dialog>
+{% endif %}
+
+{# Deleting asks first (smtp-page.js). Without JavaScript the trash button deletes. #}
+<dialog class="rules-dialog domain-dialog is-danger" id="delete-key-dialog" aria-labelledby="delete-key-title">
+  <div class="rules-form">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ icon("trash") }}</span>
+      <div>
+        <h2 id="delete-key-title" class="rules-title">Delete <span data-delete-name></span>?</h2>
+        <p class="rules-hint">Apps that use it can no longer call the API.</p>
+      </div>
+    </div>
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet" data-dialog-close>Cancel</button>
+      <button type="button" class="button rules-save" data-delete-confirm>Delete</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="{{ url_for('static', filename='js/smtp-page.js') }}"></script>
 {% endblock %}

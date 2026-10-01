@@ -80,6 +80,23 @@ CREATE TABLE IF NOT EXISTS smtp_keys (
     expires_at REAL,              -- NULL: it never expires
     login TEXT                    -- the key's own SMTP login, like website-7f3a (engine/logins.py)
 );
+-- The keys apps manage the senders and mailboxes with (the API keys page, api_keys.py; the API, api.py)
+CREATE TABLE IF NOT EXISTS api_keys (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    key_hash TEXT NOT NULL UNIQUE,  -- the key's SHA-256: the key itself is shown once, never kept
+    hint TEXT NOT NULL,             -- its last characters, to tell the keys apart
+    created_at REAL NOT NULL,
+    expires_at REAL,                -- NULL: it never expires
+    last_used_at REAL
+);
+-- Wrong API keys, per address they came from (api.py): too many in a while, then a wait
+CREATE TABLE IF NOT EXISTS api_tries (
+    address TEXT PRIMARY KEY,
+    failures INTEGER NOT NULL DEFAULT 0,
+    first_at REAL NOT NULL,
+    locked_until REAL
+);
 -- Senders (the Senders page, senders.py): the names and addresses mail goes out from, each at
 -- one of the domains, authenticated when it was added
 CREATE TABLE IF NOT EXISTS senders (
@@ -87,7 +104,8 @@ CREATE TABLE IF NOT EXISTS senders (
     name TEXT NOT NULL,           -- what people see their mail come from: PineLoop INC
     email TEXT NOT NULL UNIQUE,   -- no-reply@pineloop.online
     domain_id INTEGER NOT NULL,   -- the domain the address is at (deleting it deletes the sender)
-    created_at REAL NOT NULL
+    created_at REAL NOT NULL,
+    disabled INTEGER NOT NULL DEFAULT 0   -- nothing sends as it (with its mailbox: disabling.py)
 );
 -- The mail engine, Stalwart (someless/engine/): how the panel reaches it, and how far its
 -- first-time setup and the last sync got
@@ -118,7 +136,9 @@ CREATE TABLE IF NOT EXISTS mailboxes (
     created_at REAL NOT NULL,
     send_limit_mb INTEGER NOT NULL DEFAULT 50,     -- the most a message it sends may carry in files (1 to 100 MB)
     no_delete_webmail INTEGER NOT NULL DEFAULT 0,  -- Disable delete: nothing deleted in the webmail (moved elsewhere, yes)
-    no_delete_apps INTEGER NOT NULL DEFAULT 0      -- and nothing erased from mail apps (the engine refuses it)
+    no_delete_apps INTEGER NOT NULL DEFAULT 0,     -- and nothing erased from mail apps (the engine refuses it)
+    disabled INTEGER NOT NULL DEFAULT 0,           -- nobody signs in to it (with its sender: disabling.py)
+    refuse_mail INTEGER NOT NULL DEFAULT 0         -- and, while disabled, new mail to it bounces
 );
 -- The webmail's sign-in lock (Settings > Miscellaneous, webmail_lock.py): so many wrong passwords
 -- in a row, then a wait
@@ -276,6 +296,9 @@ LATER_COLUMNS = [("domains", "provider", "TEXT"), ("domain_keys", "mail_host", "
                  ("mailboxes", "send_limit_mb", "INTEGER NOT NULL DEFAULT 50"),
                  ("mailboxes", "no_delete_webmail", "INTEGER NOT NULL DEFAULT 0"),
                  ("mailboxes", "no_delete_apps", "INTEGER NOT NULL DEFAULT 0"),
+                 ("senders", "disabled", "INTEGER NOT NULL DEFAULT 0"),
+                 ("mailboxes", "disabled", "INTEGER NOT NULL DEFAULT 0"),
+                 ("mailboxes", "refuse_mail", "INTEGER NOT NULL DEFAULT 0"),
                  ("webmail_lock", "lock_on", "INTEGER NOT NULL DEFAULT 1")]
 
 

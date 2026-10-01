@@ -9,6 +9,7 @@ import time
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
+from . import disabling
 from .auth import login_required
 from .db import get_db
 from .domain_records import server_address
@@ -111,7 +112,7 @@ def index():
         last = deliveries.last_for(row["id"])
         senders.append({
             "id": row["id"], "name": row["name"], "email": row["email"], "domain": row["domain"],
-            "ready": bool(row["authenticated"]), "has_mailbox": _has_mailbox(row["email"]),
+            "ready": bool(row["authenticated"]), "has_mailbox": _has_mailbox(row["email"]), "disabled": bool(row["disabled"]),
             "dkim": found.get("dkim", {}).get("state") == "found",
             "dmarc": found.get("dmarc", {}).get("state") == "found",
             "last_test": last and {"status": last["status"], "detail": last["detail"], "recipient": last["recipient"],
@@ -187,6 +188,28 @@ def delete(sender_id):
     return redirect(url_for("senders.index"))
 
 
+@bp.post("/<int:sender_id>/disable")
+@login_required
+def disable(sender_id):
+    """Nothing can send as it, and its mailbox, if it has one, is disabled too (disabling.py); the
+    dialog asks whether that mailbox refuses new mail meanwhile."""
+    sender = _sender(sender_id)
+    has_mailbox = _has_mailbox(sender["email"])
+    disabling.set_disabled(sender["email"], True, refuse_mail=has_mailbox and request.form.get("refuse") == "on")
+    flash(f"{sender['name']} <{sender['email']}> is disabled" + (", and so is its mailbox." if has_mailbox else "."), "success")
+    return redirect(url_for("senders.index"))
+
+
+@bp.post("/<int:sender_id>/enable")
+@login_required
+def enable(sender_id):
+    sender = _sender(sender_id)
+    disabling.set_disabled(sender["email"], False)
+    flash(f"{sender['name']} <{sender['email']}> can be used again"
+          + (", and so can its mailbox." if _has_mailbox(sender["email"]) else "."), "success")
+    return redirect(url_for("senders.index"))
+
+
 def ready_to_send():
     return enabled() and checks.can_send(checks.run_checks(server_address(request.host)))
 
@@ -196,6 +219,8 @@ def ready_to_send():
 def send_test(sender_id):
     """A test email from this sender, through the mail engine (senders-page.js asks for it)."""
     sender = _sender(sender_id)
+    if sender["disabled"]:
+        return {"problem": f"{sender['email']} is disabled, so nothing can be sent as it. Enable it first."}, 400
     data = request.get_json(silent=True) or {}
     to = (data.get("to") or "").strip()
     if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", to):

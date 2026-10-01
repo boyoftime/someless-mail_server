@@ -1,4 +1,5 @@
 {% extends "shell.html" %}
+{% from "disable-dialog.html" import disable_dialog, power_icon %}
 {% from "copy-box.html" import copy_box %}
 {% from "password-rules-dialog.html" import rules_dialog %}
 {% block title %}Mailboxes | Someless Mail{% endblock %}
@@ -183,19 +184,30 @@
 
 <div class="mailbox-list">
   {% for box in mailboxes %}
-  <article class="mailbox-row" data-mailbox-id="{{ box.id }}" data-mailbox="{{ box.found_by }}"{% if not box.shown %} hidden{% endif %}>
+  <article class="mailbox-row{% if box.disabled %} is-disabled{% endif %}" data-mailbox-id="{{ box.id }}" data-mailbox="{{ box.found_by }}"{% if not box.shown %} hidden{% endif %}>
     <div class="mailbox-head">
       <span class="mailbox-badge" aria-hidden="true">{{ icon("inbox") }}</span>
       <h2 class="mailbox-who">{{ box.email }}</h2>
+      {% if box.disabled %}<span class="domain-status is-disabled"><span class="status-dot" aria-hidden="true"></span>Disabled</span>{% endif %}
       <div class="mailbox-actions">
         <button type="button" class="button button-quiet mailbox-button" data-config-email="{{ box.email }}"
                 data-config-profile="{{ url_for('mailboxes.profile', mailbox_id=box.id) }}" data-config-link="{{ url_for('mailboxes.profile_link', mailbox_id=box.id) }}" aria-haspopup="dialog">{{ icon("gear") }}<span>Configuration details</span></button>
         <button type="button" class="button button-quiet mailbox-button" data-dialog-open="aliases-dialog-{{ box.id }}" aria-haspopup="dialog">{{ icon("at") }}<span>Aliases</span>{% if box.aliases %}<span class="mailbox-count">{{ box.aliases | length }}</span>{% endif %}</button>
+        {% if box.disabled %}
+        {# disabled (disabling.py): its webmail doesn't open; enabling it takes one click #}
+        <form method="post" action="{{ url_for('mailboxes.enable', mailbox_id=box.id) }}" class="mailbox-enable">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="button button-quiet mailbox-button mailbox-enable-button">{{ power_icon() }}<span>Enable</span></button>
+        </form>
+        {% else %}
         {# its webmail, in a new tab, signed in already (a one-time ticket: webmail_site.py) #}
         <form method="post" action="{{ url_for('mailboxes.open_webmail', mailbox_id=box.id) }}" target="_blank" class="mailbox-open" data-full-load>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="icon-button is-webmail" aria-label="Open {{ box.email }}'s webmail in a new tab" data-tip="Open webmail">{{ icon("enter") }}</button>
         </form>
+        <button type="button" class="icon-button" data-disable-url="{{ url_for('mailboxes.disable', mailbox_id=box.id) }}" data-disable-name="{{ box.email }}"
+                data-disable-mailbox="1" aria-haspopup="dialog" aria-label="Disable {{ box.email }}" data-tip="Disable">{{ power_icon() }}</button>
+        {% endif %}
         <button type="button" class="icon-button" data-password-for="{{ box.email }}" data-url="{{ url_for('mailboxes.change_password', mailbox_id=box.id) }}" aria-haspopup="dialog" aria-label="Change {{ box.email }}'s password" data-tip="Change password">{{ icon("key") }}</button>
         <button type="button" class="icon-button" data-storage-for="{{ box.email }}" data-url="{{ url_for('mailboxes.change_storage', mailbox_id=box.id) }}" data-size="{{ box.size }}" data-unit="{{ box.unit }}" aria-haspopup="dialog" aria-label="Edit {{ box.email }}'s storage" data-tip="Edit storage">{{ icon("disk") }}</button>
         <button type="button" class="icon-button" data-sending-for="{{ box.email }}" data-url="{{ url_for('mailboxes.change_sending', mailbox_id=box.id) }}" data-limit="{{ box.send_limit }}" aria-haspopup="dialog" aria-label="Edit {{ box.email }}'s sending limit" data-tip="Sending limit">{{ icon("clip") }}</button>
@@ -222,6 +234,10 @@
         <p class="mailbox-storage-text">Sends up to <strong>{{ box.send_limit }} MB</strong> of attachments a message.</p>
         {%- if box.kept_where %}
         <p class="mailbox-storage-text mailbox-kept">{{ icon("lock") }}<span>Deleting is switched off {{ box.kept_where }}.</span></p>
+        {%- endif %}
+        {%- if box.disabled %}
+        <p class="mailbox-storage-text mailbox-kept mailbox-off">{{ power_icon() }}<span>Disabled: nobody can sign in to it,
+          {%- if box.refuse_mail %} and it refuses new mail.{% else %} and new mail still arrives.{% endif %}</span></p>
         {%- endif %}
       </div>
       <div class="mailbox-alias-list">
@@ -644,9 +660,12 @@
                 title="Mailbox password rules", in_place=true) }}
 {% endif %}
 
+{{ disable_dialog() }}
+
 <script src="{{ url_for('static', filename='js/password-toggle.js') }}"></script>
 <script src="{{ url_for('static', filename='js/password-rules-dialog.js') }}"></script>
 <script src="{{ url_for('static', filename='js/mailboxes-page.js') }}"></script>
 <script src="{{ url_for('static', filename='js/config-devices.js') }}"></script>
 <script src="{{ url_for('static', filename='js/webmail-link.js') }}"></script>
+<script src="{{ url_for('static', filename='js/disable-dialog.js') }}"></script>
 {% endblock %}

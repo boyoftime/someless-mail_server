@@ -79,18 +79,26 @@ def index():
 @login_required
 def add():
     typed = request.form.get("name", "")
+    domain_id, problem = add_domain(typed)
+    if problem:
+        return _page(400, add_error=problem, add_value=typed.strip())
+    flash(f"{tidy(typed)} was added.", "added")
+    return redirect(url_for("domains.index"))
+
+
+def add_domain(typed):
+    """A domain added (here, and through the API): (its id, None), or (None, the problem)."""
     name = tidy(typed)
     if not DOMAIN_PATTERN.fullmatch(name):
-        return _page(400, add_error=NOT_A_DOMAIN, add_value=typed.strip())
+        return None, NOT_A_DOMAIN
     db = get_db()
     if db.execute("SELECT 1 FROM domains WHERE name = ?", (name,)).fetchone():
-        return _page(400, add_error=f"{name} is already added.", add_value=typed.strip())
+        return None, f"{name} is already added."
     added = db.execute("INSERT INTO domains (name, added_at) VALUES (?, ?)", (name, time.time()))
     db.commit()
     domain_records.keys_for(added.lastrowid)  # its code and signing key, ready for its records
     _note_provider(added.lastrowid, name)
-    flash(f"{name} was added.", "added")
-    return redirect(url_for("domains.index"))
+    return added.lastrowid, None
 
 
 @bp.get("/<int:domain_id>")
@@ -181,19 +189,29 @@ def check(domain_id):
 @bp.post("/<int:domain_id>/delete")
 @login_required
 def delete(domain_id):
+    domain = get_db().execute("SELECT name FROM domains WHERE id = ?", (domain_id,)).fetchone()
+    if domain:
+        problem = remove(domain_id)
+        if problem:
+            flash(problem, "not-deleted")
+        else:
+            flash(f"{domain['name']} was deleted.", "deleted")
+    return redirect(url_for("domains.index"))
+
+
+def remove(domain_id):
+    """A domain gone, with its senders and help links (here, and through the API); or why not."""
     db = get_db()
     domain = db.execute("SELECT name FROM domains WHERE id = ?", (domain_id,)).fetchone()
-    if domain and db.execute("SELECT 1 FROM mailboxes WHERE domain_id = ? UNION SELECT 1 FROM mailbox_aliases"
-                             " WHERE domain_id = ?", (domain_id, domain_id)).fetchone():
+    if db.execute("SELECT 1 FROM mailboxes WHERE domain_id = ? UNION SELECT 1 FROM mailbox_aliases"
+                  " WHERE domain_id = ?", (domain_id, domain_id)).fetchone():
         # deleting it would stop its mail: the mailboxes (and the mail in them) go first, on purpose
-        flash(f"{domain['name']} has mailboxes or aliases. Delete its mailboxes first (and aliases at it, "
-              "on the Mailboxes page), then the domain.", "not-deleted")
-    elif domain:
-        db.execute("DELETE FROM domains WHERE id = ?", (domain_id,))
-        db.execute("DELETE FROM domain_keys WHERE domain_id = ?", (domain_id,))
-        db.execute("DELETE FROM senders WHERE domain_id = ?", (domain_id,))  # its addresses go with it
-        db.execute("DELETE FROM help_links WHERE domain_id = ?", (domain_id,))  # and its help links
-        db.commit()
-        engine_sync.after_change()
-        flash(f"{domain['name']} was deleted.", "deleted")
-    return redirect(url_for("domains.index"))
+        return (f"{domain['name']} has mailboxes or aliases. Delete its mailboxes first (and aliases at it, "
+                "on the Mailboxes page), then the domain.")
+    db.execute("DELETE FROM domains WHERE id = ?", (domain_id,))
+    db.execute("DELETE FROM domain_keys WHERE domain_id = ?", (domain_id,))
+    db.execute("DELETE FROM senders WHERE domain_id = ?", (domain_id,))  # its addresses go with it
+    db.execute("DELETE FROM help_links WHERE domain_id = ?", (domain_id,))  # and its help links
+    db.commit()
+    engine_sync.after_change()
+    return None

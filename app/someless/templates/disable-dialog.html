@@ -1,0 +1,41 @@
+{# Disabling a sender or a mailbox (disabling.py), asked first in this dialog, on the Senders and the
+   Mailboxes pages (disable-dialog.js fills it in for the one picked). Both go together, so what's
+   said of the mailbox shows when there's one (data-only-mailbox), with its Refuse new mail toggle. #}
+{% macro power_icon() -%}
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5v8"/><path d="M7.2 6.3a7.5 7.5 0 1 0 9.6 0"/></svg>
+{%- endmacro %}
+
+{% macro disable_dialog() %}
+<dialog class="rules-dialog domain-dialog is-danger is-wide" id="disable-dialog" aria-labelledby="disable-title">
+  <form method="post" action="" class="rules-form disable-form" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="rules-head">
+      <span class="card-badge" aria-hidden="true">{{ power_icon() }}</span>
+      <div>
+        <h2 id="disable-title" class="rules-title">Disable <span data-disable-name></span>?</h2>
+        <p class="rules-hint">It stays as it is, mail and all, and works again once you enable it.</p>
+      </div>
+    </div>
+    <ul class="disable-effects">
+      <li>Nothing can send as it: apps with SMTP keys, the webmail, test emails.</li>
+      <li data-only-mailbox>Nobody can sign in to its mailbox: the webmail, mail apps, calendar and contacts apps. Anyone signed in is signed out.</li>
+      <li>Its sender and its mailbox go together: disabling or enabling one does the other too.</li>
+    </ul>
+    <label class="rule-toggle" data-only-mailbox>
+      <span class="rule-toggle-text">
+        <span class="rule-toggle-label">Refuse new mail</span>
+        <span class="rule-toggle-hint">New mail to it bounces back to whoever sent it. Off: new mail still arrives, and waits for the mailbox to be enabled again.</span>
+      </span>
+      <input type="checkbox" role="switch" name="refuse">
+      <span class="switch" aria-hidden="true"><span class="switch-knob"></span></span>
+    </label>
+    <div class="rules-actions">
+      <button type="button" class="button button-quiet" data-dialog-close autofocus>Cancel</button>
+      <button class="button rules-save" type="submit" data-busy-label="Disabling…">
+        <span class="button-spinner" aria-hidden="true"></span>
+        <span class="button-label">Disable</span>
+      </button>
+    </div>
+  </form>
+</dialog>
+{% endmacro %}

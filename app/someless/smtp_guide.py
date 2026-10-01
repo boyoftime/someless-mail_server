@@ -159,10 +159,11 @@ def examples(server, port, sender, recipient="friend@example.org"):
     return filled
 
 
-def highlight(code, language):
-    """The code as HTML: comments, strings, keywords and numbers in spans, the rest escaped."""
-    comment = r"#[^\n]*" if language == "python" else r"//[^\n]*"
-    words = "|".join(KEYWORDS[language].split())
+def highlight(code, language, keywords=None):
+    """The code as HTML: comments, strings, keywords and numbers in spans, the rest escaped.
+    keywords: another guide's (api_guide.py), for its languages."""
+    comment = r"#[^\n]*" if language in ("python", "curl") else r"//[^\n]*"
+    words = "|".join((keywords or KEYWORDS)[language].split())
     pattern = re.compile(
         rf"(?P<comment>{comment})|(?P<string>\"(?:\\.|[^\"\\\n])*\"|'(?:\\.|[^'\\\n])*')"
         rf"|(?P<keyword>\b(?:{words})\b)|(?P<number>\b\d+\b)")

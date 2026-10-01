@@ -41,6 +41,8 @@ LOGIN_PAGE_FILES = [
     "js/login-background.js",
 ] + [f"img/float/{name}.webp" for name in FLOAT_ICONS]
 SIGNED_IN_PAGE_FILES = [
+    "js/dashboard.js",   # (the first page after logging in: its hanging boards)
+    "lottie/helicopter.json",   # (and the helicopter that flies over them)
     "js/side-menu.js",
     "js/account-panel.js",
     "js/theme.js",
@@ -60,14 +62,19 @@ SIGNED_IN_PAGE_FILES = [
     "js/senders-page.js",
     "js/sender-form.js",
     "js/mailboxes-page.js",
+    "js/disable-dialog.js",
     "js/smtp-page.js",
     "js/settings-mail-server.js",
     "js/celebrate.js",
     "js/settings-misc.js",
     "js/save-when-changed.js",
     "js/smtp-docs.js",
+    "js/api-docs.js",
+    "js/api-wires.js",
     "js/page-flip.js",
     "lottie/programming.json",
+    "lottie/ai-loading.json",
+    "lottie/ai.json",
     "js/collapsible-cards.js",
     "lottie/page-loader.json",
     "lottie/menu-on-dark.json",
@@ -126,6 +133,7 @@ def create_app(test_config=None):
     )
     if test_config:
         app.config.update(test_config)
+    app.json.sort_keys = False   # JSON answers keep their fields in order: the API's (api.py) as its guide shows them
 
     data_dir = Path(app.config["DATA_DIR"])
     data_dir.mkdir(parents=True, exist_ok=True)
@@ -135,8 +143,8 @@ def create_app(test_config=None):
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     csrf.init_app(app)
 
-    from . import (auth, avatar, db, domains, errors, first_password, help_links, mailboxes, pages, senders, settings, smtp,
-                   two_factor)
+    from . import (api, api_keys, auth, avatar, db, domains, errors, first_password, help_links, mailboxes, pages, senders,
+                   settings, smtp, two_factor)
     from .engine import cli as engine_cli
     from .engine import deliveries as engine_deliveries
     db.init_app(app)
@@ -151,6 +159,11 @@ def create_app(test_config=None):
     app.register_blueprint(senders.bp)
     app.register_blueprint(mailboxes.bp)
     app.register_blueprint(smtp.bp)
+    app.register_blueprint(api_keys.bp)
+    # The API: apps call it with an API key in a header, never the login cookie, so no web page
+    # can call it for a signed-in admin: no CSRF token to ask for
+    app.register_blueprint(api.bp)
+    csrf.exempt(api.bp)
     app.register_blueprint(settings.bp)
     app.register_blueprint(errors.bp)
     # Stalwart's delivery reports: signed with the webhook secret instead of a CSRF token

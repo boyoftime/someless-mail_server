@@ -133,6 +133,9 @@ def proxy(rest=""):
     if not _password_right(row, email, password):
         _wrong_try(email)
         return _ask()
+    if row["disabled"]:   # (disabling.py: said only to the right password)
+        from ..disabling import NOTICE
+        return _ask(403, NOTICE)
     if get_db().execute("SELECT 1 FROM webmail_tries WHERE email = ?", (email,)).fetchone():
         _forget_tries(email)   # (right at last: the wrong ones before it are forgotten)
 

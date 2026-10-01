@@ -1,4 +1,5 @@
 {% extends "shell.html" %}
+{% from "disable-dialog.html" import disable_dialog, power_icon %}
 {% block title %}Senders | Someless Mail{% endblock %}
 
 {% macro icon(name) %}
@@ -48,7 +49,7 @@
 
 <div class="sender-list">
   {% for sender in senders %}
-  <article class="sender-row" data-sender-id="{{ sender.id }}" data-sender="{{ (sender.name ~ ' ' ~ sender.email) | lower }}"{% if not sender.shown %} hidden{% endif %}>
+  <article class="sender-row{% if sender.disabled %} is-disabled{% endif %}" data-sender-id="{{ sender.id }}" data-sender="{{ (sender.name ~ ' ' ~ sender.email) | lower }}"{% if not sender.shown %} hidden{% endif %}>
     <div class="sender-head">
       <span class="sender-avatar" aria-hidden="true">{{ sender.name[:1] | upper }}</span>
       <h2 class="sender-who"><span class="sender-name">{{ sender.name }}</span> <span class="sender-email">&lt;{{ sender.email }}&gt;</span></h2>
@@ -59,7 +60,10 @@
         <span>Has a mailbox</span>
       </a>
       {% endif %}
-      {% if sender.ready %}
+      {% if sender.disabled %}
+      {# disabled (disabling.py): nothing sends as it, its mailbox with it #}
+      <span class="domain-status is-disabled"><span class="status-dot" aria-hidden="true"></span>Disabled</span>
+      {% elif sender.ready %}
       <span class="domain-status is-ok"><span class="status-dot" aria-hidden="true"></span>Ready</span>
       {% else %}
       <span class="domain-status"><span class="status-dot" aria-hidden="true"></span>Domain not authenticated
@@ -67,7 +71,16 @@
       </span>
       {% endif %}
       <div class="sender-actions">
-        {% if sender.ready %}
+        {% if sender.disabled %}
+        <form method="post" action="{{ url_for('senders.enable', sender_id=sender.id) }}" class="sender-enable">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="button button-quiet sender-enable-button">{{ power_icon() }}<span>Enable</span></button>
+        </form>
+        {% else %}
+        <button type="button" class="button button-quiet sender-disable" data-disable-url="{{ url_for('senders.disable', sender_id=sender.id) }}"
+                data-disable-name="{{ sender.name }} <{{ sender.email }}>" data-disable-mailbox="{{ 1 if sender.has_mailbox else 0 }}" aria-haspopup="dialog">{{ power_icon() }}<span>Disable</span></button>
+        {% endif %}
+        {% if sender.ready and not sender.disabled %}
         <button type="button" class="button button-quiet sender-test" data-test-sender="{{ sender.id }}" data-sender-name="{{ sender.name }} <{{ sender.email }}>"
                 data-test-url="{{ url_for('senders.send_test', sender_id=sender.id) }}" data-status-url="{{ url_for('senders.test_status', sender_id=sender.id, queue_id='QUEUE_ID') }}" aria-haspopup="dialog">{{ icon("send") }}<span>Send test email</span></button>
         {% endif %}
@@ -177,5 +190,8 @@
   </div>
 </dialog>
 
+{{ disable_dialog() }}
+
 <script src="{{ url_for('static', filename='js/senders-page.js') }}"></script>
+<script src="{{ url_for('static', filename='js/disable-dialog.js') }}"></script>
 {% endblock %}

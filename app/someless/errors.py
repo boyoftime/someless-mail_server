@@ -25,6 +25,11 @@ EXPIRED = ("error", "This page has expired",
            "It was open for too long, or you logged out in another tab, so nothing was saved. "
            "Reload the page and try again.")
 OTHER = ("error", "That didn't work", "The server couldn't complete this request. Go back and try again.")
+API_ERRORS = {
+    404: "There's no such call. The calls are in the API guide, on the API keys page.",
+    405: "This call doesn't take that method. The calls are in the API guide, on the API keys page.",
+    500: "Something went wrong on the server. Try again in a moment.",
+}
 
 
 @bp.app_errorhandler(HTTPException)
@@ -34,6 +39,8 @@ def show_error(error):
     headers = {}
     if getattr(error, "valid_methods", None):  # 405: say which methods do work
         headers["Allow"] = ", ".join(error.valid_methods)
+    if request.path.startswith("/api/"):   # the API (api.py) answers apps, always in JSON
+        return jsonify(error=API_ERRORS.get(error.code, "The server couldn't complete this call.")), error.code, headers
     # login-submit.js sends the login form in the background and asks for JSON. It shows
     # the message on its notice board, so keep it short.
     if request.accept_mimetypes.best == "application/json":

@@ -48,10 +48,11 @@ def home(mailbox_id):
 
 def linked(owner_id):
     """The mailboxes on a mailbox's list, as they were added, while each still has the password it
-    was added with."""
+    was added with, and isn't disabled (disabling.py)."""
     return get_db().execute(
         "SELECT mailboxes.* FROM webmail_accounts JOIN mailboxes ON mailboxes.id = webmail_accounts.mailbox_id"
         " WHERE webmail_accounts.owner_id = ? AND mailboxes.password_version = webmail_accounts.password_version"
+        " AND mailboxes.disabled = 0"
         " ORDER BY webmail_accounts.added_at, webmail_accounts.id", (owner_id,)).fetchall()
 
 

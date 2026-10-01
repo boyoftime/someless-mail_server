@@ -444,6 +444,126 @@ body.is-ready .preparing-main { opacity: 0; transform: translateY(-6px); }
   .board { animation: none; }
 }
 
+/* Dashboard (dashboard.js): a board each for the domains, the mailboxes and the senders, hanging
+   from two ropes like the notice board above. They drop in and sway in the wind; PixiJS draws the
+   ropes and the breeze in .dash-sky. Still (less motion asked for, or no PixiJS): ropes in CSS. */
+.dash-hang {
+  --rope: 76px;
+  --beam: 26px;
+  --dash-glow: 91, 156, 255;
+  position: relative;
+  margin-top: 0.25rem;
+  padding: calc(var(--beam) + var(--rope)) 0 2.5rem;
+  clip-path: inset(0 -100vw -100vh -100vw);   /* (above the beam: nothing) */
+}
+/* one over the other: the beam, the ropes (tied to a bolt in the beam's middle), the boards */
+.dash-sky { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+/* the helicopter (dashboard.js flies it across every 30 seconds), over the ropes and the boards;
+   out of sight between flights */
+.dash-heli {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  width: 116px;
+  height: 84px;
+  visibility: hidden;
+  pointer-events: none;
+  filter: drop-shadow(0 10px 10px rgba(0, 0, 0, 0.35));
+}
+.dash-heli.is-flying { visibility: visible; }
+.dash-sky canvas { display: block; }
+.dash-boards { position: relative; z-index: 3; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: calc(var(--beam) + var(--rope) + 2.5rem) clamp(1.25rem, 2.5vw, 2.25rem); max-width: 78rem; }   /* (a row's beam a little below the row above) */
+.dash-hang.is-live .dash-boards { clip-path: inset(calc(-1 * var(--rope)) -100vw -100vh -100vw); }   /* (a board dropping in comes from under the beam) */
+/* the beam a row of boards hangs from (dashboard.js puts one over each row): Kenney's metal
+   platform, its ends and its middle repeated between them */
+.dash-beam {
+  position: absolute;
+  z-index: 1;
+  height: var(--beam);
+  padding: 0 44px;   /* (the ends: 70 × 40 drawn 26 high) */
+  background: url("../img/dash/beam-left.png") left top / auto 100% no-repeat, url("../img/dash/beam-right.png") right top / auto 100% no-repeat,
+    url("../img/dash/beam-mid.png") left top / auto 100% repeat-x;
+  background-clip: border-box, border-box, content-box;
+  background-origin: border-box, border-box, content-box;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+  pointer-events: none;
+}
+:root:not([data-theme="dark"]) .dash-beam { filter: drop-shadow(0 5px 8px rgba(15, 26, 61, 0.22)); }
+/* each board a slab of Kenney's sand (public domain), the same in both themes: cream sand along its
+   top, sandstone under it, the words dark brown on it; a warm glow under the pointer */
+.dash-board {
+  --sand: 52px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: calc(1.2rem + 6px) 1.4rem 1.2rem;
+  border: 1.5px solid rgba(120, 72, 28, 0.6);
+  border-radius: 18px;
+  background: url("../img/dash/sand-top.png") left top / var(--sand) var(--sand) repeat-x,
+    url("../img/dash/sand-fill.png") left top / var(--sand) var(--sand) repeat;
+  color: #2a1606;
+  text-decoration: none;
+  box-shadow: 0 0 0 4px rgba(201, 152, 105, 0.12), 0 0 24px rgba(255, 190, 110, 0.18), 0 22px 44px rgba(0, 0, 0, 0.45);
+  transform-origin: 50% 0;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.dash-board:hover { border-color: rgba(255, 214, 150, 0.95); box-shadow: 0 0 0 4px rgba(255, 196, 120, 0.2), 0 0 36px rgba(255, 190, 110, 0.5), 0 22px 44px rgba(0, 0, 0, 0.45); }
+.dash-board:focus-visible { outline: 3px solid rgb(var(--dash-glow)); outline-offset: 4px; }
+.dash-board-ring { position: absolute; top: -7px; width: 14px; height: 14px; border: 3px solid #c8cfe6; border-radius: 50%; background: #0e1740; }
+.dash-board-ring.is-left { left: calc(20% - 7px); }
+.dash-board-ring.is-right { right: calc(20% - 7px); }
+.dash-board-icon { display: grid; flex: none; place-items: center; width: 50px; height: 50px; border-radius: 50%; background: rgba(74, 42, 16, 0.16); color: #4a2a10; box-shadow: 0 0 0 5px rgba(74, 42, 16, 0.07); }
+.dash-board-icon svg { width: 25px; height: 25px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.dash-board-text { display: grid; min-width: 0; }
+.dash-board-count { font-size: 2.1rem; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
+.dash-board-label { margin-top: 0.3rem; color: #4a2a10; font-weight: 600; }
+/* the server's boards (server_stats.py): slabs of Kenney's cake, pink frosting and sprinkles along
+   the top, sponge under it, the words in deep plum; RAM and disk with a meter, red when it's
+   nearly full; health's icon in its state's colour */
+.dash-board.is-cake {
+  border-color: rgba(176, 92, 176, 0.55);
+  background: url("../img/dash/cake-top.png") left top / var(--sand) var(--sand) repeat-x,
+    url("../img/dash/cake-fill.png") left top / var(--sand) var(--sand) repeat;
+  color: #2e1a3a;
+  box-shadow: 0 0 0 4px rgba(255, 204, 255, 0.1), 0 0 24px rgba(255, 170, 255, 0.16), 0 22px 44px rgba(0, 0, 0, 0.45);
+}
+.dash-board.is-cake:hover { border-color: rgba(255, 204, 255, 0.95); box-shadow: 0 0 0 4px rgba(255, 204, 255, 0.22), 0 0 36px rgba(255, 170, 255, 0.5), 0 22px 44px rgba(0, 0, 0, 0.45); }
+.dash-board.is-cake .dash-board-icon { background: rgba(122, 47, 134, 0.14); color: #7a2f86; box-shadow: 0 0 0 5px rgba(122, 47, 134, 0.06); }
+.dash-board.is-cake .dash-board-label { color: #523863; }
+.dash-board-count.is-word { font-size: 1.3rem; line-height: 1.15; }
+.dash-board-meter { display: block; height: 6px; margin-top: 0.5rem; overflow: hidden; border-radius: 999px; background: rgba(46, 26, 58, 0.14); }
+.dash-board-meter > span { display: block; width: var(--used); height: 100%; border-radius: inherit; background: linear-gradient(90deg, #d65fd6, #8b5cf6); transition: width 0.6s var(--menu-ease); }
+.dash-board-meter.is-high > span { background: linear-gradient(90deg, #f97316, #e11d48); }
+.dash-board.is-cake[data-state="ok"] .dash-board-icon { background: rgba(22, 163, 74, 0.16); color: #15803d; }
+.dash-board.is-cake[data-state="warning"] .dash-board-icon { background: rgba(217, 119, 6, 0.16); color: #b45309; }
+.dash-board.is-cake[data-state="down"] .dash-board-icon { background: rgba(225, 29, 72, 0.16); color: #be123c; }
+:root:not([data-theme="dark"]) .dash-board.is-cake { box-shadow: 0 0 0 4px rgba(255, 204, 255, 0.1), 0 18px 36px rgba(60, 26, 70, 0.18); }
+:root:not([data-theme="dark"]) .dash-hang { --dash-glow: 29, 70, 201; }
+:root:not([data-theme="dark"]) .dash-board { box-shadow: 0 0 0 4px rgba(201, 152, 105, 0.12), 0 18px 36px rgba(60, 36, 14, 0.2); }
+:root:not([data-theme="dark"]) .dash-board-ring { border-color: #8a95b8; background: #ffffff; }
+/* still: the ropes in CSS, straight up from the rings to a bolt in the beam's middle */
+.dash-hang:not(.is-live) .dash-board::before, .dash-hang:not(.is-live) .dash-board::after {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  width: 12px;
+  height: calc(var(--rope) + var(--beam) / 2 + 6px);
+  background: radial-gradient(circle at 50% 6px, #dfe4f2 0 2px, #5b6478 2.5px 5px, transparent 5.5px) top / 12px 12px no-repeat,
+    repeating-linear-gradient(160deg, #d8b98a 0 4px, #9c7a4c 4px 8px) center / 4px 100% no-repeat;
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.3));
+}
+.dash-hang:not(.is-live) .dash-board::before { left: calc(20% - 6px); }
+.dash-hang:not(.is-live) .dash-board::after { right: calc(20% - 6px); }
+.dash-hang.is-arming .dash-board { visibility: hidden; }   /* (till it drops in) */
+@media (max-width: 1180px) {
+  .dash-boards { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 48rem; }
+}
+@media (max-width: 760px) {
+  .dash-boards { grid-template-columns: minmax(0, 1fr); max-width: 26rem; }
+}
+
 /* Read out by screen readers, not shown */
 .visually-hidden {
   position: absolute;
@@ -3104,6 +3224,375 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
 .guide-list li::marker { color: #0195fb; }
 .guide-value { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 0.92rem; }
 .smtp-card .dns-full a { color: var(--airmail-blue); }
+
+/* The island the guide stands on (api-docs.html): from its title down, one big block of Kenney's
+   grass (public domain), scrolling with the page: grass along its rounded top, earth through it,
+   a jagged rocky edge under it, as if floating. Behind the content, dimmed as one in the dark
+   theme; the words on it sit on soft surfaces of their own, like the cards. */
+.api-land {
+  --tile: 64px;
+  --surface: rgba(255, 255, 255, 0.86);
+  position: relative;
+  isolation: isolate;
+  container: api-land / inline-size;   /* (the calls' index lays itself out by the island's width) */
+  margin-top: 0.75rem;
+  padding: calc(var(--tile) + 1rem) clamp(1rem, 2.5vw, 2rem) calc(var(--tile) + 1.75rem);
+}
+:root[data-theme="dark"] .api-land { --surface: rgba(16, 25, 63, 0.86); }
+.api-land-art {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  border-radius: 36px 36px 0 0;
+  background: url("../img/api/grass-top.png") left top / var(--tile) var(--tile) repeat-x;
+  box-shadow: 0 -2px 0 rgba(126, 190, 35, 0.35);
+}
+.api-land-art::before, .api-land-art::after { content: ""; position: absolute; left: 0; right: 0; }
+/* (the earth a little under the grass and the rocky edge, so no hairline shows between them on a scaled screen) */
+.api-land-art::before { top: calc(var(--tile) - 3px); bottom: calc(var(--tile) - 3px); background: url("../img/api/grass-fill.png") left bottom / var(--tile) var(--tile) repeat; }
+.api-land-art::after { bottom: 0; height: var(--tile); background: url("../img/api/grass-bottom.png") left top / var(--tile) var(--tile) repeat-x; }
+:root[data-theme="dark"] .api-land-art { filter: brightness(0.55) saturate(0.85); }
+/* the words straight on the island, on surfaces of their own */
+.api-land > .page-header, .api-land .api-group > .smtp-title, .api-land > .guide-notes {
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.api-land > .page-header { padding: 1.1rem 1.4rem; }
+.api-land .api-group > .smtp-title { width: fit-content; padding: 0.45rem 1rem; border-radius: 999px; }
+.api-land > .guide-notes { padding: 1.2rem 1.4rem; }
+
+/* Get help from AI, in a pop-up (api-docs.html): its button at the top right of the guide's title,
+   the AI animation in a ring of the AI colours; the card pops up with a little bounce over the
+   page, which blurs behind it */
+.api-ai-button { cursor: pointer; border-color: rgba(139, 92, 246, 0.8); box-shadow: 0 0 22px -4px rgba(139, 92, 246, 0.9), inset 0 0 16px -4px rgba(1, 149, 251, 0.6); }
+.api-ai-button:hover { border-color: #a78bfa; box-shadow: 0 0 32px -2px rgba(139, 92, 246, 1), inset 0 0 18px -4px rgba(1, 149, 251, 0.8); }
+.api-ai-button .docs-button-still { fill: #8b5cf6; stroke: none; }
+.api-ai-dialog {
+  width: min(calc(100vw - 2rem), 46rem);
+  max-width: none;
+  padding: 0;
+  overflow: visible;
+  border: 1.5px solid transparent;
+  border-radius: 22px;
+  background: linear-gradient(var(--dialog-bg), var(--dialog-bg)) padding-box,
+    linear-gradient(135deg, #0195fb, #8b5cf6 55%, #ec4899) border-box;
+  color: var(--ink);
+  box-shadow: 0 30px 80px -20px rgba(8, 12, 36, 0.6), 0 0 50px -12px rgba(139, 92, 246, 0.6);
+}
+.api-ai-dialog::backdrop { background: var(--loader-veil); -webkit-backdrop-filter: blur(10px) saturate(1.15); backdrop-filter: blur(10px) saturate(1.15); }
+.api-ai-dialog[open] { animation: ai-pop 0.46s cubic-bezier(0.2, 1.25, 0.35, 1) backwards; }
+.api-ai-dialog[open]::backdrop { animation: fade-in 0.3s ease both; }
+.api-ai-dialog.is-closing { animation: dialog-out 0.2s ease both; }
+.api-ai-dialog.is-closing::backdrop { animation: fade-out 0.2s ease both; }
+@keyframes ai-pop { from { opacity: 0; transform: translateY(18px) scale(0.86); } }
+.api-ai-dialog .api-ai { margin: 0; padding: 1.6rem 3.75rem 1.6rem 1.7rem; border: 0; background: none; box-shadow: none; }
+.api-ai-close {
+  position: absolute;
+  top: 0.8rem;
+  right: 0.8rem;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--input-bg);
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, transform 0.3s var(--menu-ease);
+}
+.api-ai-close:hover { border-color: #a78bfa; color: var(--ink); transform: rotate(90deg); }
+.api-ai-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+@media (prefers-reduced-motion: reduce) {
+  .api-ai-dialog[open], .api-ai-dialog[open]::backdrop, .api-ai-dialog.is-closing, .api-ai-dialog.is-closing::backdrop { animation: none; }
+  .api-ai-close { transition: none; }
+}
+
+/* The ropes down the right of the guide's cards (api-wires.js): room for them on the island on a
+   wide window, and their canvas over the window (over the island too), never in the way of a click */
+@media (min-width: 1100px) {
+  .api-land { padding-right: 5rem; }
+}
+.api-wires { position: fixed; inset: 0; z-index: 3; width: 100%; height: 100%; pointer-events: none; }
+@media (max-width: 1099px) {
+  .api-wires { display: none; }
+}
+
+/* Get help from AI (api-docs.html): the link to the guide in plain text, and the text itself to
+   copy, in a card with a glowing edge */
+.api-ai {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1rem 1.25rem;
+  margin: 0 0 2rem;
+  padding: 1.3rem 1.4rem;
+  border: 1.5px solid transparent;
+  border-radius: 18px;
+  background: linear-gradient(var(--dialog-bg), var(--dialog-bg)) padding-box,
+    linear-gradient(135deg, #0195fb, #8b5cf6 55%, #ec4899) border-box;
+  box-shadow: var(--card-shadow), 0 0 36px -16px rgba(139, 92, 246, 0.75);
+}
+.api-ai-badge {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0195fb, #8b5cf6 60%, #ec4899);
+  color: #fff;
+  box-shadow: 0 0 22px -4px rgba(139, 92, 246, 0.8);
+}
+.api-ai-badge-anim, .api-ai-badge-still { grid-area: 1 / 1; }
+.api-ai-badge-anim { width: 100%; height: 100%; }
+.api-ai-badge-still { width: 26px; height: 26px; fill: currentColor; }
+/* the AI animation playing: in place of the sparkles, a little larger, on no square of its own */
+.api-ai-badge:has(.api-ai-badge-anim.is-playing) { width: 64px; height: 64px; background: none; box-shadow: none; }
+.api-ai-badge-anim.is-playing + .api-ai-badge-still { display: none; }
+.api-ai-words { display: grid; gap: 0.7rem; min-width: 0; }
+.api-ai-title { margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em; }
+.api-ai-text, .api-ai-note { margin: 0; color: var(--muted); line-height: 1.6; }
+.api-ai-note { font-size: 0.88rem; }
+.api-ai-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.7rem; }
+.api-ai-actions .copy-box { max-width: 100%; }
+.api-ai-copy { display: inline-grid; }
+.api-ai-copy-label, .api-ai-copy-done { grid-area: 1 / 1; }
+.api-ai-copy-done { visibility: hidden; color: #2dd4bf; }
+.api-ai-copy.is-copied .api-ai-copy-label { visibility: hidden; }
+.api-ai-copy.is-copied .api-ai-copy-done { visibility: visible; }
+@media (max-width: 640px) {
+  .api-ai { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* The API guide (api-docs.html), as in Postman: an index of the calls; then each call in a card,
+   what it does and takes on the left, and on the right a dark console (in both themes, like the
+   code windows) with its request, in the language picked, and its response. Narrow: one under
+   the other. */
+/* the index, as in Postman's sidebar: a panel per group (its icon, its name, how many calls),
+   each call a row: its method, its name in words and its path under it. Wide: two columns, the
+   short groups (Domains, Senders) on the left, Mailboxes on the right, both reaching as low. */
+.api-index {
+  display: grid;
+  gap: 1rem;
+  margin: 0 0 2rem;
+  padding: 1.2rem 1.3rem 1.3rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+}
+@container api-land (min-width: 760px) {
+  .api-index {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas: "head head" "domains mailboxes" "senders mailboxes";
+    align-items: start;
+  }
+  .api-index-head { grid-area: head; }
+  .api-index-group.is-domains { grid-area: domains; }
+  .api-index-group.is-senders { grid-area: senders; align-self: stretch; }
+  .api-index-group.is-mailboxes { grid-area: mailboxes; align-self: stretch; }
+}
+.api-index-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; }
+.api-index-hint { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.api-index-group { padding: 0.85rem 0.85rem 0.7rem; border: 1px solid var(--line); border-radius: 14px; background: rgba(1, 149, 251, 0.035); }
+.api-index-group-head { display: flex; align-items: center; gap: 0.65rem; margin: 0 0 0.55rem; padding: 0 0.15rem; }
+.api-index-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(1, 149, 251, 0.18), rgba(139, 92, 246, 0.18));
+  color: #0195fb;
+}
+:root[data-theme="dark"] .api-index-icon { color: #7cc4ff; }
+.api-index-icon svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.api-index-title { margin: 0; font-size: 1rem; font-weight: 700; }
+.api-index-count { margin-left: auto; padding: 0.15rem 0.6rem; border-radius: 999px; background: rgba(1, 149, 251, 0.12); color: #0195fb; font-size: 0.75rem; font-weight: 700; white-space: nowrap; }
+:root[data-theme="dark"] .api-index-count { color: #7cc4ff; }
+.api-index-list { display: grid; gap: 0.15rem; margin: 0; padding: 0; list-style: none; }
+.api-index-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 10px;
+  color: var(--ink);
+  text-decoration: none;
+  transition: background 0.15s ease, transform 0.2s var(--menu-ease);
+}
+.api-index-link:hover { background: rgba(1, 149, 251, 0.1); transform: translateX(3px); }
+.api-index-link:focus-visible { outline: 2px solid var(--airmail-blue); outline-offset: 1px; }
+.api-index-link .api-method { flex: none; min-width: 4.1rem; padding: 0.14rem 0.4rem; font-size: 0.66rem; }
+.api-index-words { display: grid; min-width: 0; }
+.api-index-name { font-size: 0.92rem; font-weight: 600; line-height: 1.3; }
+/* (a long path breaks after a slash, never inside a word) */
+.api-index-path { color: var(--muted); font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 0.78rem; overflow-wrap: break-word; }
+.api-group { display: grid; gap: 1rem; margin: 0 0 2rem; container-type: inline-size; overflow-anchor: none; }
+.api-call {
+  display: grid;
+  gap: 1.1rem;
+  padding: 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  scroll-margin-top: 5.5rem;
+}
+.api-call.is-flash { animation: api-flash 1.5s ease; }
+@keyframes api-flash {
+  0%, 35% { border-color: rgba(1, 149, 251, 0.9); box-shadow: 0 0 0 4px rgba(1, 149, 251, 0.18), 0 0 36px rgba(1, 149, 251, 0.45); }
+}
+.api-call-doc { display: grid; gap: 0.75rem; align-content: start; min-width: 0; padding: 0.2rem 0.2rem 0; }
+/* (a long line of code scrolls inside its console: it never widens the console past the card) */
+.api-call-code { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.9rem; align-content: start; min-width: 0; }
+@container (min-width: 880px) {
+  .api-call { grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 1.6rem; align-items: start; }
+  .api-call-code { position: sticky; top: 5.5rem; }   /* (beside a long table, the console stays in sight) */
+}
+.api-console {
+  min-width: 0;
+  border: 1px solid rgba(123, 150, 255, 0.28);
+  border-radius: 14px;
+  background: #0a1030;
+  box-shadow: 0 0 30px -16px rgba(1, 149, 251, 0.75);
+}
+.api-console-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 3rem;
+  padding: 0.45rem 0.5rem 0.45rem 0.9rem;
+  border-bottom: 1px solid rgba(123, 150, 255, 0.2);
+  border-radius: 14px 14px 0 0;
+  background: rgba(255, 255, 255, 0.03);
+}
+.api-console-title { color: #98a2c2; font-size: 0.8rem; font-weight: 700; }
+.api-langs {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  min-width: 0;
+  padding: 3px;
+  overflow-x: auto;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  scrollbar-width: none;
+}
+.api-langs-glider {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  width: 0;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #1463f3, #0195fb);
+  box-shadow: 0 0 14px -2px rgba(1, 149, 251, 0.75);
+  pointer-events: none;
+}
+.api-langs.is-placed .api-langs-glider { transition: transform 0.34s var(--menu-ease), width 0.34s var(--menu-ease); }
+.api-lang {
+  position: relative;
+  z-index: 1;
+  padding: 0.3rem 0.65rem;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: #98a2c2;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.api-lang:hover { color: #e6ebff; }
+.api-lang[aria-selected="true"] { color: #fff; }
+.api-lang:focus-visible { outline: 2px solid #4db3ff; outline-offset: 1px; }
+html:not(.js) .api-langs { display: none; }   /* without JavaScript, every language shows */
+.api-console .api-copy {
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  border-color: rgba(123, 150, 255, 0.3);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #c8d2f0;
+}
+.api-console .api-copy:hover { background: rgba(1, 149, 251, 0.16); color: #fff; }
+.api-console .api-copy svg { width: 16px; height: 16px; }
+.api-codes { overflow: hidden; transition: height 0.34s var(--menu-ease); }
+.api-code .code-block { max-height: 30rem; overflow: auto; padding: 1rem 1.1rem; font-size: 0.84rem; }
+.api-code.is-entering .code-block { animation: api-code-in 0.32s ease both; }
+@keyframes api-code-in { from { opacity: 0; transform: translateY(6px); filter: blur(2px); } }
+.api-status { padding: 0.16rem 0.6rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; white-space: nowrap; }
+.api-status.is-ok { border: 1px solid rgba(52, 211, 153, 0.4); background: rgba(52, 211, 153, 0.12); color: #34d399; }
+.api-status::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 0.4rem 0.1rem 0;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+  vertical-align: middle;
+}
+.api-no-fields { margin: 0; color: var(--muted); font-size: 0.9rem; }
+@media (prefers-reduced-motion: reduce) {
+  .api-call.is-flash, .api-code.is-entering .code-block { animation: none; }
+  .api-langs.is-placed .api-langs-glider, .api-codes, .api-index-link { transition: none; }
+}
+.api-call-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin: 0; font-size: 1rem; }
+.api-method {
+  --method: 1, 149, 251;
+  min-width: 4.4rem;
+  padding: 0.22rem 0.6rem;
+  border: 1px solid rgba(var(--method), 0.45);
+  border-radius: 8px;
+  background: rgba(var(--method), 0.14);
+  color: rgb(var(--method));
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+.api-method.is-get { --method: 34, 197, 140; }
+.api-method.is-post { --method: 1, 149, 251; }
+.api-method.is-patch { --method: 245, 166, 35; }
+.api-method.is-delete { --method: 244, 75, 105; }
+.api-path { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 0.98rem; font-weight: 600; overflow-wrap: anywhere; }
+.api-call-text { margin: 0; color: var(--muted); line-height: 1.6; }
+.api-fields-wrap { overflow-x: auto; }
+.api-fields { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+.api-fields th { padding: 0 0.75rem 0.45rem 0; color: var(--muted); font-size: 0.8rem; font-weight: 600; text-align: left; }
+.api-fields td { padding: 0.6rem 0.75rem 0.6rem 0; border-top: 1px solid var(--line); line-height: 1.5; vertical-align: top; }
+.api-fields td:first-child { white-space: nowrap; }
+.api-fields td:nth-child(2) { color: var(--muted); white-space: nowrap; }
+.api-fields code { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-weight: 600; }
+.api-required { margin-left: 0.45rem; padding: 0.1rem 0.4rem; border-radius: 6px; background: rgba(1, 149, 251, 0.14); color: #0195fb; font-size: 0.72rem; font-weight: 700; }
+.api-json {
+  max-height: 24rem;
+  margin: 0;
+  padding: 1rem 1.1rem;
+  overflow: auto;
+  color: #e6ebff;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+.api-json:focus-visible { outline: 2px solid #4db3ff; outline-offset: -2px; }
+@media (max-width: 640px) {
+  .api-fields thead { display: none; }
+  .api-fields tr { display: grid; padding: 0.55rem 0; border-top: 1px solid var(--line); }
+  .api-fields td { padding: 0.1rem 0; border: 0; }
+}
 @media (max-width: 640px) {
   .page-header-actions { width: 100%; }
   .page-header-actions .add-button { flex: 1 1 auto; }
@@ -3183,10 +3672,10 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
 .credits-quote p { margin: 0; text-wrap: pretty; }
 .credits-quote p::before { content: open-quote; }
 .credits-quote p::after { content: close-quote; }
-.credits-maker-words > p { margin: 0; line-height: 1.65; }
+.credits-maker-words > p { margin: 0; line-height: 1.65; text-wrap: balance; }
 
-.credits-card { padding: clamp(1.25rem, 3vw, 1.75rem); }
-.credits-card p { max-width: 72ch; margin: 0.65rem 0 0; line-height: 1.65; }
+.credits-card { padding: clamp(1.25rem, 3vw, 2rem); text-align: center; }
+.credits-card p { max-width: 72ch; margin: 0.65rem auto 0; line-height: 1.65; text-wrap: pretty; }
 .credits-heading { margin: 0; font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; }
 .credits-built { color: var(--muted); font-size: 0.92rem; }
 
@@ -3634,6 +4123,26 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
 /* Disable delete: on the card, and its settings (the gear) */
 .mailbox-kept { display: flex; align-items: center; gap: 0.4rem; color: #f5b54a; font-weight: 600; }
 .mailbox-kept svg { flex: none; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* Disabled (disabling.py, disable-dialog.html): a sender or mailbox says so in a red pill, its card
+   softly faded but for its buttons (Enable among them), and on a mailbox, whether it refuses mail */
+.domain-status.is-disabled {
+  padding: 0.15rem 0.65rem;
+  border: 1px solid rgba(255, 93, 110, 0.45);
+  border-radius: 999px;
+  background: rgba(255, 93, 110, 0.12);
+  color: #ff5d6e;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.sender-row.is-disabled :is(.sender-avatar, .sender-who, .sender-facts),
+.mailbox-row.is-disabled :is(.mailbox-badge, .mailbox-who, .mailbox-storage > :not(.mailbox-off), .mailbox-alias-list) { opacity: 0.55; filter: grayscale(0.6); }
+.mailbox-kept.mailbox-off { color: #ff5d6e; }
+.sender-enable, .mailbox-enable { display: contents; }
+.sender-disable svg, .sender-enable-button svg, .mailbox-enable-button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.sender-enable-button, .mailbox-enable-button { border-color: rgba(34, 197, 94, 0.55); color: #22c55e; }
+.sender-enable-button:hover, .mailbox-enable-button:hover { border-color: #22c55e; background: rgba(34, 197, 94, 0.12); }
+.disable-effects { display: grid; gap: 0.55rem; margin: 0; padding: 0 0 0 1.2rem; color: var(--muted); line-height: 1.55; }
+.disable-effects li::marker { color: #ff5d6e; }
 .keep-group { display: grid; gap: 0.7rem; }
 .keep-title { display: flex; align-items: center; gap: 0.45rem; margin: 0; font-weight: 700; }
 .keep-title svg { width: 18px; height: 18px; fill: none; stroke: #f5b54a; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }

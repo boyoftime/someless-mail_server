@@ -11,7 +11,7 @@ from urllib.parse import quote
 
 from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, url_for
 
-from . import mail_password, mail_profile, webmail_site
+from . import disabling, mail_password, mail_profile, webmail_site
 from .auth import login_required
 from .db import get_db
 from .domain_records import HOST_CHOICES
@@ -104,6 +104,8 @@ def _address(local, domain_name, sender=False):
     if sender and not db.execute("SELECT 1 FROM senders WHERE lower(email) = ?", (email,)).fetchone():
         return None, None, (f"{email} isn't a sender yet. Add it on the Senders page first: each mailbox "
                             "is made for one of your senders.")
+    if sender and disabling.disabled_problem(email):   # (a disabled sender gets no mailbox)
+        return None, None, disabling.disabled_problem(email)
     if db.execute("SELECT 1 FROM mailboxes WHERE email = ?", (email,)).fetchone():
         return None, None, f"{email} is already a mailbox."
     if db.execute("SELECT 1 FROM mailbox_aliases WHERE email = ?", (email,)).fetchone():
@@ -177,6 +179,7 @@ def _page(status=200, **context):
             "id": row["id"], "email": row["email"], "domain": row["domain"], "aliases": aliases,
             "found_by": found_by, "shown": query.lower() in found_by,
             "keep_webmail": bool(row["no_delete_webmail"]), "keep_apps": bool(row["no_delete_apps"]),
+            "disabled": bool(row["disabled"]), "refuse_mail": bool(row["refuse_mail"]),
             "kept_where": _kept_where(row["no_delete_webmail"], row["no_delete_apps"]),
             "quota": size_text(quota), "size": size, "unit": unit, "send_limit": row["send_limit_mb"],
             "used": None if in_use is None else {
@@ -187,7 +190,7 @@ def _page(status=200, **context):
     # what a new mailbox can be for: the senders at authenticated domains without one yet
     free_senders = db.execute(
         "SELECT senders.name, lower(senders.email) AS email FROM senders JOIN domains ON domains.id = senders.domain_id"
-        " WHERE domains.authenticated = 1 AND lower(senders.email) NOT IN (SELECT email FROM mailboxes)"
+        " WHERE domains.authenticated = 1 AND senders.disabled = 0 AND lower(senders.email) NOT IN (SELECT email FROM mailboxes)"
         " AND lower(senders.email) NOT IN (SELECT email FROM mailbox_aliases)"
         " ORDER BY senders.created_at DESC, senders.id DESC").fetchall()
     server = _server_for(boxes[0]["domain"]) if boxes else names.server_name()
@@ -276,8 +279,33 @@ def change_password_rules():
 def open_webmail(mailbox_id):
     """The mailbox's webmail, in a new tab, already signed in: a one-time ticket, used within a
     minute (webmail_site.py)."""
-    _mailbox(mailbox_id)
+    mailbox = _mailbox(mailbox_id)
+    if mailbox["disabled"]:
+        flash(f"{mailbox['email']} is disabled, so its webmail doesn't open. Enable it first.", "not-deleted")
+        return redirect(url_for("mailboxes.index"))
     return redirect(f"{webmail_site.address(request.host)}/enter?ticket={webmail_site.new_ticket(mailbox_id)}")
+
+
+@bp.post("/<int:mailbox_id>/disable")
+@login_required
+def disable(mailbox_id):
+    """Nobody can sign in to it, and its sender is disabled too (disabling.py); with refuse, new
+    mail to it bounces meanwhile."""
+    mailbox = _mailbox(mailbox_id)
+    refuse = request.form.get("refuse") == "on"
+    disabling.set_disabled(mailbox["email"], True, refuse_mail=refuse)
+    flash(f"{mailbox['email']} is disabled" + (", and new mail to it is refused." if refuse else ". New mail to it still arrives."),
+          "success")
+    return redirect(url_for("mailboxes.index"))
+
+
+@bp.post("/<int:mailbox_id>/enable")
+@login_required
+def enable(mailbox_id):
+    mailbox = _mailbox(mailbox_id)
+    disabling.set_disabled(mailbox["email"], False)
+    flash(f"{mailbox['email']} can be used again, and so can its sender.", "success")
+    return redirect(url_for("mailboxes.index"))
 
 
 @bp.get("/<int:mailbox_id>/profile")
@@ -419,13 +447,18 @@ def delete_alias(mailbox_id, alias_id):
 @bp.post("/<int:mailbox_id>/delete")
 @login_required
 def delete(mailbox_id):
-    db = get_db()
-    mailbox = db.execute("SELECT email FROM mailboxes WHERE id = ?", (mailbox_id,)).fetchone()
+    mailbox = get_db().execute("SELECT email FROM mailboxes WHERE id = ?", (mailbox_id,)).fetchone()
     if mailbox:
-        db.execute("DELETE FROM mailbox_aliases WHERE mailbox_id = ?", (mailbox_id,))
-        webmail_views.forget(mailbox_id)
-        db.execute("DELETE FROM mailboxes WHERE id = ?", (mailbox_id,))
-        db.commit()
-        engine_sync.after_change()   # the engine deletes the account, and the mail in it
+        remove(mailbox_id)
         flash(f"{mailbox['email']} was deleted, with its mail.", "deleted")
     return redirect(url_for("mailboxes.index"))
+
+
+def remove(mailbox_id):
+    """A mailbox gone, with its aliases and its webmail's own settings (here, and through the API)."""
+    db = get_db()
+    db.execute("DELETE FROM mailbox_aliases WHERE mailbox_id = ?", (mailbox_id,))
+    webmail_views.forget(mailbox_id)
+    db.execute("DELETE FROM mailboxes WHERE id = ?", (mailbox_id,))
+    db.commit()
+    engine_sync.after_change()   # the engine deletes the account, and the mail in it

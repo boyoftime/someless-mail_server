@@ -4,3 +4,6 @@ __pycache__/
 .pytest_cache/
 devdata/
 /data/
+
+# design mockups made while brainstorming (not part of the product)
+.superpowers/

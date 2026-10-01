@@ -1,7 +1,9 @@
 from flask import Blueprint, g, redirect, render_template, request, session, url_for
 
-from . import engine
+from . import engine, server_stats
 from .auth import login_required
+from .db import get_db
+from .engine import names
 
 bp = Blueprint("pages", __name__)
 
@@ -50,13 +52,26 @@ def preparing_skip():
 @bp.get("/dashboard")
 @login_required
 def dashboard():
-    return render_template("dashboard.html")
+    """The mail server at a glance: boards hanging from ropes, swaying in the wind (dashboard.js),
+    one each for the domains, the mailboxes, the senders and the mail server (one, once it has a
+    name: an authenticated domain's mail name); and under them, the server itself (server_stats.py):
+    its RAM, its disk, Someless Mail's share of the RAM, and whether it's healthy."""
+    db = get_db()
+    counts = {table: db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0] for table in ("domains", "mailboxes", "senders")}
+    counts["server"] = 1 if names.server_name() else 0
+    hung = [("domains", "domains.index", "Domain", "Domains", "globe"), ("mailboxes", "mailboxes.index", "Mailbox", "Mailboxes", "inbox"),
+            ("senders", "senders.index", "Sender", "Senders", "sender"),
+            ("server", "settings.mail_server", "Mail server", "Mail servers", "server")]
+    boards = [{"key": key, "url": url_for(endpoint), "count": counts[key], "name": one if counts[key] == 1 else many, "icon": icon}
+              for key, endpoint, one, many, icon in hung]
+    return render_template("dashboard.html", boards=boards, server=server_stats.cards())
 
 
-@bp.get("/api-keys")
+@bp.get("/dashboard/stats")
 @login_required
-def api_keys():
-    return render_template("api-keys.html")
+def dashboard_stats():
+    """The server boards' figures again: the open Dashboard asks every so often (dashboard.js)."""
+    return server_stats.cards()
 
 
 @bp.get("/credits")

@@ -40,6 +40,14 @@ def test_the_page_thanks_the_makers_and_offers_a_donation(client, login):
     assert 'target="_blank"' in donate and 'rel="noopener"' in donate
 
 
+def test_the_credits_say_nothing_of_ai(client, login):
+    login()
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+    for words in (re.sub(r"<[^>]+>", "", text(client.get("/credits"))), readme[readme.index("## Credits"):]):
+        assert not re.search(r"\bAI\b|artificial intelligence", words, re.I)
+
+
 def test_the_pictures_are_there(app):
     static = Path(app.static_folder) / "img" / "credits"
     assert (static / "someless-tricks.webp").stat().st_size > 0

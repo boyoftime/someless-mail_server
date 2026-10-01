@@ -2,7 +2,7 @@
 // in the panel's own look (the browser's own is plain, and different on every system). The
 // select stays underneath, hidden, holding the choice, so the form sends it as before, and
 // without JavaScript it's simply there. The list opens downwards, or upwards when there's
-// more room there (inside a dialog, the dialog's room).
+// more room there (inside a dialog, the dialog's room), and scrolls when even that's too little.
 // Keyboard: Enter, Space or the arrows open it; the arrows, Home and End move; Enter or Space
 // choose; Escape closes it without closing the dialog around it; Tab moves on.
 (function () {
@@ -85,11 +85,17 @@
     function open() {
       if (!list.hidden) return;
       list.hidden = false;
+      list.style.maxHeight = "";
       var box = button.getBoundingClientRect();
       var room = button.closest("dialog") ? button.closest("dialog").getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
       var below = room.bottom - box.bottom;
       var above = box.top - room.top;
-      list.setAttribute("data-side", below >= list.offsetHeight + 12 || below >= above ? "below" : "above");
+      var whole = list.offsetHeight;
+      var side = below >= whole + 12 || below >= above ? "below" : "above";
+      list.setAttribute("data-side", side);
+      // no room for all of it (a short dialog): as tall as there's room for, scrolling, never past the edge
+      var fits = (side === "below" ? below : above) - 16;
+      if (fits < whole) list.style.maxHeight = Math.max(fits, 120) + "px";
       wrap.classList.add("is-open");
       button.setAttribute("aria-expanded", "true");
       light(select.selectedIndex);
