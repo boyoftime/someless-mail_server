@@ -3694,6 +3694,9 @@ html:not(.js) .api-langs { display: none; }   /* without JavaScript, every langu
 .credits-card p { max-width: 72ch; margin: 0.65rem auto 0; line-height: 1.65; text-wrap: pretty; }
 .credits-heading { margin: 0; font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; }
 .credits-built { color: var(--muted); font-size: 0.92rem; }
+.credits-licence-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; margin-top: 1.25rem; }
+.credits-licence-links .button { display: inline-flex; align-items: center; gap: 0.5rem; }
+.credits-licence-links svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 .credits-why { display: grid; gap: 1rem; }
 .credits-why-lead { max-width: 72ch; margin: 0; color: var(--muted); line-height: 1.6; }

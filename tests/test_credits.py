@@ -6,6 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DONATE = "https://nowpayments.io/donation/someless"
+SOURCE = "https://github.com/boyoftime/someless-mail_server"
 
 
 def text(response):
@@ -38,6 +39,24 @@ def test_the_page_thanks_the_makers_and_offers_a_donation(client, login):
     assert "Someless Tricks" in words and "Stalwart" in words
     donate = re.search(rf'<a [^>]*href="{re.escape(DONATE)}"[^>]*>', page).group(0)
     assert 'target="_blank"' in donate and 'rel="noopener"' in donate
+
+
+def test_the_page_tells_of_the_licence_and_links_the_source(client, login):
+    """The AGPL's notices, in the panel itself: who holds the copyright, the licence, no warranty,
+    and where to read the licence and get the source code."""
+    login()
+
+    page = text(client.get("/credits"))
+
+    words = " ".join(re.sub(r"<[^>]+>", "", page).split())
+    for said in ("free and open-source project by Someless Ado",
+                 "GNU Affero General Public License, version 3 (AGPL-3.0)",
+                 "Copyright © 2026 Someless Ado", "no warranty"):
+        assert said in words, said
+    for href in (SOURCE, SOURCE + "/blob/main/LICENSE"):
+        link = re.search(rf'<a [^>]*href="{re.escape(href)}"[^>]*>', page).group(0)
+        assert 'target="_blank"' in link and 'rel="noopener"' in link
+    assert page.index('id="licence-title"') < page.index('id="donate-title"')
 
 
 def test_the_credits_say_nothing_of_ai(client, login):

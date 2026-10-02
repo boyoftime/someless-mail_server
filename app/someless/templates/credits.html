@@ -22,7 +22,7 @@
 {% endmacro %}
 
 {% block content %}
-{# Who made Someless Mail, why it's worth running, the thanks, and where to donate (pages.py) #}
+{# Who made Someless Mail, why it's worth running, the thanks, its licence, and where to donate (pages.py) #}
 <div class="credits">
   <header class="page-header">
     <h1 class="page-title">Credits</h1>
@@ -83,6 +83,16 @@
     <h2 class="credits-heading" id="thanks-title">Thanks to the Stalwart team</h2>
     <p>Their open-source mail engine, <a href="https://github.com/stalwartlabs/stalwart" target="_blank" rel="noopener">Stalwart</a>, is the heart of Someless Mail: fast and secure, written in Rust, it sends, receives and keeps every message. Thank you for building it in the open.</p>
     <p class="credits-built">Also built with Flask, Pillow, segno, cryptography, dnspython, lottie-web, PixiJS, the Google Sans font, Devicon, and icons from Iconify and Simple Icons.</p>
+  </section>
+
+  <section class="credits-card" aria-labelledby="licence-title">
+    <h2 class="credits-heading" id="licence-title">Free and open source</h2>
+    <p>Someless Mail is a free and open-source project by <strong>Someless Ado</strong>, under the GNU Affero General Public License, version 3 (AGPL-3.0). Copyright © 2026 Someless Ado.</p>
+    <p>Anyone may use it, change it, share it and even sell it. Whoever shares a changed copy, or runs one for other people, must offer its full source code to everyone who uses it, under the same licence, and keep these notices. It comes with no warranty.</p>
+    <div class="credits-licence-links">
+      <a class="button add-button" href="{{ source }}" target="_blank" rel="noopener">{{ icon("code") }}<span>Source code</span></a>
+      <a class="button button-quiet" href="{{ licence }}" target="_blank" rel="noopener">{{ icon("out") }}<span>Read the licence</span></a>
+    </div>
   </section>
 
   <section class="credits-donate" aria-labelledby="donate-title">

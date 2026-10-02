@@ -12,6 +12,7 @@ bp = Blueprint("pages", __name__)
 PREPARING_STEPS = [("new", "Setting up the mail engine"), ("bootstrapped", "Getting it ready to send"),
                    ("provisioned", "Almost there")]
 DONATE = "https://nowpayments.io/donation/someless"   # Credits: where to support Someless Mail
+SOURCE = "https://github.com/boyoftime/someless-mail_server"   # Credits: its source code, and its licence
 
 
 def preparing_page():
@@ -77,8 +78,8 @@ def dashboard_stats():
 @bp.get("/credits")
 @login_required
 def credits():
-    """Who made Someless Mail, why it's worth running, the thanks, and where to donate."""
-    return render_template("credits.html", donate=DONATE)
+    """Who made Someless Mail, why it's worth running, the thanks, its licence, and where to donate."""
+    return render_template("credits.html", donate=DONATE, source=SOURCE, licence=SOURCE + "/blob/main/LICENSE")
 
 
 @bp.get("/healthz")
