@@ -1,0 +1,8 @@
+{# A page's title, with how many it holds in a chip beside it (Domains, Senders, Mailboxes): all of
+   them, even while a search shows only some #}
+{% macro counted_title(title, count, one, many) -%}
+<div class="page-title-row">
+  <h1 class="page-title">{{ title }}</h1>
+  <span class="page-count">{{ count }}<span class="visually-hidden"> {{ one if count == 1 else many }}</span></span>
+</div>
+{%- endmacro %}

@@ -1,4 +1,5 @@
 {% extends "shell.html" %}
+{% from "page-count.html" import counted_title %}
 {% block title %}Domains | Someless Mail{% endblock %}
 
 {% macro icon(name) %}
@@ -16,7 +17,7 @@
 {% block content %}
 <header class="page-header page-header-row">
   <div>
-    <h1 class="page-title">Domains</h1>
+    {{ counted_title("Domains", domains | length, "domain", "domains") }}
     <p class="page-subtitle">A mail domain is the part of an email address after the @. Connect yours here to send and receive mail with it. Authenticating it shows other mail servers that your mail is really yours, so it doesn't land in spam.</p>
   </div>
   <button type="button" class="button add-button" data-dialog-open="add-domain-dialog" aria-haspopup="dialog">

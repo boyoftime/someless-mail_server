@@ -1,4 +1,5 @@
 {% extends "shell.html" %}
+{% from "page-count.html" import counted_title %}
 {% from "disable-dialog.html" import disable_dialog, power_icon %}
 {% from "copy-box.html" import copy_box %}
 {% from "password-rules-dialog.html" import rules_dialog %}
@@ -151,7 +152,7 @@
 {% set typed = typed or {} %}
 <header class="page-header page-header-row">
   <div>
-    <h1 class="page-title">Mailboxes</h1>
+    {{ counted_title("Mailboxes", mailboxes | length, "mailbox", "mailboxes") }}
     <p class="page-subtitle">A mailbox is an inbox at one of your domains, like ceo@yourcompany.com. Mail sent to it lands here, and you read it in any mail app: Outlook, Apple Mail, Thunderbird or the one on your phone.</p>
   </div>
   {% if domains or mailboxes %}

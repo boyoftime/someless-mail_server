@@ -606,6 +606,26 @@ body.is-ready .preparing-main { opacity: 0; transform: translateY(-6px); }
 .page-header { margin: 0 0 1.5rem; }
 .page-header .page-title { margin-bottom: 0.3rem; }
 .page-subtitle { margin: 0; color: var(--muted); }
+/* how many a page holds, in a chip beside its title (page-count.html) */
+.page-title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.85rem; margin-bottom: 0.3rem; }
+.page-header .page-title-row .page-title { margin: 0; }
+.page-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2.4rem;
+  height: 2.4rem;
+  padding: 0 0.8rem;
+  border: 1px solid rgba(20, 99, 243, 0.28);
+  border-radius: 999px;
+  background: rgba(20, 99, 243, 0.1);
+  color: var(--brand);
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  box-shadow: 0 0 22px -8px rgba(1, 149, 251, 0.75);
+}
+:root[data-theme="dark"] .page-count { border-color: rgba(92, 182, 255, 0.4); background: rgba(1, 149, 251, 0.16); color: #8fd0ff; }
 .alert {
   margin: 0 0 1.5rem;
   padding: 0.75rem 1rem;
@@ -3775,7 +3795,7 @@ html:not(.js) .api-langs { display: none; }   /* without JavaScript, every langu
 
 /* Senders (senders.html): a card per sender, its name and address with a round initial, and
    what makes other mail servers trust it (its domain, DKIM, DMARC) */
-.sender-list { display: grid; gap: 0.9rem; margin-top: 1.25rem; }
+.sender-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.9rem; margin-top: 1.25rem; }
 .sender-row {
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -3982,7 +4002,8 @@ html:not(.js) .api-langs { display: none; }   /* without JavaScript, every langu
 }
 @media (max-width: 640px) {
   .sender-facts { grid-template-columns: minmax(0, 1fr); }
-  .sender-actions { margin-left: 0; }
+  .sender-who { flex-basis: 10rem; }   /* (beside its round initial) */
+  .sender-actions { flex-wrap: wrap; margin-left: 0; }
   .sender-form-actions .button { flex: 1 1 auto; }
   .email-parts { grid-template-columns: minmax(0, 1fr); }
 }

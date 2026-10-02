@@ -1,4 +1,5 @@
 {% extends "shell.html" %}
+{% from "page-count.html" import counted_title %}
 {% from "disable-dialog.html" import disable_dialog, power_icon %}
 {% block title %}Senders | Someless Mail{% endblock %}
 
@@ -29,7 +30,7 @@
 {% block content %}
 <header class="page-header page-header-row">
   <div>
-    <h1 class="page-title">Senders</h1>
+    {{ counted_title("Senders", senders | length, "sender", "senders") }}
     <p class="page-subtitle">A sender is the name and address your mail comes from, like Google &lt;no-reply@google.com&gt;. People recognise it in their inbox, and other mail servers trust it because its domain is authenticated.</p>
   </div>
   <a class="button add-button" href="{{ url_for('senders.new') }}">{{ icon("plus") }}<span>Add sender</span></a>
