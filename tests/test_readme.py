@@ -30,14 +30,24 @@ def test_every_picture_it_shows_is_there():
 
 def test_it_shows_the_interface():
     """A look inside: the Dashboard in the reader's own GitHub theme (dark or light), then the
-    other pages, each with a few words."""
+    other pages, each with a few words, and the API guide."""
     inside = README[README.index("## A look inside"):]
     inside = inside[:inside.index("\n## ", 1)]
     assert re.search(r'<source media="\(prefers-color-scheme: dark\)" srcset="docs/images/screens/dashboard-dark\.png">\s*'
                      r'<img src="docs/images/screens/dashboard-light\.png" alt="[^"]+"', inside)
-    for screen in ("smtp-ready", "api-keys", "senders", "mailboxes", "settings-account", "settings-misc"):
+    assert re.search(r'<source media="\(prefers-color-scheme: light\)" srcset="docs/images/screens/settings-account-light\.png">\s*'
+                     r'<img src="docs/images/screens/settings-account\.png" alt="[^"]+"', inside)
+    for screen in ("welcome", "login", "domains", "smtp-ready", "smtp-examples", "senders", "mailboxes",
+                   "api-keys", "api-docs", "settings-misc"):
         assert re.search(rf'<img src="docs/images/screens/{screen}\.png" alt="[^"]+"', inside), screen
     assert README.index("## A look inside") < README.index("## How it fits together")
+
+
+def test_it_says_who_makes_it_and_that_it_is_free():
+    """Right at the top, before the first heading: free and open source, by Someless Ado."""
+    top = README[:README.index("\n## ")]
+    assert "free and open-source project by **Someless Ado**" in top
+    assert re.search(r'<p align="center">.*Free and open source.*Someless Ado.*</p>', top)
 
 
 def test_it_tells_of_the_finished_server_and_its_api():

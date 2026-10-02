@@ -7,7 +7,9 @@
 
 <h3 align="center">The powerful mail server for businesses and enterprises, on your own server.</h3>
 
-Welcome to **Someless Mail Server**: your own mail server in a single Docker image. Install it on your server, open the web interface, connect your domain, send email from your apps and websites through your own server, signed and trusted like mail from the big providers, and receive it in your own mailboxes. No monthly fee per user, no one else holding your company's mail: just your server, your domains and your rules.
+<p align="center"><b>Free and open source</b>, made by <b>Someless Ado</b>.</p>
+
+Welcome to **Someless Mail Server**, a free and open-source project by **Someless Ado**: your own mail server in a single Docker image. Install it on your server, open the web interface, connect your domain, send email from your apps and websites through your own server, signed and trusted like mail from the big providers, and receive it in your own mailboxes. No monthly fee per user, no one else holding your company's mail: just your server, your domains and your rules.
 
 **Version:** 1.0.0
 
@@ -43,12 +45,22 @@ Hosted suites charge for every user, every month, and keep your mail on their se
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/screens/smtp-ready.png" alt="SMTP &amp; API: Ready to send and receive, with every check ticked: mail engine, server name, certificate, ports 25, 993 and 995, reverse DNS">
-      <br><b>Ready to send and receive.</b> Every check your mail server needs, ticked as it's done: the mail engine, its name and certificate, the mail ports, reverse DNS.
+      <img src="docs/images/screens/welcome.png" alt="Welcome to Someless Mail: connect your own domains, create inboxes for you and your team, send and receive email securely, with Continue">
+      <br><b>Welcome.</b> The first thing you see after installing: what Someless Mail does for you, and one button to start.
     </td>
     <td width="50%" valign="top">
-      <img src="docs/images/screens/api-keys.png" alt="API keys: your API's address and how to send the key, with Create API key">
-      <br><b>API keys.</b> Your own apps add domains, senders and mailboxes through the API, each with a key of its own. The round button opens the guide.
+      <img src="docs/images/screens/login.png" alt="Log in: username and password, among floating mail icons">
+      <br><b>Log in.</b> Your own username and password, with two-factor sign-in if you turn it on.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/screens/domains.png" alt="Domains: each domain Authenticated, with its DNS provider, View configuration and a delete button">
+      <br><b>Domains.</b> Every domain you send and receive with, authenticated so your mail doesn't land in spam, with the exact records for its DNS provider.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/screens/smtp-ready.png" alt="SMTP &amp; API: Ready to send and receive, with every check ticked: mail engine, server name, certificate, ports 25, 993 and 995, reverse DNS">
+      <br><b>Ready to send and receive.</b> Every check your mail server needs, ticked as it's done: the mail engine, its name and certificate, the mail ports, reverse DNS.
     </td>
   </tr>
   <tr>
@@ -63,7 +75,20 @@ Hosted suites charge for every user, every month, and keep your mail on their se
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/screens/settings-account.png" alt="Settings, Account: update username and profile picture, change password, two-factor authentication">
+      <img src="docs/images/screens/smtp-examples.png" alt="SMTP &amp; API examples: ready-to-copy code in Python, Node.js, PHP, Java, C# and Go">
+      <br><b>Send from your code.</b> Copy-ready examples in Python, Node.js, PHP, Java, C# and Go, filled in with your own server and sender.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/screens/api-keys.png" alt="API keys: your API's address and how to send the key, with Create API key">
+      <br><b>API keys.</b> Your own apps add domains, senders and mailboxes through the API, each with a key of its own. The round button opens the guide.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <picture>
+        <source media="(prefers-color-scheme: light)" srcset="docs/images/screens/settings-account-light.png">
+        <img src="docs/images/screens/settings-account.png" alt="Settings, Account: update username and profile picture, change password, two-factor authentication">
+      </picture>
       <br><b>Your account.</b> Your username and picture, your password, and two-factor sign-in with any authenticator app.
     </td>
     <td width="50%" valign="top">
@@ -72,6 +97,12 @@ Hosted suites charge for every user, every month, and keep your mail on their se
     </td>
   </tr>
 </table>
+
+<p align="center">
+  <img src="docs/images/screens/api-docs.png" alt="The Someless Mail API guide, on an island of grass, with glowing ropes joining its cards: the address every call uses, the key and the format" width="900">
+</p>
+
+<p align="center"><b>The API guide</b>: every call your apps can make, with the request to send and the answer that comes back, in cURL, JavaScript, Python and PHP. The flower button hands the whole API to your AI assistant in one link.</p>
 
 Try it now: it takes minutes to install, and your first message goes out as soon as your domain is authenticated.
 
