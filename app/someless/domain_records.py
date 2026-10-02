@@ -26,6 +26,10 @@ from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
 
 import dns.exception
+import dns.message
+import dns.query
+import dns.rdataclass
+import dns.rdatatype
 import dns.resolver
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -37,6 +41,14 @@ AUTHENTICATING = ("code", "a", "spf", "dkim", "dmarc", "mx")  # all found: authe
 HOST_CHOICES = ("mail", "mx", "smtp", "mail2")  # this server's name in the domain: the first free one
 SPF_LOOKUP_LIMIT = 10  # DNS lookups one SPF check may take; past it the record fails everywhere
 LOOK_AGAIN_AFTER = 60  # seconds: an older look at a domain's DNS is done again when its page opens
+# Cloudflare's proxy (www.cloudflare.com/ips-v4): a name with its orange cloud points there, not here
+CLOUDFLARE_PROXY = [ipaddress.ip_network(network) for network in (
+    "173.245.48.0/20", "103.21.244.0/22", "103.22.200.0/22", "103.31.4.0/22", "141.101.64.0/18",
+    "108.162.192.0/18", "190.93.240.0/20", "188.114.96.0/20", "197.234.240.0/22", "198.41.128.0/17",
+    "162.158.0.0/15", "104.16.0.0/13", "104.24.0.0/14", "172.64.0.0/13", "131.0.72.0/22")]
+OWN_ADDRESS_KEPT = 3600  # seconds: the server's own address, as DNS told it (own_address)
+OWN_ADDRESS_RETRY = 300  # seconds: after no answer
+_own = {"address": None, "at": None}
 
 # One record to add: `host` as DNS providers take it ("@" for the domain itself). `advice`:
 # how it fits with a record the domain has already (`now`: that record's value).
@@ -82,7 +94,8 @@ def keys_for(domain_id):
 def server_address(host):
     """This server's public IP address, as the way the admin opened the panel tells it: the
     address itself, or what the panel's name points to. None for a private address (the
-    panel opened on the server itself, or at home)."""
+    panel opened on the server itself, or at home). A name behind Cloudflare's proxy points to
+    Cloudflare, not here: then it's the server's own address, as DNS tells it."""
     name = host[1:host.index("]")] if host.startswith("[") else host.rsplit(":", 1)[0] if host.count(":") == 1 else host
     try:
         address = ipaddress.ip_address(name)
@@ -91,7 +104,48 @@ def server_address(host):
             address = ipaddress.ip_address(socket.getaddrinfo(name, None, socket.AF_INET)[0][4][0])
         except (OSError, IndexError, ValueError):
             return None
+    if _proxied(address):
+        return own_address()
     return str(address) if address.is_global else None
+
+
+def _proxied(address):
+    return any(address in network for network in CLOUDFLARE_PROXY)
+
+
+def own_address():
+    """This server's public IP address, as DNS tells it (kept for an hour; after no answer,
+    asked again in five minutes)."""
+    kept_for = OWN_ADDRESS_KEPT if _own["address"] else OWN_ADDRESS_RETRY
+    now = time.time()
+    if _own["at"] is None or now - _own["at"] > kept_for:
+        _own["address"], _own["at"] = ask_own_address(), now
+    return _own["address"]
+
+
+def ask_own_address():
+    """Ask DNS who's asking: Cloudflare's whoami, else OpenDNS's myip. A public address that
+    isn't Cloudflare's own, or None."""
+    for ask in (_cloudflare_whoami, _opendns_myip):
+        try:
+            address = ipaddress.ip_address(ask())
+        except (dns.exception.DNSException, OSError, ValueError, IndexError):
+            continue
+        if address.version == 4 and address.is_global and not _proxied(address):
+            return str(address)
+    return None
+
+
+def _cloudflare_whoami():
+    query = dns.message.make_query("whoami.cloudflare", dns.rdatatype.TXT, dns.rdataclass.CH)
+    return dns.query.udp(query, "1.1.1.1", timeout=3).answer[0][0].strings[0].decode()
+
+
+def _opendns_myip():
+    resolver = dns.resolver.Resolver(configure=False)
+    resolver.nameservers = ["208.67.222.222"]
+    resolver.lifetime = 3
+    return resolver.resolve("myip.opendns.com", "A")[0].to_text()
 
 
 def found_in(keys):

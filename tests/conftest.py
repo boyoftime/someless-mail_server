@@ -16,6 +16,12 @@ def no_real_dns(monkeypatch):
     monkeypatch.setattr(domain_records, "lookup", lambda name, rdtype: [])
     # a domain's own name servers don't answer either, so the (made-up) usual DNS is asked
     monkeypatch.setattr(domain_records, "lookup_at", lambda servers, name, rdtype: None)
+    # nor tells the server its own address (behind Cloudflare's proxy), and nothing's remembered of it
+    def unanswered():
+        raise OSError("no DNS in the tests")
+    monkeypatch.setattr(domain_records, "_cloudflare_whoami", unanswered)
+    monkeypatch.setattr(domain_records, "_opendns_myip", unanswered)
+    monkeypatch.setattr(domain_records, "_own", {"address": None, "at": None})
     # nor the mail engine's checklist: port 25 is open, no reverse DNS, the server name points nowhere
     from someless.engine import checks
     checks.forget()

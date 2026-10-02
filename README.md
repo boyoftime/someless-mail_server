@@ -289,6 +289,8 @@ The **MX** record is needed too: a domain is authenticated once its mail comes t
 
 Some DNS providers can import records from a file. Click **Download zone file** at the top of the domain's **Authenticate** page for all six in one file. At Cloudflare, open the domain, then **DNS → Records → Import and Export**, upload the file, and leave **Proxy imported DNS records** off: mail doesn't go through Cloudflare's proxy. A record the domain has already is left out of the file, and so is one to change by hand: if the domain has an SPF record of its own, edit it to the one on the page, since a domain can have only one.
 
+Your web interface itself can sit behind Cloudflare's proxy (the orange cloud): Someless Mail then asks DNS for your server's own IP address, so the A record and the checks still point to your server, not to Cloudflare. Keep the mail server's name (`mail.example.com`) on **DNS only**.
+
 ### Someone else looks after the DNS?
 
 Click **Need help?** at the bottom of the domain's **Authenticate** page, and make a link to send to your developer or IT. It opens a page of its own, on your web interface's address, with no login: the records, how to add them at your DNS provider (or all at once, with the zone file), and an **Authenticate** button. You choose when the link expires (1 hour to 30 days, or never) and whether it asks for a password. The dialog shows whether each link was opened, and you can delete one at any time. Once its check finds all six records right, the domain is authenticated and the link closes.
