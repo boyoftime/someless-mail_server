@@ -29,6 +29,50 @@ Hosted suites charge for every user, every month, and keep your mail on their se
 - **Secure by design.** Two-factor sign-in for the web interface, a lock after wrong passwords in the webmail, and encrypted connections for every mail app.
 - **A modern engine.** Built on [Stalwart](https://github.com/stalwartlabs/stalwart), a fast, secure mail engine written in Rust, in a single Docker image you update with one command.
 
+## A look inside
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/screens/dashboard-dark.png">
+    <img src="docs/images/screens/dashboard-light.png" alt="The Dashboard: boards for the domains, mailboxes, senders and mail server, and under them the server's RAM, disk, Someless Mail's share of the RAM and its health, hanging from metal beams" width="900">
+  </picture>
+</p>
+
+<p align="center"><b>The Dashboard</b>: your domains, mailboxes, senders and mail server at a glance, and the server's own RAM, disk and health, refreshed as you watch. Every few seconds a little helicopter flies over the boards, and they swing in its downwash. (This picture follows your GitHub theme: light or dark, Someless Mail has both.)</p>
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/screens/smtp-ready.png" alt="SMTP &amp; API: Ready to send and receive, with every check ticked: mail engine, server name, certificate, ports 25, 993 and 995, reverse DNS">
+      <br><b>Ready to send and receive.</b> Every check your mail server needs, ticked as it's done: the mail engine, its name and certificate, the mail ports, reverse DNS.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/screens/api-keys.png" alt="API keys: your API's address and how to send the key, with Create API key">
+      <br><b>API keys.</b> Your own apps add domains, senders and mailboxes through the API, each with a key of its own. The round button opens the guide.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/screens/senders.png" alt="Senders: each sender Ready, with its domain, DKIM signature and DMARC, and buttons to disable it, send a test email or edit it">
+      <br><b>Senders.</b> The names and addresses your mail comes from, each with its domain, DKIM and DMARC checked, a test email to send, and Disable.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/screens/mailboxes.png" alt="Mailboxes: each mailbox with its storage, sending limit, aliases and its buttons">
+      <br><b>Mailboxes.</b> Inboxes at your domains: storage, sending limit, aliases, Disable delete, its webmail in one click, and setup for any mail app.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/screens/settings-account.png" alt="Settings, Account: update username and profile picture, change password, two-factor authentication">
+      <br><b>Your account.</b> Your username and picture, your password, and two-factor sign-in with any authenticator app.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/screens/settings-misc.png" alt="Settings, Miscellaneous: automatic domain checks, webmail address, webmail sign-in lock">
+      <br><b>Miscellaneous.</b> Automatic domain checks, where the webmail opens, and its sign-in lock.
+    </td>
+  </tr>
+</table>
+
 Try it now: it takes minutes to install, and your first message goes out as soon as your domain is authenticated.
 
 This guide takes you from installing to your first email landing in a Gmail inbox, and your first reply landing in your own mailbox; then to the webmail and [the API](#the-api-domains-senders-and-mailboxes-from-your-apps). Follow the steps in order; each one takes a few minutes, apart from waiting for DNS changes to show up.

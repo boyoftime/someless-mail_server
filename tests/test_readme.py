@@ -3,7 +3,8 @@ and every link within it leads to a heading of its own."""
 import re
 from pathlib import Path
 
-README = (Path(__file__).resolve().parent.parent / "README.md").read_text(encoding="utf-8")
+ROOT = Path(__file__).resolve().parent.parent
+README = (ROOT / "README.md").read_text(encoding="utf-8")
 
 
 def slug(heading):
@@ -17,6 +18,26 @@ def test_every_link_within_the_readme_leads_to_a_heading():
     links = set(re.findall(r"\]\(#([^)]+)\)", README))
 
     assert links and links <= anchors, sorted(links - anchors)
+
+
+def test_every_picture_it_shows_is_there():
+    pictures = re.findall(r'(?:src|srcset)="(docs/images/[^"]+)"', README)
+
+    assert pictures
+    for picture in pictures:
+        assert (ROOT / picture).is_file(), picture
+
+
+def test_it_shows_the_interface():
+    """A look inside: the Dashboard in the reader's own GitHub theme (dark or light), then the
+    other pages, each with a few words."""
+    inside = README[README.index("## A look inside"):]
+    inside = inside[:inside.index("\n## ", 1)]
+    assert re.search(r'<source media="\(prefers-color-scheme: dark\)" srcset="docs/images/screens/dashboard-dark\.png">\s*'
+                     r'<img src="docs/images/screens/dashboard-light\.png" alt="[^"]+"', inside)
+    for screen in ("smtp-ready", "api-keys", "senders", "mailboxes", "settings-account", "settings-misc"):
+        assert re.search(rf'<img src="docs/images/screens/{screen}\.png" alt="[^"]+"', inside), screen
+    assert README.index("## A look inside") < README.index("## How it fits together")
 
 
 def test_it_tells_of_the_finished_server_and_its_api():
