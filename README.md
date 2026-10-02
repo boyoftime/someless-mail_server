@@ -326,9 +326,18 @@ Once your domain is authenticated, its mail name (`mail.example.com`) becomes yo
 | Forward port | `17081` |
 | SSL tab | **None.** Leave SSL off and Force SSL off for this one |
 
-SSL stays off here on purpose: Someless Mail gets this certificate itself, and when Nginx Proxy Manager holds a certificate for a name, it answers Let's Encrypt's visits to that name on its own, so they'd never reach Someless Mail. Port 17081 answers Let's Encrypt's check and nothing else.
+SSL stays off here on purpose: Someless Mail gets this certificate itself, and when Nginx Proxy Manager holds a certificate for a name, it answers Let's Encrypt's visits to that name on its own, so they'd never reach Someless Mail. Port 17081 answers Let's Encrypt's check, and shows one page of its own to say it works.
 
 **Without a proxy**, and with nothing else on port 80: uncomment the `"80:17081"` line in your `docker-compose.yml` and run `docker compose up -d`.
+
+**To see it works,** open `http://mail.example.com` in your browser. When the visit reaches Someless Mail, it says **It's all done!** in blocks of grass. Any other page, Nginx Proxy Manager's for one, means it doesn't get through yet. (Your browser calls the page "Not secure", since it's plain HTTP like Let's Encrypt's visit: that's as it should be. Your mail apps never open it.)
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/screens/proxy-works-dark.png">
+    <img src="docs/images/screens/proxy-works-light.png" alt="It's all done! in blocks of grass over a sky, with a note that the proxy host works, and Someless Mail as a watermark" width="720">
+  </picture>
+</p>
 
 That's all: there's nothing to click. Every 30 seconds, Someless Mail looks whether Let's Encrypt's check gets through, and the moment your proxy host works, it asks Let's Encrypt for the certificate straight away. It usually arrives a minute or two after you save the proxy host. Sometimes it takes up to 30 minutes, for example right after you changed the mail server name's DNS record, while old answers are still kept in DNS caches; there's nothing to do but wait. Someless Mail renews it by itself. **SMTP & API** and **Settings → Mail server name** follow it live: *waiting for the proxy host*, then *getting it* (a turning blue ring), then ticked (see [Step 8](#step-8-check-ready-to-send)). **Check again** looks at every check afresh, as often as you like; it asks Let's Encrypt only once the proxy host lets its check through (before that, the request could only fail), and then at most every 10 minutes, since Let's Encrypt allows only a few failed checks of a name an hour.
 
@@ -496,7 +505,7 @@ Keep the key on your server, never in a web page where anyone could read it. Too
 
 ## Troubleshooting
 
-- **The certificate doesn't arrive.** Check that `mail.example.com` points to your server ([Step 4](#step-4-connect-and-authenticate-your-domain)), that its proxy host forwards to port `17081` with SSL off ([Step 5](#step-5-your-mail-servers-certificate)), and that port 80 is open in your firewall: the certificate is asked for by itself as soon as all that works (or click **Check again** on **SMTP & API**). Opening `http://mail.example.com/.well-known/acme-challenge/test` should say *Someless Mail: nothing here but Let's Encrypt's checks.* If you see a page from Nginx Proxy Manager instead, the request isn't reaching Someless Mail.
+- **The certificate doesn't arrive.** Check that `mail.example.com` points to your server ([Step 4](#step-4-connect-and-authenticate-your-domain)), that its proxy host forwards to port `17081` with SSL off ([Step 5](#step-5-your-mail-servers-certificate)), and that port 80 is open in your firewall: the certificate is asked for by itself as soon as all that works (or click **Check again** on **SMTP & API**). Opening `http://mail.example.com` should show *It's all done!* in blocks of grass, and `http://mail.example.com/.well-known/acme-challenge/test` should say *Someless Mail: nothing here but Let's Encrypt's checks.* If you see a page from Nginx Proxy Manager instead, the request isn't reaching Someless Mail. Changed the name's DNS record lately? Old answers can stay in DNS caches for up to an hour, so give it a while.
 - **"535 Authentication failed" in an app:** the login or the key is wrong, or the key has expired. Each key has its own login: use the one listed with it.
 - **"501 You are not allowed to send from this address":** the app sends from an address that isn't on your **Senders** list. Add it there, or change the app's "from" address.
 - **"Connection refused" or a timeout in an app:** ports `587`/`465` aren't open in your firewall, or the network your app runs on blocks them.
@@ -658,7 +667,7 @@ The same thanks, and the donate button, are in the web interface too: **Credits*
 - Font: [Google Sans](https://github.com/googlefonts/googlesans), SIL Open Font License 1.1 (`app/someless/static/fonts/OFL.txt`).
 - Animation player: [lottie-web](https://github.com/airbnb/lottie-web) 5.13.0 (MIT).
 - Login background: [PixiJS](https://github.com/pixijs/pixijs) 8.21.0 (MIT). PixiJS also swings the Dashboard's hanging boards.
-- The Dashboard's metal beam, sand and cake boards, and the API guide's grass: [Kenney](https://kenney.nl/)'s Platformer Art Extended Tileset (CC0, public domain).
+- The Dashboard's metal beam, sand and cake boards, the API guide's grass, and the grass blocks of the mail server's *It's all done!* page: [Kenney](https://kenney.nl/)'s Platformer Art Extended Tileset (CC0, public domain).
 - QR codes for two-factor authentication: [segno](https://github.com/heuer/segno) 1.6.6 (BSD-3-Clause).
 - DKIM signing keys: [cryptography](https://github.com/pyca/cryptography) 50.0.1 (Apache-2.0 or BSD-3-Clause).
 - DNS checks: [dnspython](https://github.com/rthalley/dnspython) 2.8.0 (ISC).

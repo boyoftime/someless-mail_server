@@ -62,6 +62,18 @@ def challenge_reply(path, fetch):
     return fetch(path)
 
 
+def relay_reply(path, fetch):
+    """(status, content type, body): the front page (relay_page.py: the proxy host works), a
+    challenge's answer, or else whose it is, in a line (what the proxy host check looks for)."""
+    if path.split("?", 1)[0] == "/":
+        from . import relay_page
+        return 200, "text/html; charset=utf-8", relay_page.page()
+    status, body = challenge_reply(path, fetch)
+    if status != 200:
+        return status, "text/plain", NOT_HERE
+    return status, "text/plain", body
+
+
 def _fetch_from_stalwart(path, host):
     request = urllib.request.Request(f"http://127.0.0.1:17880{path}", headers={"Host": host or "localhost"})
     try:
@@ -77,12 +89,15 @@ class _Relay(BaseHTTPRequestHandler):
     timeout = 10   # seconds: 17081 is open to the internet; a connection that says nothing is dropped
 
     def do_GET(self):
-        status, body = challenge_reply(self.path, lambda path: _fetch_from_stalwart(path, self.headers.get("Host")))
-        if status != 200:
-            body = NOT_HERE
+        status, kind, body = relay_reply(self.path, lambda path: _fetch_from_stalwart(path, self.headers.get("Host")))
         self.send_response(status)
-        self.send_header("Content-Type", "text/plain")
+        self.send_header("Content-Type", kind)
         self.send_header("Content-Length", str(len(body)))
+        # (open to the internet: what it sends can load, run and frame nothing)
+        self.send_header("Content-Security-Policy", "default-src 'none'; img-src data:; style-src 'unsafe-inline'; "
+                                                    "base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
         self.end_headers()
         self.wfile.write(body)
 
