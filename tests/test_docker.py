@@ -59,6 +59,18 @@ def test_the_image_takes_the_mail_engine_version_from_one_place():
     assert "STALWART_IMAGE=ghcr.io/boyoftime/someless-stalwart:${{ steps.version.outputs.stalwart }}" in workflow
 
 
+def test_the_mail_engine_is_built_from_our_own_copy_of_its_source():
+    """Stalwart's source comes from boyoftime/stalwart, a fork of Stalwart's own with the same
+    version tags, so it stays there as long as the image needs it (the AGPL asks for that): the
+    build clones it, and the note in the image, and the README, say where it is."""
+    build = (ROOT / "stalwart" / "Dockerfile").read_text()
+    readme = README.read_text(encoding="utf-8")
+
+    assert 'git clone --depth 1 --branch "${STALWART_VERSION}" https://github.com/boyoftime/stalwart /src' in build
+    assert "built from https://github.com/boyoftime/stalwart/tree/%s (commit %s), a copy of https://github.com/stalwartlabs/stalwart" in build
+    assert "[boyoftime/stalwart](https://github.com/boyoftime/stalwart)" in readme[readme.index("## Credits"):]
+
+
 def test_the_image_is_built_again_once_the_mail_engine_is():
     # On the first push both workflows start together, and the image needs the engine's
     # build, which takes far longer: the image waits for it instead of failing.

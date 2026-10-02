@@ -651,7 +651,7 @@ The same thanks, and the donate button, are in the web interface too: **Credits*
 
 ### Open-source software it's built with
 
-- Mail engine: [Stalwart](https://github.com/stalwartlabs/stalwart) v0.16.23, built from source without its Enterprise features (AGPL-3.0). Its licence and a link to its source are in the image at `/usr/share/doc/stalwart/`.
+- Mail engine: [Stalwart](https://github.com/stalwartlabs/stalwart) v0.16.23, built from source without its Enterprise features (AGPL-3.0). Its source is kept at [boyoftime/stalwart](https://github.com/boyoftime/stalwart), a copy of Stalwart's own with the same versions, so it stays available; its licence and a link to that source are in the image at `/usr/share/doc/stalwart/`.
 - Profile pictures: [Pillow](https://github.com/python-pillow/Pillow) 12.3.0 (MIT-CMU).
 - Font: [Google Sans](https://github.com/googlefonts/googlesans), SIL Open Font License 1.1 (`app/someless/static/fonts/OFL.txt`).
 - Animation player: [lottie-web](https://github.com/airbnb/lottie-web) 5.13.0 (MIT).
