@@ -44,10 +44,26 @@ def test_it_shows_the_interface():
 
 
 def test_it_says_who_makes_it_and_that_it_is_free():
-    """Right at the top, before the first heading: free and open source, by Someless Ado."""
+    """Right at the top, before the first heading: free and open source, by Someless Ado, under the
+    GNU AGPL-3.0."""
     top = README[:README.index("\n## ")]
     assert "free and open-source project by **Someless Ado**" in top
-    assert re.search(r'<p align="center">.*Free and open source.*Someless Ado.*</p>', top)
+    assert re.search(r'<p align="center">.*Free and open source.*Someless Ado.*<a href="LICENSE">GNU AGPL-3\.0</a>.*</p>', top)
+
+
+def test_the_licence_is_the_agpl_3_0():
+    """LICENSE is the licence's own text, word for word (so GitHub recognises it); the copyright and
+    what the licence asks of a changed copy are in the README's Licence section."""
+    licence = (ROOT / "LICENSE").read_text(encoding="utf-8")
+    assert licence.split("\n")[:2] == ["                    GNU AFFERO GENERAL PUBLIC LICENSE",
+                                       "                       Version 3, 19 November 2007"]
+    assert "13. Remote Network Interaction; Use with the GNU General Public License." in licence
+    assert licence.rstrip().endswith("<https://www.gnu.org/licenses/>.")
+    assert "MIT" not in README[README.index("## Licence"):]
+    section = README[README.index("## Licence"):]
+    for words in ("[GNU Affero General Public License, version 3](LICENSE)", "Copyright © 2026 Someless Ado",
+                  "Stalwart"):
+        assert words in section, words
 
 
 def test_it_tells_of_the_finished_server_and_its_api():

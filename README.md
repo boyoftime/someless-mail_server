@@ -7,7 +7,7 @@
 
 <h3 align="center">The powerful mail server for businesses and enterprises, on your own server.</h3>
 
-<p align="center"><b>Free and open source</b>, made by <b>Someless Ado</b>.</p>
+<p align="center"><b>Free and open source</b>, made by <b>Someless Ado</b>, under the <a href="LICENSE">GNU AGPL-3.0</a>.</p>
 
 Welcome to **Someless Mail Server**, a free and open-source project by **Someless Ado**: your own mail server in a single Docker image. Install it on your server, open the web interface, connect your domain, send email from your apps and websites through your own server, signed and trusted like mail from the big providers, and receive it in your own mailboxes. No monthly fee per user, no one else holding your company's mail: just your server, your domains and your rules.
 
@@ -668,3 +668,13 @@ The same thanks, and the donate button, are in the web interface too: **Credits*
 - Making attached pictures and PDFs smaller without losing anything: [libjpeg-turbo](https://libjpeg-turbo.org/)'s jpegtran (IJG and BSD licences) and [qpdf](https://github.com/qpdf/qpdf) (Apache-2.0), from Debian.
 - The webmail's animations are from [LottieFiles](https://lottiefiles.com/): the loading arrows and the unread-mail badge. So are the Dashboard's helicopter and the API guide's sparkle animations.
 - The new-mail sound: "Modern short message tone" by [digitalstore07](https://pixabay.com/users/digitalstore07/) on [Pixabay](https://pixabay.com/) (Pixabay Content License).
+
+## Licence
+
+Someless Mail is free and open source under the [GNU Affero General Public License, version 3](LICENSE) (AGPL-3.0). Copyright © 2026 Someless Ado.
+
+- **You may** use it, change it, share it and even sell it, for yourself or your business.
+- **If you share a changed copy, or run one for other people over a network** (as a hosted service, say), you must offer its full source code to everyone who uses it, under this same licence, and keep the copyright notices.
+- It comes with no warranty.
+
+The software it's built with keeps its own licence, listed above. The mail engine inside the image, Stalwart, is under AGPL-3.0 too: its licence and a link to its source are in the image at `/usr/share/doc/stalwart/`.
