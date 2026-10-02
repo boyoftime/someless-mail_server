@@ -74,6 +74,15 @@ def test_asked_at_once_even_if_it_was_asked_lately_before_the_proxy_host_worked(
     assert len(orders(ready)) == 1
 
 
+def test_it_says_how_long_it_can_take(app, ready, proxy):
+    """Usually a minute or two, but up to half an hour (old answers in DNS caches, after a change
+    of the mail name's record), so a slower one isn't taken for a fault."""
+    for works in (False, True):
+        proxy["works"] = works
+        detail = watch(app)["detail"]
+        assert "a minute or two" in detail and "up to 30 minutes" in detail, detail
+
+
 def test_once_the_certificate_is_in_it_says_so_and_asks_nothing(app, ready, proxy):
     proxy["works"] = True
     ready.objects["Certificate"] = CERTIFICATE

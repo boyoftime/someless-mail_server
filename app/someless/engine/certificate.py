@@ -9,8 +9,10 @@ from . import sync
 
 WAITING = ("Let's Encrypt checks {name} on port 80. In Nginx Proxy Manager, add a proxy host for it: scheme http, "
            "forward hostname someless-mail, forward port 17081, SSL left off. It's asked for by itself as soon as "
-           "that works.")
-GETTING = "The proxy host works: Let's Encrypt is being asked for it now. It usually takes a minute or two."
+           "that works, and usually comes in a minute or two; sometimes it takes up to 30 minutes.")
+GETTING = ("The proxy host works: Let's Encrypt is being asked for it now. It usually takes a minute or two, "
+           "and sometimes up to 30 minutes, for example right after a change to this name's DNS record. "
+           "There's nothing to click: this line turns green by itself.")
 DONE = "From Let's Encrypt. Someless Mail renews it by itself."
 
 
