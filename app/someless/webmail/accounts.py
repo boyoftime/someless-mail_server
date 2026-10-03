@@ -87,13 +87,15 @@ def card():
     """The accounts on the account card (a template global): the one signed in with first, then
     the ones it added; the one in sight is active."""
     from .messages import hue
+    from .settings import picture_url
     if g.get("mailbox") is None:
         return []
     shown = []
     for row in g.accounts:
         name = name_of(row)
         shown.append({"id": row["id"], "email": row["email"], "name": name, "initial": name[:1].upper(), "hue": hue(row["email"]),
-                      "url": home(row["id"]), "active": row["id"] == g.mailbox["id"], "own": row["id"] == g.owner["id"]})
+                      "url": home(row["id"]), "active": row["id"] == g.mailbox["id"], "own": row["id"] == g.owner["id"],
+                      "picture": picture_url(row["id"])})
     return shown
 
 

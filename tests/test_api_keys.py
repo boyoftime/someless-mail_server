@@ -164,7 +164,7 @@ def test_each_call_shows_its_request_and_its_response_side_by_side(client, login
     page = text(client.get("/api-keys/docs"))
 
     calls = re.findall(r'<article class="api-call" id="(call-[a-z-]+)">(.*?)</article>', page, re.S)
-    assert len(calls) == 18
+    assert len(calls) == 20
     for call_id, call in calls:
         assert '<div class="api-call-doc">' in call and '<div class="api-call-code">' in call, call_id
         tabs = re.findall(r'<button [^>]*role="tab"[^>]*>(.*?)</button>', call, re.S)
@@ -279,13 +279,14 @@ def test_the_guide_starts_with_an_index_of_the_calls(client, login):
     index = page[page.index('<nav class="api-index"'):]
     index = index[:index.index("</nav>")]
     links = re.findall(r'<a [^>]*href="#(call-[a-z-]+)"[^>]*>', index)
-    assert len(links) == 18 and len(set(links)) == 18
+    assert len(links) == 20 and len(set(links)) == 20
     for link in links:
         assert f'id="{link}"' in page
     # as in Postman's sidebar: each group with its icon and how many calls; each call named in words, its path under it
     words = re.sub(r"\s+", " ", plain(index))
-    for group, count in (("Domains", "5 calls"), ("Senders", "5 calls"), ("Mailboxes", "8 calls")):
+    for group, count in (("Domains", "5 calls"), ("Senders", "5 calls"), ("Mailboxes", "10 calls")):
         assert f"{group} {count}" in words, group
     for name, path in (("Make a mailbox", "/mailboxes"), ("Reset a password", "/mailboxes/password"),
+                       ("Check a mailbox's password", "/mailboxes/login"), ("Get a profile picture", "/mailboxes/{id}/picture"),
                        ("Delete an alias", "/mailboxes/{id}/aliases/{alias}")):
         assert f"{name} {path}" in words, name

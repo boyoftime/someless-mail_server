@@ -19,11 +19,20 @@
     <h2 class="wm-card-title" id="card-profile">Profile</h2>
     <div class="wm-card-body">
       <div class="wm-profile-head">
-        <span class="wm-profile-avatar" aria-hidden="true">{{ initial }}</span>
+        <span class="wm-profile-avatar{% if picture %} has-picture{% endif %}" aria-hidden="true" data-avatar-spot data-letter="{{ initial }}">{% if picture %}<img alt="" src="{{ picture }}">{% else %}{{ initial }}{% endif %}</span>
         <div class="wm-profile-who">
           <p class="wm-profile-name" data-wm-profile-name>{{ display_name or name }}</p>
           <p class="wm-profile-email">{{ email }}</p>
         </div>
+      </div>
+      {#- the picture: chosen here, placed in the dialog below (settings-avatar.js, as the panel's admin picture) #}
+      <div class="wm-picture-buttons">
+        <button type="button" class="wm-button is-ghost is-small" data-avatar-choose>{{ icon("camera") }}<span>{{ "Change picture" if picture else "Upload picture" }}</span></button>
+        <input class="visually-hidden" type="file" tabindex="-1" aria-hidden="true" accept="image/jpeg,image/png,image/webp,image/gif" data-avatar-file>
+        <form method="post" action="{{ url_for('settings.picture_delete') }}" class="wm-picture-remove" data-avatar-remove{% if not picture %} hidden{% endif %}>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="wm-button is-ghost is-small">{{ icon("trash") }}<span>Remove</span></button>
+        </form>
       </div>
       <form class="wm-field-form" data-wm-profile-form novalidate>
         <label class="wm-label" for="display-name">Display name</label>
@@ -204,6 +213,29 @@
   </div>
 </dialog>
 
+{# Placing the profile picture: drag it, zoom it; the round part is what shows (settings-avatar.js) #}
+<dialog class="wm-dialog wm-picture-dialog" id="avatar-dialog" aria-labelledby="avatar-title">
+  <form method="post" action="{{ url_for('settings.picture_upload') }}" enctype="multipart/form-data" class="wm-dialog-card" data-avatar-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="x"><input type="hidden" name="y"><input type="hidden" name="size">
+    <h2 class="wm-dialog-title" id="avatar-title">Your profile picture</h2>
+    <p class="wm-dialog-text">Drag it to place it in the circle, and zoom in or out.</p>
+    <div class="avatar-stage" data-avatar-stage>
+      <img alt="The picture you chose" draggable="false" data-avatar-image>
+      <span class="avatar-ring" aria-hidden="true"></span>
+    </div>
+    <div class="avatar-zoom">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5M8.5 11h5"/></svg>
+      <input type="range" min="1" max="4" step="0.01" value="1" aria-label="Zoom" data-avatar-zoom>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5M8.5 11h5M11 8.5v5"/></svg>
+    </div>
+    <div class="wm-dialog-actions">
+      <button type="button" class="wm-button is-ghost" data-dialog-close>Cancel</button>
+      <button type="submit" class="wm-button">Save picture</button>
+    </div>
+  </form>
+</dialog>
+
 {# the forwarding address: added or changed #}
 <dialog class="wm-dialog" data-wm-forward-dialog aria-labelledby="forward-title">
   <form class="wm-dialog-card" data-wm-forward-form novalidate>
@@ -220,4 +252,5 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/webmail-settings.js') }}"></script>
+<script src="{{ url_for('static', filename='js/settings-avatar.js') }}"></script>
 {% endblock %}

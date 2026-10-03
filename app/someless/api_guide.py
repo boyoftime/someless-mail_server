@@ -5,6 +5,8 @@ SOMELESS_API_KEY environment variable, so the key never sits in the code."""
 import json
 import re
 
+from markupsafe import escape
+
 from .smtp_guide import highlight
 
 LANGUAGES = [("curl", "cURL"), ("javascript", "JavaScript"), ("python", "Python"), ("php", "PHP")]
@@ -15,7 +17,7 @@ KEYWORDS = {
     "php": "true false null if exit",
     "json": "true false null",
 }
-STATUS = {200: "200 OK", 201: "201 Created"}
+STATUS = {200: "200 OK", 201: "201 Created", 404: "404 Not Found", 429: "429 Too Many Requests"}
 EXAMPLE_PASSWORD = "Choose-A-Strong-1!"
 
 
@@ -27,7 +29,8 @@ def calls(base, domain):
     mailbox = {"id": 7, "email": f"sales@{domain}", "name": "Sales Team", "domain": domain, "storage": "15 GB",
                "storage_bytes": 15 * 1024 ** 3, "used_bytes": 52428800, "send_limit_mb": 50,
                "disable_delete": {"webmail": False, "apps": False}, "aliases": [f"orders@{domain}"],
-               "disabled": False, "refuse_mail": False, "created_at": "2026-10-01T09:30:00+00:00"}
+               "disabled": False, "refuse_mail": False, "picture_url": f"{base}/mailboxes/7/picture",
+               "created_at": "2026-10-01T09:30:00+00:00"}
     disabled = ("disabled", "true or false", "Disable it, or enable it again. A sender and its mailbox (the same "
                 "address) go together: nothing can send as it, and nobody can sign in to the mailbox (the webmail, mail "
                 "apps, calendar apps). Its mail stays.")
@@ -131,6 +134,32 @@ def calls(base, domain):
                         ("confirm_password", "text", "The new password again: the two have to match.", True)],
              "body": {"email": f"sales@{domain}", "password": EXAMPLE_PASSWORD, "confirm_password": EXAMPLE_PASSWORD},
              "answer": {"mailbox": mailbox}},
+            {"method": "POST", "path": "/mailboxes/login", "name": "Check a mailbox's password", "text": "Check an address "
+             "and password, for an app where people sign in with their mailbox. The answer says whether they match, and "
+             "if they do, who it is: their name, to greet them (the one their mail goes out with), and their mailbox. Call "
+             "it from your app's server, never from a browser, since the key must stay secret, and never keep the "
+             "password. Wrong passwords count towards the webmail's sign-in lock (Settings, Miscellaneous in the panel): "
+             "after too many in a row the address waits a while, however it signs in.",
+             "fields": [("email", "text", "The address the person typed.", True),
+                        ("password", "text", "The password they typed.", True)],
+             "body": {"email": f"sales@{domain}", "password": EXAMPLE_PASSWORD},
+             "answer": {"valid": True, "email": f"sales@{domain}", "name": "Sales Team",
+                        "picture": "data:image/webp;base64,UklGRlYAAABXRUJQVlA4…", "mailbox": mailbox},
+             "outcomes": [(200, {"valid": False, "reason": "wrong"},
+                           "The address or the password is wrong: the same answer for both, so it never tells which "
+                           "addresses have a mailbox."),
+                          (200, {"valid": False, "reason": "disabled"},
+                           "The password is right, but the mailbox is disabled: nobody can sign in to it."),
+                          (429, {"valid": False, "reason": "locked", "retry_after": 300},
+                           "Too many wrong passwords in a row: the address can try again after retry_after seconds "
+                           "(also in the Retry-After header).")]},
+            {"method": "GET", "path": "/mailboxes/{id}/picture", "name": "Get a profile picture", "example": "/mailboxes/7/picture",
+             "text": "The mailbox's profile picture, as its owner chose it in the webmail (Settings, Profile): a "
+             "WebP picture, 512 by 512 pixels, to show beside their name. A mailbox's picture_url says where it is, or is "
+             "null without one; a password check's answer brings it too, ready to show.",
+             "answer": "The picture itself: Content-Type image/webp.", "binary": True,
+             "outcomes": [(404, {"error": "This mailbox has no profile picture."},
+                           "There's no picture: show their initial instead.")]},
             {"method": "DELETE", "path": "/mailboxes/{id}", "name": "Delete a mailbox", "example": "/mailboxes/7", "text": "Delete a mailbox, its "
              "aliases and all the mail in it. This can't be undone. Its sender stays.", "answer": {"deleted": True}},
             {"method": "POST", "path": "/mailboxes/{id}/aliases", "name": "Add an alias", "example": "/mailboxes/7/aliases", "text": "Add an "
@@ -147,9 +176,17 @@ def calls(base, domain):
         for call in group["calls"]:
             call["id"] = "call-" + "-".join([call["method"].lower(), *re.findall(r"[a-z]+", call["path"])])
             call["status"] = STATUS[call.get("status", 200)]
-            call["requests"] = _requests(call["method"], base + call.get("example", call["path"]), call.get("body"))
-            answer = json.dumps(call.pop("answer"), indent=2)
-            call["answer"] = {"code": answer, "html": highlight(answer, "json", KEYWORDS)}
+            call["requests"] = _requests(call["method"], base + call.get("example", call["path"]), call.get("body"),
+                                         call.get("binary", False))
+            answer = call.pop("answer")
+            if call.get("binary"):   # (a file, not JSON: what it is, in words)
+                call["answer"] = {"code": answer, "html": escape(answer)}
+            else:
+                answer = json.dumps(answer, indent=2)
+                call["answer"] = {"code": answer, "html": highlight(answer, "json", KEYWORDS)}
+            call["outcomes"] = [{"status": STATUS[code], "ok": code < 400, "text": text,
+                                 "code": json.dumps(other), "html": highlight(json.dumps(other), "json", KEYWORDS)}
+                                for code, other, text in call.get("outcomes", [])]
     return groups
 
 
@@ -202,14 +239,20 @@ def as_text(base):
             else:
                 lines.append("No fields: nothing to send but the key.")
             curl = next(request["code"] for request in call["requests"] if request["key"] == "curl")
-            lines += ["", "Request:", "", "```bash", curl.rstrip("\n"), "```", "",
-                      f"Response: {call['status']}", "", "```json", call["answer"]["code"], "```"]
+            lines += ["", "Request:", "", "```bash", curl.rstrip("\n"), "```", "", f"Response: {call['status']}", ""]
+            lines += [call["answer"]["code"]] if call.get("binary") else ["```json", call["answer"]["code"], "```"]
+            if call["outcomes"]:
+                lines += ["", "Other responses:", ""]
+                lines += [f"- {other['status']} `{other['code']}`: {other['text']}" for other in call["outcomes"]]
     return "\n".join(lines) + "\n"
 
 
-def _requests(method, url, body):
-    """The request in each language: its code, and its code coloured."""
+def _requests(method, url, body, binary=False):
+    """The request in each language: its code, and its code coloured. binary: the answer is a file
+    (a picture), saved as one, not read as JSON."""
     made = {"curl": _curl, "javascript": _javascript, "python": _python, "php": _php}
+    if binary:
+        made = {"curl": _curl_file, "javascript": _javascript_file, "python": _python_file, "php": _php_file}
     return [{"key": key, "name": name, "code": code, "html": highlight(code, key, KEYWORDS)}
             for key, name in LANGUAGES for code in [made[key](method, url, body)]]
 
@@ -292,3 +335,41 @@ def _php(method, url, body):
             "if (curl_getinfo($curl, CURLINFO_RESPONSE_CODE) >= 400) {\n"
             '    exit($answer["error"]);\n'
             "}\n")
+
+
+# --- a file for an answer (a profile picture): saved as picture.webp ---
+
+def _curl_file(method, url, body):
+    return f'curl --fail -o picture.webp "{url}" \\\n  -H "Authorization: Bearer $SOMELESS_API_KEY"\n'
+
+
+def _javascript_file(method, url, body):
+    return (f'const response = await fetch("{url}", {{\n'
+            '  headers: { "Authorization": "Bearer " + process.env.SOMELESS_API_KEY },\n'
+            "});\n"
+            "if (!response.ok) throw new Error((await response.json()).error);\n"
+            "const picture = Buffer.from(await response.arrayBuffer());   // image/webp: save it, or send it on\n")
+
+
+def _python_file(method, url, body):
+    return ("import os\n\nimport requests  # pip install requests\n\n"
+            'key = os.environ["SOMELESS_API_KEY"]\n'
+            f'response = requests.get("{url}", headers={{"Authorization": "Bearer " + key}})\n'
+            "if not response.ok:\n"
+            '    raise SystemExit(response.json()["error"])\n'
+            'with open("picture.webp", "wb") as file:\n'
+            "    file.write(response.content)\n")
+
+
+def _php_file(method, url, body):
+    return ("<?php\n"
+            f'$curl = curl_init("{url}");\n'
+            "curl_setopt_array($curl, [\n"
+            "    CURLOPT_RETURNTRANSFER => true,\n"
+            '    CURLOPT_HTTPHEADER => ["Authorization: Bearer " . getenv("SOMELESS_API_KEY")],\n'
+            "]);\n"
+            "$picture = curl_exec($curl);\n"
+            "if (curl_getinfo($curl, CURLINFO_RESPONSE_CODE) >= 400) {\n"
+            '    exit(json_decode($picture, true)["error"]);\n'
+            "}\n"
+            'file_put_contents("picture.webp", $picture);\n')

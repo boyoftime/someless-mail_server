@@ -58,12 +58,15 @@
     {%- endif %}
     <a class="wm-icon wm-settings{% if app == 'settings' %} is-active{% endif %}" href="{{ url_for('settings.index') }}" data-wm-page-link aria-label="Settings" data-tip="Settings">{{ icon("settings") }}</a>
     <div class="wm-account-wrap">
-      <button type="button" class="wm-avatar" data-wm-account aria-controls="wm-account" aria-expanded="false" aria-label="Your account">{{ initial }}</button>
+      {#- the mailbox's picture (Settings > Profile), or its letter #}
+      {%- set picture = picture_of(g.mailbox.id) if g.mailbox else None %}
+      <button type="button" class="wm-avatar{% if picture %} has-picture{% endif %}" data-wm-account aria-controls="wm-account" aria-expanded="false" aria-label="Your account"
+              data-avatar-spot data-letter="{{ initial }}">{% if picture %}<img alt="" src="{{ picture }}">{% else %}{{ initial }}{% endif %}</button>
       {# the account: the mailbox, its address to copy, the theme, and logging out #}
       <section class="wm-account" id="wm-account" aria-label="Your account" hidden>
         <div class="wm-account-head">
           <span class="wm-account-photo">
-            <span class="wm-account-picture" aria-hidden="true">{{ initial }}</span>
+            <span class="wm-account-picture{% if picture %} has-picture{% endif %}" aria-hidden="true" data-avatar-spot data-letter="{{ initial }}">{% if picture %}<img alt="" src="{{ picture }}">{% else %}{{ initial }}{% endif %}</span>
           </span>
           <p class="wm-account-name">{{ name }}</p>
           <p class="wm-account-email">
@@ -81,7 +84,7 @@
             {%- for one in account_card() %}
             <li class="wm-account-item">
               <a class="wm-switch-account{% if one.active %} is-active{% endif %}" href="{{ one.url }}" data-wm-switch data-id="{{ one.id }}" data-email="{{ one.email }}"{% if one.active %} aria-current="true"{% endif %}>
-                <span class="wm-account-mini" style="--hue: {{ one.hue }};" aria-hidden="true">{{ one.initial }}</span>
+                <span class="wm-account-mini{% if one.picture %} has-picture{% endif %}" style="--hue: {{ one.hue }};" aria-hidden="true"{% if one.active %} data-avatar-spot data-letter="{{ one.initial }}"{% endif %}>{% if one.picture %}<img alt="" src="{{ one.picture }}">{% else %}{{ one.initial }}{% endif %}</span>
                 <span class="wm-account-who"><span class="wm-account-who-name">{{ one.name }}</span><span class="wm-account-who-email">{{ one.email }}</span></span>
                 <span class="wm-account-unread" data-wm-unread hidden></span>
                 {%- if one.active %}<span class="wm-account-tick" role="img" aria-label="In use">{{ icon("check") }}</span>{% endif %}

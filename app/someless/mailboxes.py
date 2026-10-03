@@ -11,7 +11,7 @@ from urllib.parse import quote
 
 from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, url_for
 
-from . import disabling, mail_password, mail_profile, webmail_site
+from . import avatar, disabling, mail_password, mail_profile, webmail_site
 from .auth import login_required
 from .db import get_db
 from .domain_records import HOST_CHOICES
@@ -462,4 +462,5 @@ def remove(mailbox_id):
     webmail_views.forget(mailbox_id)
     db.execute("DELETE FROM mailboxes WHERE id = ?", (mailbox_id,))
     db.commit()
+    avatar.remove(avatar.mailbox_path(mailbox_id))   # its profile picture (the webmail's Settings)
     engine_sync.after_change()   # the engine deletes the account, and the mail in it

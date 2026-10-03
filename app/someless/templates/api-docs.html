@@ -171,6 +171,17 @@
           {{ copy_button(call.answer.code, "Copy the response") }}
         </div>
         <pre class="api-json" tabindex="0"><code>{{ call.answer.html }}</code></pre>
+        {% if call.outcomes %}
+        <div class="api-outcomes">
+          <p class="api-outcomes-title">Other responses</p>
+          <ul>
+            {% for other in call.outcomes %}
+            <li><span class="api-status{% if other.ok %} is-ok{% else %} is-warn{% endif %}">{{ other.status }}</span>
+              <code class="api-json-line">{{ other.html }}</code><span class="api-outcome-text">{{ other.text }}</span></li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
       </div>
     </div>
   </article>

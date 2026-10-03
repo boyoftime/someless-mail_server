@@ -1,10 +1,70 @@
 """The webmail's sign-in lock (Settings > Miscellaneous): after so many wrong passwords in a row,
-an address waits so long before it can try again (webmail/__init__.py, and the calendar and
-contacts apps: webmail/dav.py). 5 and 5 minutes to start with. It can be switched off (then
-wrong passwords never make anyone wait), and an address locked now can be let in at once."""
+an address waits so long before it can try again (webmail/__init__.py, the calendar and contacts
+apps: webmail/dav.py, and apps checking a password through the API: api.py), wherever the wrong
+ones came from. 5 and 5 minutes to start with. It can be switched off (then wrong passwords never
+make anyone wait), and an address locked now can be let in at once."""
+import functools
+import secrets
 import time
 
+from . import mail_password
 from .db import get_db
+
+
+@functools.cache
+def dummy_hash():
+    """A hash to check a password against when there's no mailbox at the address: as long as a
+    wrong password takes, so the time taken doesn't say whether there's one."""
+    return mail_password.hash_password(secrets.token_hex(16))
+
+
+def check(email, password):
+    """A mailbox's address and password, checked as the webmail's login does: ("ok", the mailbox's
+    row), ("wrong", None) whether the address or the password is, ("locked", None), or
+    ("disabled", the row), said only to the right password."""
+    if locked(email):
+        return "locked", None
+    row = get_db().execute("SELECT * FROM mailboxes WHERE email = ?", (email,)).fetchone()
+    right = mail_password.password_ok(row["password_hash"] if row else dummy_hash(), password)
+    if not (row and right):
+        if email:
+            wrong_try(email)
+        return "wrong", None
+    forget_tries(email)
+    return ("disabled" if row["disabled"] else "ok"), row
+
+
+def locked(email):
+    if not is_on():
+        return False
+    row = get_db().execute("SELECT locked_until FROM webmail_tries WHERE email = ?", (email,)).fetchone()
+    return bool(row and row["locked_until"] and row["locked_until"] > time.time())
+
+
+def seconds_left(email):
+    """How long a locked address still waits, in whole seconds (at least 1)."""
+    row = get_db().execute("SELECT locked_until FROM webmail_tries WHERE email = ?", (email,)).fetchone()
+    return max(1, int((row["locked_until"] if row and row["locked_until"] else 0) - time.time() + 0.999))
+
+
+def wrong_try(email):
+    """One more wrong password in a row; the last one allowed locks the address (and starts the
+    count again). With the lock off, nothing is counted."""
+    if not is_on():
+        return
+    tries, minutes = settings()
+    database = get_db()
+    database.execute("INSERT INTO webmail_tries (email) VALUES (?) ON CONFLICT (email) DO NOTHING", (email,))
+    database.execute("UPDATE webmail_tries SET failures = failures + 1 WHERE email = ?", (email,))
+    database.execute("UPDATE webmail_tries SET failures = 0, locked_until = ? WHERE email = ? AND failures >= ?",
+                     (time.time() + minutes * 60, email, tries))
+    database.commit()
+
+
+def forget_tries(email):
+    database = get_db()
+    database.execute("DELETE FROM webmail_tries WHERE email = ?", (email,))
+    database.commit()
 
 MOST_TRIES = 20
 LONGEST = 24 * 60   # minutes

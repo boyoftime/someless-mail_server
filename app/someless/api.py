@@ -8,10 +8,11 @@ import json
 import re
 import time
 
-from flask import Blueprint, Response, g, jsonify, request
+from flask import Blueprint, Response, g, jsonify, request, send_file
 
-from . import api_guide, disabling, domain_records, domains, mail_password, mailboxes, senders
+from . import api_guide, avatar, disabling, domain_records, domains, mail_password, mailboxes, senders, webmail_lock
 from .db import get_db
+from .webmail import views as webmail_views
 from .engine import sync as engine_sync
 from .smtp import fingerprint
 
@@ -200,6 +201,8 @@ def _mailbox_json(row, used=None):
             "send_limit_mb": row["send_limit_mb"],
             "disable_delete": {"webmail": bool(row["no_delete_webmail"]), "apps": bool(row["no_delete_apps"])},
             "aliases": aliases, "disabled": bool(row["disabled"]), "refuse_mail": bool(row["refuse_mail"]),
+            "picture_url": (request.url_root.rstrip("/") + bp.url_prefix + f"/mailboxes/{row['id']}/picture"
+                            if avatar.mailbox_path(row["id"]).exists() else None),
             "created_at": _moment(row["created_at"])}
 
 
@@ -457,6 +460,35 @@ def reset_password():
                      (mail_password.hash_password(password), mailbox["id"]))
     _changed()
     return {"mailbox": _mailbox_json(_mailbox(mailbox["id"]))}
+
+
+@bp.post("/mailboxes/login")
+def check_login():
+    """Whether an address and password are a mailbox's: for an app where people sign in with their
+    mailbox, and are greeted by name (the one their mail goes out with). The webmail login's own
+    rules (webmail_lock.check): one answer for a wrong address or a wrong password, the wrong ones
+    counting towards its sign-in lock, and a disabled mailbox said so only to the right password."""
+    body = _body("email", "password")
+    email = _text(body, "email").strip().lower()[:254]
+    found, row = webmail_lock.check(email, _text(body, "password"))
+    if found == "locked":
+        wait = webmail_lock.seconds_left(email)
+        return jsonify(valid=False, reason="locked", retry_after=wait), 429, {"Retry-After": str(wait)}
+    if found != "ok":
+        return {"valid": False, "reason": found}
+    mailbox = _mailbox(row["id"])
+    return {"valid": True, "email": mailbox["email"], "name": webmail_views.display_name(row["id"]) or mailbox["name"],
+            "picture": avatar.data_url(avatar.mailbox_path(row["id"])), "mailbox": _mailbox_json(mailbox)}
+
+
+@bp.get("/mailboxes/<int:mailbox_id>/picture")
+def mailbox_picture(mailbox_id):
+    """The mailbox's profile picture (the webmail's Settings > Profile): WebP, 512 by 512."""
+    _mailbox(mailbox_id)
+    picture = avatar.mailbox_path(mailbox_id)
+    if not picture.exists():
+        raise Refused("This mailbox has no profile picture.", 404)
+    return send_file(picture, mimetype="image/webp", max_age=0)
 
 
 @bp.delete("/mailboxes/<int:mailbox_id>")

@@ -12,14 +12,14 @@ import json
 import re
 import time
 
-from flask import Blueprint, g, render_template, request, session, url_for
+from flask import Blueprint, abort, g, render_template, request, send_file, session, url_for
 
 from . import accounts, login_required, views
 from . import sieve, undelivered
 from .compose import _own_addresses, clean_outgoing
 from .jmap import MailError, MailUnavailable, for_mailbox
 from .mail import _tree, reachable
-from .. import mail_password
+from .. import avatar, mail_password
 from ..db import get_db
 from ..engine import sync as engine_sync
 
@@ -91,6 +91,7 @@ def index():
         except (MailError, MailUnavailable):
             pass
     return _page("webmail-settings.html", display_name=_who(), preferences=views.preferences(mailbox_id),
+                 picture=picture_url(mailbox_id),
                  default_signature=next((one for one in signatures if one["is_default"]), None),
                  signature_count=len(signatures), rules=rules, undelivered_waiting=waiting,
                  filter_count=sum(1 for rule in sieve.rules(mailbox_id) if rule["enabled"]),
@@ -120,6 +121,48 @@ def profile():
         return {"problem": problem}, 400
     views.set_display_name(g.mailbox["id"], " ".join(name.split()))
     return {"message": "Name has been updated successfully.", "display_name": " ".join(name.split())}
+
+
+# --- Profile: the picture (avatar.py), placed in a dialog as the panel's admin picture is
+# (settings-avatar.js), and shown in the corner and the account menu; apps get it through the API ---
+
+def picture_url(mailbox_id):
+    """Where a mailbox's picture is served, changing whenever it does (so browsers can keep it);
+    None without one. (A template global: webmail-top.html.)"""
+    picture = avatar.mailbox_path(mailbox_id)
+    if not picture.exists():
+        return None
+    return url_for("settings.picture", mailbox_id=mailbox_id, v=int(picture.stat().st_mtime_ns // 1000))
+
+
+@bp.get("/picture/<int:mailbox_id>")
+@login_required
+def picture(mailbox_id):
+    """A mailbox's picture: the one in sight's, or another account's at hand in this browser."""
+    picture_file = avatar.mailbox_path(mailbox_id)
+    if mailbox_id not in {row["id"] for row in g.accounts} or not picture_file.exists():
+        abort(404)
+    return send_file(picture_file, mimetype="image/webp", max_age=31536000 if request.args.get("v") else 0)
+
+
+@bp.post("/picture")
+@login_required
+def picture_upload():
+    """The picture chosen, cut where it was placed ({"x", "y", "size"}): {"url"}, or {"problem"}."""
+    upload = request.files.get("picture")
+    data = upload.read(avatar.LARGEST + 1) if upload else b""
+    problem = avatar.save(data, request.form.get("x"), request.form.get("y"), request.form.get("size"),
+                          avatar.mailbox_path(g.mailbox["id"])) if data else "Choose a picture first."
+    if problem:
+        return {"problem": problem}, 400
+    return {"url": picture_url(g.mailbox["id"])}
+
+
+@bp.post("/picture/delete")
+@login_required
+def picture_delete():
+    avatar.remove(avatar.mailbox_path(g.mailbox["id"]))
+    return {"message": "Your profile picture is gone: your initial shows instead."}
 
 
 # --- System preferences: the sound, notifications ---

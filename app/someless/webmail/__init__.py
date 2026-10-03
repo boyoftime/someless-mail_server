@@ -22,15 +22,13 @@ from flask_wtf import CSRFProtect
 from flask_wtf.csrf import CSRFError, generate_csrf
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from .. import (FLOAT_ICONS, STATIC_CACHE_SECONDS, VERSION, db, disabling, fingerprint_static_links, mail_password,
-                picked_theme, webmail_lock, webmail_site)
+from .. import (FLOAT_ICONS, STATIC_CACHE_SECONDS, VERSION, db, disabling, fingerprint_static_links, picked_theme,
+                webmail_lock, webmail_site)
 from ..db import get_db
 from . import accounts
 
 WRONG ="The email or password is wrong."
 LEFT_OPEN = "This page was open for a long time. Log in again."
-# checked when the address isn't a mailbox, so a wrong address takes as long as a wrong password
-_DUMMY_HASH = mail_password.hash_password(secrets.token_hex(16))
 
 
 def _load_secret_key(data_dir):
@@ -39,33 +37,6 @@ def _load_secret_key(data_dir):
         path.write_text(secrets.token_hex(32))
         path.chmod(0o600)
     return path.read_text().strip()
-
-
-def _locked(email):
-    if not webmail_lock.is_on():   # (switched off in Settings > Miscellaneous)
-        return False
-    row = get_db().execute("SELECT locked_until FROM webmail_tries WHERE email = ?", (email,)).fetchone()
-    return bool(row and row["locked_until"] and row["locked_until"] > time.time())
-
-
-def _wrong_try(email):
-    """One more wrong password in a row; the last one allowed locks the address (and starts the
-    count again). With the lock off, nothing is counted."""
-    if not webmail_lock.is_on():
-        return
-    tries, minutes = webmail_lock.settings()
-    database = get_db()
-    database.execute("INSERT INTO webmail_tries (email) VALUES (?) ON CONFLICT (email) DO NOTHING", (email,))
-    database.execute("UPDATE webmail_tries SET failures = failures + 1 WHERE email = ?", (email,))
-    database.execute("UPDATE webmail_tries SET failures = 0, locked_until = ? WHERE email = ? AND failures >= ?",
-                     (time.time() + minutes * 60, email, tries))
-    database.commit()
-
-
-def _forget_tries(email):
-    database = get_db()
-    database.execute("DELETE FROM webmail_tries WHERE email = ?", (email,))
-    database.commit()
 
 
 def _load_mailbox():
@@ -155,18 +126,14 @@ def login():
                                notice=session.pop("notice", None), adding=adding)
     email = request.form.get("email", "").strip().lower()[:254]
     password = request.form.get("password", "")
-    if _locked(email):
+    found, row = webmail_lock.check(email, password)   # (the same rules as the API's: api.py)
+    if found == "locked":
         wait = webmail_lock.describe(webmail_lock.settings()[1])
         return render_template("webmail-login.html", email=email, adding=adding, problem=(
             f"Too many tries with a wrong password. Wait {wait}, then try again.")), 429
-    row = get_db().execute("SELECT * FROM mailboxes WHERE email = ?", (email,)).fetchone()
-    right = mail_password.password_ok(row["password_hash"] if row else _DUMMY_HASH, password)
-    if not (row and right):
-        if email:
-            _wrong_try(email)
+    if found == "wrong":
         return render_template("webmail-login.html", email=email, adding=adding, problem=WRONG), 400
-    _forget_tries(email)
-    if row["disabled"]:   # (said only to the right password)
+    if found == "disabled":   # (said only to the right password)
         return render_template("webmail-login.html", email=email, adding=adding, problem=disabling.NOTICE), 403
     return _added(row) if adding else _signed_in(row)
 
@@ -252,6 +219,7 @@ def create_webmail_app(test_config=None):
     app.jinja_env.globals["kept_mail"] = mail.kept_mail   # (Disable delete: the delete buttons go)
     app.register_blueprint(compose.bp)
     app.register_blueprint(settings.bp)
+    app.jinja_env.globals["picture_of"] = settings.picture_url   # (a mailbox's picture: webmail-top.html)
     app.register_blueprint(contacts.bp)
     app.register_blueprint(calendar.bp)
     app.register_blueprint(dav.bp)

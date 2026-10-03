@@ -278,6 +278,15 @@ body.webmail-app .wm-search input[type="search"]:focus { border-color: var(--wm-
   transition: box-shadow 0.15s ease;
 }
 .wm-avatar:hover, .wm-avatar[aria-expanded="true"] { box-shadow: 0 0 0 3px var(--wm-icon-hover); }
+/* a mailbox's picture (Settings > Profile), filling its round place instead of the letter */
+.wm-avatar.has-picture, .wm-account-picture.has-picture, .wm-account-mini.has-picture { overflow: hidden; padding: 0; background: none; }
+.wm-avatar.has-picture img, .wm-account-picture.has-picture img, .wm-account-mini.has-picture img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
 .wm-account {
   position: absolute;
   top: calc(100% + 10px);

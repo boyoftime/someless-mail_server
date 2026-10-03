@@ -2,7 +2,9 @@
 // WebP or GIF up to 5 MB); a dialog shows it behind a circle, to drag into place and zoom (the
 // slider, or the mouse wheel). Save sends the file and where the square around the circle is; the
 // server cuts it out and keeps it. The picture then shows here and in the top right corner at once.
-// Remove takes it away the same way, in the background: the page doesn't move.
+// Remove takes it away the same way, in the background: the page doesn't move. The webmail's
+// Settings > Profile uses it too, for a mailbox's picture: there, the places that show it are marked
+// data-avatar-spot (with their letter in data-letter), and its words go on the webmail's toast.
 (function () {
   var dialog = document.getElementById("avatar-dialog");
   var choose = document.querySelector("[data-avatar-choose]");
@@ -19,7 +21,20 @@
   var view = { width: 0, height: 0, base: 1, scale: 1, x: 0, y: 0 };   // the picture as shown in the stage
 
   function board(type, title, message) {
-    if (window.somelessBoard) window.somelessBoard.show({ type: type, title: title, message: message });
+    if (window.wm && type === "error") window.wm.board(title, message);   // (the webmail: errors on its board,
+    else if (window.wm) window.wm.toast(message);                         //  what went well on its toast)
+    else if (window.somelessBoard) window.somelessBoard.show({ type: type, title: title, message: message });
+  }
+  var NO_ANSWER = window.wm ? "The webmail didn't answer. Check your connection and try again."
+                            : "The panel didn't answer. Check your connection and try again.";
+
+  // the webmail's places for the picture: it, or the letter
+  function spots(url) {
+    document.querySelectorAll("[data-avatar-spot]").forEach(function (spot) {
+      spot.classList.toggle("has-picture", !!url);
+      if (url) spot.innerHTML = '<img alt="" src="' + url + '">';
+      else spot.textContent = spot.dataset.letter || "";
+    });
   }
 
   function close() {
@@ -134,6 +149,7 @@
       image.src = url;
       corner.replaceWith(image);
     }
+    spots(url);
     var remove = document.querySelector("[data-avatar-remove]");
     if (remove) remove.hidden = false;
     var label = choose.querySelector("span");
@@ -160,6 +176,7 @@
             letter.textContent = preview ? preview.dataset.letter : "";
             corner.replaceWith(letter);
           }
+          spots(null);
           remove.hidden = true;
           var label = choose.querySelector("span");
           if (label) label.textContent = "Upload picture";
@@ -167,7 +184,7 @@
         })
         .catch(function () {
           remove.dispatchEvent(new Event("someless:done"));
-          board("error", "Couldn't remove the picture", "The panel didn't answer. Check your connection and try again.");
+          board("error", "Couldn't remove the picture", NO_ANSWER);
         });
     });
   }
@@ -196,7 +213,7 @@
       })
       .catch(function () {
         form.dispatchEvent(new Event("someless:done"));
-        board("error", "Couldn't save the picture", "The panel didn't answer. Check your connection and try again.");
+        board("error", "Couldn't save the picture", NO_ANSWER);
       });
   });
 })();

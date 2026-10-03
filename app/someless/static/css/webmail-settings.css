@@ -129,7 +129,19 @@
   font-size: 1.5rem;
   font-weight: 700;
 }
+.wm-profile-avatar.has-picture { overflow: hidden; background: none; box-shadow: 0 0 14px -4px rgba(1, 149, 251, 0.8); }
+.wm-profile-avatar.has-picture img { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
 .wm-profile-who { min-width: 0; }
+/* Upload or Change picture, and Remove (settings-avatar.js) */
+.wm-picture-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: -0.2rem 0 1rem; }
+.wm-picture-buttons .wm-button { display: inline-flex; align-items: center; gap: 0.45rem; }
+.wm-picture-buttons svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.wm-picture-remove { margin: 0; }
+.wm-picture-remove[hidden] { display: none; }
+/* the dialog: the panel's stage and zoom (style.css), in the webmail's dialog */
+.wm-picture-dialog .wm-dialog-card { display: grid; gap: 1rem; width: 24rem; }
+.wm-picture-dialog .wm-dialog-title { margin: 0; }
+.wm-picture-dialog .wm-dialog-actions { margin-top: 0.2rem; }
 .wm-profile-name { overflow: hidden; font-size: 1rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .wm-profile-email { overflow: hidden; color: var(--wm-soft); text-overflow: ellipsis; white-space: nowrap; }
 .wm-field-form { margin: 0; }

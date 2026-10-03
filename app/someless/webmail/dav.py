@@ -115,29 +115,28 @@ def _forward(method, path, headers, body):
 @bp.route("/dav/", methods=METHODS, defaults={"rest": ""})
 @bp.route("/dav/<path:rest>", methods=METHODS)
 def proxy(rest=""):
-    from . import _DUMMY_HASH, _forget_tries, _locked, _wrong_try
     from .. import webmail_lock
     if any(segment in (".", "..") for segment in request.path.split("/")):
         return _ask(400, "That address isn't one of the calendars or address books.")   # (nothing outside them)
     email, password = _credentials()
     if not email:
         return _ask()
-    if _locked(email):
+    if webmail_lock.locked(email):
         wait = webmail_lock.describe(webmail_lock.settings()[1])
         return _ask(429, f"Too many tries with a wrong password. Wait {wait}, then try again.")
     row = get_db().execute("SELECT * FROM mailboxes WHERE email = ?", (email,)).fetchone()
     if row is None:
-        mail_password.password_ok(_DUMMY_HASH, password)   # (as long as a wrong password takes)
-        _wrong_try(email)
+        mail_password.password_ok(webmail_lock.dummy_hash(), password)   # (as long as a wrong password takes)
+        webmail_lock.wrong_try(email)
         return _ask()
     if not _password_right(row, email, password):
-        _wrong_try(email)
+        webmail_lock.wrong_try(email)
         return _ask()
     if row["disabled"]:   # (disabling.py: said only to the right password)
         from ..disabling import NOTICE
         return _ask(403, NOTICE)
     if get_db().execute("SELECT 1 FROM webmail_tries WHERE email = ?", (email,)).fetchone():
-        _forget_tries(email)   # (right at last: the wrong ones before it are forgotten)
+        webmail_lock.forget_tries(email)   # (right at last: the wrong ones before it are forgotten)
 
     headers = {name: request.headers[name] for name in PASSED if name in request.headers}
     here = request.host_url.rstrip("/")

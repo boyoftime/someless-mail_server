@@ -3569,6 +3569,14 @@ html:not(.js) .api-langs { display: none; }   /* without JavaScript, every langu
 @keyframes api-code-in { from { opacity: 0; transform: translateY(6px); filter: blur(2px); } }
 .api-status { padding: 0.16rem 0.6rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; white-space: nowrap; }
 .api-status.is-ok { border: 1px solid rgba(52, 211, 153, 0.4); background: rgba(52, 211, 153, 0.12); color: #34d399; }
+.api-status.is-warn { border: 1px solid rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.12); color: #fbbf24; }
+/* a call's other answers, under its response (api-docs.html) */
+.api-outcomes { padding: 0.85rem 1.1rem 1.05rem; border-top: 1px solid rgba(123, 150, 255, 0.2); }
+.api-outcomes-title { margin: 0 0 0.6rem; color: #98a2c2; font-size: 0.8rem; font-weight: 700; }
+.api-outcomes ul { display: grid; gap: 0.8rem; margin: 0; padding: 0; list-style: none; }
+.api-outcomes li { display: grid; justify-items: start; gap: 0.35rem; min-width: 0; }
+.api-json-line { max-width: 100%; color: #e6ebff; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 0.8rem; overflow-wrap: anywhere; }
+.api-outcome-text { color: #b6c0e0; font-size: 0.86rem; line-height: 1.5; }
 .api-status::before {
   content: "";
   display: inline-block;
