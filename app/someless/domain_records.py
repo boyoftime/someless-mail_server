@@ -96,17 +96,30 @@ def server_address(host):
     address itself, or what the panel's name points to. None for a private address (the
     panel opened on the server itself, or at home). A name behind Cloudflare's proxy points to
     Cloudflare, not here: then it's the server's own address, as DNS tells it."""
-    name = host[1:host.index("]")] if host.startswith("[") else host.rsplit(":", 1)[0] if host.count(":") == 1 else host
-    try:
-        address = ipaddress.ip_address(name)
-    except ValueError:
-        try:
-            address = ipaddress.ip_address(socket.getaddrinfo(name, None, socket.AF_INET)[0][4][0])
-        except (OSError, IndexError, ValueError):
-            return None
+    address = _address_of(host)
+    if address is None:
+        return None
     if _proxied(address):
         return own_address()
     return str(address) if address.is_global else None
+
+
+def behind_proxy(host):
+    """Whether the name the panel was opened by points to Cloudflare's proxy, not to this server."""
+    address = _address_of(host)
+    return address is not None and _proxied(address)
+
+
+def _address_of(host):
+    """The address a Host header (name or address, maybe a port) leads to; None when it leads nowhere."""
+    name = host[1:host.index("]")] if host.startswith("[") else host.rsplit(":", 1)[0] if host.count(":") == 1 else host
+    try:
+        return ipaddress.ip_address(name)
+    except ValueError:
+        try:
+            return ipaddress.ip_address(socket.getaddrinfo(name, None, socket.AF_INET)[0][4][0])
+        except (OSError, IndexError, ValueError):
+            return None
 
 
 def _proxied(address):

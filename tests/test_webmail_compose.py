@@ -465,16 +465,17 @@ def test_compose_opens_a_new_message_maximized(mail):
     assert "if (options.full) composer.toggleFull(true);" in script
 
 
-def test_the_signature_starts_out_of_sight_and_the_eye_shows_it(mail):
+def test_the_signature_shows_in_the_message_as_it_is(mail):
+    """Right there under what's written, to see and change, as in any mail app: never folded away
+    behind a "Signature hidden (still sent)" line, no eye to show it, no Show or Hide."""
     page = mail.get("/mail/inbox").get_data(as_text=True)
-    eye = page.split('data-cm="sig-show"')[1].split(">")[0]
-    assert 'aria-label="Show signature"' in eye and 'data-tip-on="Hide signature"' in eye and "hidden" in eye
+    assert 'data-cm="sig-show"' not in page and "Show signature" not in page
     script = mail.get("/static/js/webmail-compose.js").get_data(as_text=True)
-    assert "this.signatureFolded = true;" in script   # (out of sight to begin with)
-    assert "content:'Signature hidden (still sent)'" in script   # (its line, where it starts)
-    # sent all the same: the mark that hides it is never kept
+    for gone in ("signatureFolded", "foldSignature", "wm-sig-folded", "Signature hidden", "content:'Signature'", "content:'Hide'"):
+        assert gone not in script, gone
+    assert ".wm-signature{" in script   # (still set apart from the words above it)
     core = mail.get("/static/js/webmail-core.js").get_data(as_text=True)
-    assert '"wm-sig-folded"' in core.split("var ONLY_SHOWN")[1].split(";")[0]
+    assert "wm-sig-folded" not in core
 
 
 def test_a_tables_borders_are_dragged_and_its_cells_right_clicked(mail):

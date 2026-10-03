@@ -90,9 +90,6 @@
       {{ tool("link", "link", "Insert link") }}
       {{ tool("picture", "image", "Insert image") }}
       {{ tool("signature", "signature", "Add signature") }}
-      {#- the signature out of sight while writing (as it starts) or in view; sent either way (webmail-compose.js foldSignature) #}
-      <button type="button" class="wm-icon wm-cm-tool" data-cm="sig-show" aria-pressed="false" aria-label="Show signature" data-tip="Show signature"
-              data-tip-on="Hide signature" data-tip-off="Show signature" hidden>{{ icon("eye") }}</button>
       <button type="button" class="wm-icon wm-cm-tool" data-cm="important" aria-pressed="false" aria-label="Mark as important"
               data-tip="Mark as important" data-tip-on="Unmark as important" data-tip-off="Mark as important">{{ icon("priority") }}</button>
       <span class="wm-cm-status" data-cm-status role="status"></span>

@@ -456,14 +456,15 @@ To send them the link, click **Webmail link** on the **Mailboxes** page: copy it
 What they find there:
 
 - **Mail:** the folders (their own too, folders inside folders, dragged into place), the mail 50 at a time with more as they scroll, the message beside the list, tracking links cleaned, attachments to preview or download, and search with its first results as they type. New mail arrives by itself, with a short tone and, if they allow it, a notification on their computer.
-- **Writing:** a compose window with formatting, attachments, signatures, replies under the message, drafts saved as they write, and several windows at once, maximized or on the whole screen. Compose opens in a large window in the middle of the screen. The signature sits below a line that shows where it starts. It's hidden while you write, so there's room, and is sent all the same; Show or the eye button brings it back into view. In a table, drag the border between two columns or two rows to resize that column or row, and right-click a cell to add or delete rows and columns. Right-click a picture to replace, resize or remove it. Pictures in a signature go inside the message itself, so recipients see them in place, not as attachments.
+- **Writing:** a compose window with formatting, attachments, signatures, replies under the message, drafts saved as they write, and several windows at once, maximized or on the whole screen. Compose opens in a large window in the middle of the screen. The signature is right there under what they write, below a faint line that shows where it starts, to see and change before sending. In a table, drag the border between two columns or two rows to resize that column or row, and right-click a cell to add or delete rows and columns. Right-click a picture to replace, resize or remove it. Pictures in a signature go inside the message itself, so recipients see them in place, not as attachments.
 - **More than one mailbox:** Add another account in the account menu signs in to another mailbox once. After that, one tap switches between them, with a tick on the one in use and each one's unread count. Each mailbox keeps its own list, and each browser tab stays on its own account.
 - **Always up to date:** the same mailbox open on two computers stays in step. A message deleted or moved on one leaves the other at once (its reading pane closes, saying so), new folders show up, and after a lost connection it catches up as soon as it's back. A page left open for hours still sends.
-- **Settings:** their name, light or dark, the new-mail sound, signatures, filters (conditions, and what happens to the mail), an auto-reply between two dates, forwarding, a new password, where they logged in from, and how to connect their phone and mail apps.
+- **Settings:** their name, light or dark, the new-mail sound, signatures, filters (conditions, and what happens to the mail), an auto-reply between two dates, forwarding, the Undelivered folder, a new password, where they logged in from, and how to connect their phone and mail apps.
+- **Undelivered folder:** switched on in **Settings → Undelivered mail**, the notices that say a message couldn't be delivered ("Failed to deliver message", "Mail delivery failed"…, from any mail server) skip the Inbox and go to a folder of their own, **Undelivered**, between Spam and Trash. The ones already in the Inbox move there with one click.
 - **Calendar:** a day, the working week, a week or a month; events that repeat, all-day events, people invited by email, and invitations to accept, decline or answer maybe.
 - **Contacts:** their address book, with photos, found as they type; the compose window suggests them.
 
-Filters, the auto-reply and forwarding are kept in the mail engine, so they work when the webmail is closed too.
+Filters, the auto-reply, forwarding and the Undelivered folder are kept in the mail engine, so they work when the webmail is closed too, and in mail apps.
 
 **On HTTPS, at `webmail.example.com`:** add an A record `webmail` pointing to your server's IP address, then a proxy host in Nginx Proxy Manager:
 
@@ -477,6 +478,8 @@ Filters, the auto-reply and forwarding are kept in the mail engine, so they work
 | SSL tab | Request a new SSL certificate, with **Force SSL** and **HTTP/2** on |
 
 Then, in **Settings → Miscellaneous → Webmail address**, type `https://webmail.example.com`, so the Mailboxes page opens the webmail there.
+
+**Web interface behind Cloudflare's proxy** (the orange cloud)? Cloudflare doesn't carry port 17090, so until the webmail has an address of its own, **Open webmail** and the **Webmail link** go to your server's IP address (`http://your-server-ip:17090`), and the Mailboxes page says so. Give it its address as above; `webmail` can be proxied too, since Cloudflare carries its live new mail (WebSockets).
 
 **Calendar and contacts apps** (Thunderbird, an iPhone, DAVx⁵ on Android) connect through the same address: `https://webmail.example.com/dav/`, with the mailbox's address and password. Most apps find the calendars and address books by themselves from `https://webmail.example.com`; the webmail's **Settings → Connect third-party apps** shows the exact addresses. Wrong passwords there count towards the same sign-in lock. And close the way in by IP: in `docker-compose.yml`, put a `#` at the start of the `"17090:17090"` line and run `docker compose up -d` (and `sudo ufw delete allow 17090/tcp` if you opened it).
 

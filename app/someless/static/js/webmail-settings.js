@@ -211,6 +211,40 @@
     });
   }
 
+  // --- Undelivered mail: the switch; switched on, the notices in the Inbox already, to move ---
+  var undelivered = document.querySelector("[data-wm-undelivered]");
+  if (undelivered) {
+    var undeliveredUrl = location.pathname.replace(/\/$/, "") + "/undelivered";
+    var waitingLine = undelivered.querySelector("[data-wm-undelivered-waiting]");
+    var showWaiting = function (count) {
+      waitingLine.dataset.wmUndeliveredWaiting = String(count);
+      undelivered.querySelector("[data-wm-undelivered-count]").textContent =
+        count + (count === 1 ? " notice is" : " notices are");
+      waitingLine.hidden = !count;
+    };
+    undelivered.addEventListener("click", function (event) {
+      var toggle = event.target.closest("[data-wm-undelivered-switch]");
+      if (toggle) {
+        toggle.disabled = true;
+        wm.request(undeliveredUrl, { method: "POST", body: { on: toggle.getAttribute("aria-checked") !== "true" },
+                                     failTitle: "Failed to update the Undelivered folder setting." }).then(function (answer) {
+          toggle.setAttribute("aria-checked", String(!!answer.on));
+          showWaiting(answer.waiting || 0);
+          wm.toast(answer.message);
+        }).finally(function () { toggle.disabled = false; });
+        return;
+      }
+      var move = event.target.closest("[data-wm-undelivered-move]");
+      if (move) {
+        move.disabled = true;
+        wm.request(undeliveredUrl + "/move", { method: "POST", body: {}, failTitle: "Failed to move the notices." }).then(function (answer) {
+          showWaiting(answer.waiting || 0);
+          wm.toast(answer.message, { warning: !!answer.warning });
+        }).finally(function () { move.disabled = false; });
+      }
+    });
+  }
+
   // --- Security Center: a new password, its rules ticked off as it's typed; saved, the webmail
   // logs out and the login page asks for it ---
   var passwordForm = document.querySelector("[data-wm-password-form]");

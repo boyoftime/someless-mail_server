@@ -234,3 +234,69 @@ def test_a_sender_with_capitals_sends_whatever_the_case_it_is_typed_in(app, live
         for address in ("Sales@example.com", "sales@example.com", "SALES@EXAMPLE.COM"):
             assert smtp.mail(address)[0] == 250, address
             smtp.rset()
+
+
+def test_notices_of_undelivered_mail_go_to_their_folder(app, live):
+    """The Undelivered folder (webmail/undelivered.py): the engine files a delivery report and an old
+    server's plain bounce there as they come, never a person's mail; the ones that came to the
+    Inbox before are found to move."""
+    import time
+
+    from someless import mail_password
+    from someless.db import get_db
+    from someless.engine import sync
+    from someless.webmail import folders, sieve, undelivered
+    from someless.webmail.jmap import Jmap
+    report = (b"From: Mail Delivery Subsystem <MAILER-DAEMON@friend.test>\r\nTo: ceo@example.com\r\n"
+              b"Subject: Failed to deliver message\r\nMIME-Version: 1.0\r\n"
+              b"Content-Type: multipart/report; report-type=delivery-status; boundary=\"b1\"\r\n\r\n"
+              b"--b1\r\nContent-Type: text/plain\r\n\r\nYour message could not be delivered.\r\n"
+              b"--b1\r\nContent-Type: message/delivery-status\r\n\r\nReporting-MTA: dns; friend.test\r\n\r\n"
+              b"Final-Recipient: rfc822; nobody@gmail.com\r\nAction: failed\r\nStatus: 5.1.1\r\n\r\n--b1--\r\n")
+    plain = (b"From: Mail Delivery System <Mailer-Daemon@cpl109.main-hosting.eu>\r\nTo: ceo@example.com\r\n"
+             b"Subject: Mail delivery failed: returning message to sender\r\n\r\nThis message was created automatically.\r\n")
+    person = b"From: friend@friend.test\r\nTo: ceo@example.com\r\nSubject: Lunch?\r\n\r\nHi!\r\n"
+
+    def deliver(*messages):
+        with smtplib.SMTP("127.0.0.1", 25, timeout=20) as smtp:
+            smtp.ehlo("mx.friend.test")
+            for message in messages:
+                assert smtp.sendmail("" if b"aemon@" in message else "friend@friend.test", ["ceo@example.com"], message) == {}
+
+    def where(subject):
+        boxes = {box["id"]: box["name"] for box in jmap.call(("Mailbox/get", {"properties": ["name"]}))[0]["list"]}
+        for _ in range(20):
+            found = jmap.call(("Email/query", {"filter": {"subject": subject}}),
+                              ("Email/get", {"#ids": {"resultOf": "0", "name": "Email/query", "path": "/ids"},
+                                             "properties": ["mailboxIds"]}))[1]["list"]
+            if found:
+                return sorted(boxes[box] for email in found for box in email["mailboxIds"])
+            time.sleep(0.5)
+        return []
+
+    with app.app_context():
+        domain_id = _live_domain_and_key(app)
+        db = get_db()
+        db.execute("INSERT INTO mailboxes (email, domain_id, quota_bytes, password_hash, created_at)"
+                   " VALUES ('ceo@example.com', ?, ?, ?, 0)", (domain_id, 50 * 1024 ** 2, mail_password.hash_password("Mailbox-Pass-123!")))
+        db.commit()
+        assert sync.run(), engine_module.state()["sync_error"]
+        jmap = Jmap("ceo@example.com", engine_module.secret("webmail_password"))
+
+    deliver(report, plain)   # before it's switched on: to the Inbox
+    assert where("Failed to deliver message") == ["Inbox"] and where("Mail delivery failed") == ["Inbox"]
+    tree = folders.load(jmap)
+    assert len(undelivered.notices_in(jmap, tree.role("inbox"))) == 2
+
+    folder_id = undelivered.make_folder(jmap, tree)
+    tree = folders.load(jmap)
+    kept = {"forward_to": None, "forward_on": False, "forward_keep": True, "reply_on": False, "reply_start": None,
+            "reply_end": None, "reply_subject": "", "reply_html": "", "undelivered_on": True}
+    sieve.install(jmap, sieve.script(kept, [], {}, ["ceo@example.com"],
+                                     {"id": folder_id, "name": tree.engine_path(tree.role("undelivered"))}))
+    assert undelivered.move(jmap, tree) == 2
+    deliver(report, plain, person)
+
+    assert where("Failed to deliver message") == ["Undelivered", "Undelivered"]
+    assert where("Mail delivery failed") == ["Undelivered", "Undelivered"]
+    assert where("Lunch?") in (["Inbox"], ["Junk Mail"])   # (a person's mail: wherever the spam filter puts it)

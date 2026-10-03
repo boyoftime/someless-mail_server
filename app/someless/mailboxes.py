@@ -203,6 +203,7 @@ def _page(status=200, **context):
         "mailboxes.html", mailboxes=boxes, query=query, domains=[domain["name"] for domain in domains],
         server=server, ports=MAIL_APPS, free=size_text(free) if free else None,
         webmail_login=webmail_login, webmail_links=webmail_links, free_senders=free_senders,
+        webmail_behind_proxy=bool(boxes) and webmail_site.behind_proxy(request.host),
         rules=password_checks(password_rules()), saved_rules=password_rules(), min_length=password_rules()["min_length"],
         notes=_receive_notes(sorted({box["domain"] for box in boxes})) if boxes else [],
         sync_error=state()["sync_error"] if enabled() else None,

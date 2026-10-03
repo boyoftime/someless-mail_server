@@ -147,6 +147,25 @@
     </div>
   </section>
 
+  {# Undelivered mail: notices of mail that couldn't be delivered, into a folder of their own (undelivered.py) #}
+  <section class="wm-card" data-kind="email" aria-labelledby="card-undelivered" data-wm-undelivered>
+    <h2 class="wm-card-title" id="card-undelivered">Undelivered mail</h2>
+    <div class="wm-card-body">
+      <div class="wm-setting-row">
+        <div class="wm-setting-text">
+          <p class="wm-setting-name">Undelivered folder</p>
+          <p class="wm-setting-hint">Notices about mail that couldn't be delivered skip your Inbox and go to the Undelivered folder, in your mail apps too.</p>
+        </div>
+        <button type="button" class="wm-switch-button" role="switch" aria-checked="{{ 'true' if rules.undelivered_on else 'false' }}"
+                data-wm-undelivered-switch aria-label="Undelivered folder"><span class="wm-switch"><span></span></span></button>
+      </div>
+      <div class="wm-undelivered-waiting" data-wm-undelivered-waiting="{{ undelivered_waiting }}"{% if not (rules.undelivered_on and undelivered_waiting) %} hidden{% endif %}>
+        <p class="wm-setting-hint"><span data-wm-undelivered-count>{{ undelivered_waiting }} {{ "notice is" if undelivered_waiting == 1 else "notices are" }}</span> in your Inbox already.</p>
+        <button type="button" class="wm-button is-small" data-wm-undelivered-move>Move them</button>
+      </div>
+    </div>
+  </section>
+
   {# Connect third-party apps #}
   <section class="wm-card" data-kind="email" aria-labelledby="card-apps">
     <h2 class="wm-card-title" id="card-apps">Connect third-party apps</h2>

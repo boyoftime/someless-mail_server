@@ -1,10 +1,11 @@
 """The mailbox's rules for its incoming mail, as one Sieve script in the mail engine (RFC 5228):
-its auto-reply, its forwarding and its filters (Settings). They're kept here (webmail_settings,
+its auto-reply, its forwarding, its Undelivered folder and its filters (Settings). They're kept here (webmail_settings,
 webmail_rules), and each change writes the script again and makes it the active one. (The engine's
 own auto-reply, JMAP VacationResponse, is a Sieve script of its own that switches the others
 off: so it isn't used, and the auto-reply is written into this one.)
 
-The script, in order: the auto-reply (within its dates), the forwarding, then the filters, each
+The script, in order: the auto-reply (within its dates), the forwarding, the notices of undelivered
+mail into their folder (undelivered.py) when the mailbox wants it, then the filters, each
 "if" its conditions (all, any, or none needed), its actions: flags first (read, favorite), then
 where it goes (a folder by its id, RFC 9042, so a renamed folder still works), forwarded, kept or
 thrown away; "stop" skips the filters after it."""
@@ -15,6 +16,7 @@ import re
 from flask import g
 
 from ..db import get_db
+from . import undelivered
 from .jmap import MailError
 
 SCRIPT = "someless"
@@ -53,15 +55,15 @@ def rules(mailbox_id):
 
 
 def settings(mailbox_id):
-    """Forwarding and the auto-reply, as kept: {"forward_to", "forward_on", "forward_keep",
-    "reply_on", "reply_start", "reply_end", "reply_subject", "reply_html"}."""
+    """Forwarding, the auto-reply and the Undelivered folder, as kept: {"forward_to", "forward_on",
+    "forward_keep", "reply_on", "reply_start", "reply_end", "reply_subject", "reply_html", "undelivered_on"}."""
     row = get_db().execute("SELECT forward_to, forward_on, forward_keep, reply_on, reply_start, reply_end, reply_subject,"
-                           " reply_html FROM webmail_settings WHERE mailbox_id = ?", (mailbox_id,)).fetchone()
+                           " reply_html, undelivered_on FROM webmail_settings WHERE mailbox_id = ?", (mailbox_id,)).fetchone()
     if row is None:
         return {"forward_to": None, "forward_on": False, "forward_keep": True, "reply_on": False, "reply_start": None,
-                "reply_end": None, "reply_subject": "", "reply_html": ""}
+                "reply_end": None, "reply_subject": "", "reply_html": "", "undelivered_on": False}
     kept = dict(row)
-    for key in ("forward_on", "forward_keep", "reply_on"):
+    for key in ("forward_on", "forward_keep", "reply_on", "undelivered_on"):
         kept[key] = bool(kept[key])
     kept["reply_subject"] = kept["reply_subject"] or ""
     kept["reply_html"] = kept["reply_html"] or ""
@@ -73,7 +75,7 @@ def save_settings(mailbox_id, **values):
     database.execute("INSERT INTO webmail_settings (mailbox_id) VALUES (?) ON CONFLICT (mailbox_id) DO NOTHING", (mailbox_id,))
     for key, value in values.items():
         if key not in ("forward_to", "forward_on", "forward_keep", "reply_on", "reply_start", "reply_end", "reply_subject",
-                       "reply_html"):
+                       "reply_html", "undelivered_on"):
             raise ValueError(key)
         database.execute(f"UPDATE webmail_settings SET {key} = ? WHERE mailbox_id = ?",
                          (int(value) if isinstance(value, bool) else value, mailbox_id))
@@ -294,11 +296,26 @@ def _vacation(kept, own, needs):
     return [f"if allof({', '.join(dates)}) {{"] + ["    " + line if index == 0 else line for index, line in enumerate(command)] + ["}"]
 
 
-def script(kept, rule_list, folders, own):
+def _undelivered(folder, needs):
+    """The notices of undelivered mail into their folder (undelivered.py says what one is), before
+    a filter can take them anywhere else. By the folder's id when it's known, and made again by its
+    name if it was deleted meanwhile (by a mail app, say)."""
+    needs.update(("fileinto", "mailbox"))
+    if folder:
+        needs.add("mailboxid")
+        file = f"fileinto :mailboxid {_quote(folder['id'])} :create {_quote(folder['name'])};"
+    else:
+        file = f"fileinto :create {_quote(undelivered.FOLDER)};"
+    return ["# Undelivered mail: notices of mail that couldn't be delivered, into their own folder",
+            f"if {undelivered.SIEVE_TEST} {{", "    " + file, "    stop;", "}"]
+
+
+def script(kept, rule_list, folders, own, undelivered_folder=None):
     """The whole script. folders: {folder id: {"id", "name"}, "trash": {...}}; own: the mailbox's
-    addresses (the auto-reply's :from and :addresses)."""
+    addresses (the auto-reply's :from and :addresses); undelivered_folder: {"id", "name"} of the
+    Undelivered folder, when there's one."""
     needs = set()
-    body = ["# Written by the Someless webmail (Settings): auto-reply, forwarding and filters.",
+    body = ["# Written by the Someless webmail (Settings): auto-reply, forwarding, Undelivered folder and filters.",
             "# Changed there, it's written again."]
     body += _vacation(kept, own, needs)
     if kept["forward_on"] and kept["forward_to"]:
@@ -307,6 +324,8 @@ def script(kept, rule_list, folders, own):
             body.append(f"redirect :copy {_quote(kept['forward_to'])};")
         else:
             body.append(f"redirect {_quote(kept['forward_to'])};")
+    if kept.get("undelivered_on"):
+        body += _undelivered(undelivered_folder, needs)
     for rule in rule_list:
         if not rule["enabled"]:
             continue
@@ -349,4 +368,6 @@ def write(mail, tree, own):
     trash = tree.role("trash")
     if trash:
         folders["trash"] = folders[trash["id"]]
-    install(mail, script(settings(g.mailbox["id"]), rules(g.mailbox["id"]), folders, own))
+    kept = tree.role("undelivered")
+    install(mail, script(settings(g.mailbox["id"]), rules(g.mailbox["id"]), folders, own,
+                         folders[kept["id"]] if kept else None))

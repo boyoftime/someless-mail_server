@@ -62,7 +62,8 @@ class FakeJmap:
 
     def add(self, folder="inbox", subject="Hello", sender=("Amina Hassan", "amina@example.com"), to=DEFAULT_TO, cc=(),
             text="Hi, this is the message.", html=None, received="2026-09-28T18:51:00Z", unread=True, flagged=False,
-            answered=False, forwarded=False, important=False, attachments=(), size=None, reply_to=()):
+            answered=False, forwarded=False, important=False, attachments=(), size=None, reply_to=(),
+            content_type="text/plain; charset=utf-8"):
         email_id = f"e{next(self._ids)}"
         mailbox_id = self.mailboxes.get(folder) and folder or self.role(folder)
         keywords = {}
@@ -95,6 +96,7 @@ class FakeJmap:
             "size": size or len(raw) + sum(part["size"] for part in parts), "hasAttachment": bool(parts),
             "attachments": parts, "messageId": [f"{email_id}@example.com"], "inReplyTo": None, "references": None,
             "header:X-Priority:asText": " 1" if important else None,
+            "header:Content-Type:asText": f" {content_type}",
             "_text": text, "_html": html,
         }
         self.state += 1

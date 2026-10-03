@@ -171,6 +171,9 @@
 {% if sync_error %}
 <p class="smtp-note is-warning">{{ icon("info") }}<span>The mail engine didn't take the last change yet ({{ sync_error }}). It tries again with the next change, and every hour.</span></p>
 {% endif %}
+{% if webmail_behind_proxy %}
+<p class="smtp-note">{{ icon("info") }}<span>Your panel is behind Cloudflare's proxy, which doesn't carry the webmail's port (17090), so Open webmail goes to your server's IP address for now. Give the webmail an address of its own, like https://webmail.example.com, in <a href="{{ url_for('settings.misc') }}">Settings → Miscellaneous</a>.</span></p>
+{% endif %}
 {% for note in notes %}
 <p class="smtp-note">{{ icon("info") }}<span>{{ note.text }} <a href="{{ url_for('domains.authenticate', domain_id=note.domain_id) }}">See its records</a>.</span></p>
 {% endfor %}

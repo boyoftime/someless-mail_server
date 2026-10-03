@@ -210,7 +210,8 @@ CREATE TABLE IF NOT EXISTS webmail_settings (
     reply_start TEXT,                            -- from and until (ISO, UTC)
     reply_end TEXT,
     reply_subject TEXT,
-    reply_html TEXT
+    reply_html TEXT,
+    undelivered_on INTEGER NOT NULL DEFAULT 0    -- notices of undelivered mail to their own folder (Settings > Undelivered mail)
 );
 -- A mailbox's filters (Settings > Filters), in their order: each written into its Sieve script
 -- (webmail/sieve.py), with its conditions and actions as JSON
@@ -294,6 +295,7 @@ LATER_COLUMNS = [("domains", "provider", "TEXT"), ("domain_keys", "mail_host", "
                  ("webmail_settings", "reply_on", "INTEGER NOT NULL DEFAULT 0"), ("webmail_settings", "reply_start", "TEXT"),
                  ("webmail_settings", "reply_end", "TEXT"), ("webmail_settings", "reply_subject", "TEXT"),
                  ("webmail_settings", "reply_html", "TEXT"),
+                 ("webmail_settings", "undelivered_on", "INTEGER NOT NULL DEFAULT 0"),
                  ("mailboxes", "send_limit_mb", "INTEGER NOT NULL DEFAULT 50"),
                  ("mailboxes", "no_delete_webmail", "INTEGER NOT NULL DEFAULT 0"),
                  ("mailboxes", "no_delete_apps", "INTEGER NOT NULL DEFAULT 0"),

@@ -15,9 +15,9 @@ import time
 from flask import Blueprint, g, render_template, request, session, url_for
 
 from . import accounts, login_required, views
-from . import sieve
+from . import sieve, undelivered
 from .compose import _own_addresses, clean_outgoing
-from .jmap import MailError, for_mailbox
+from .jmap import MailError, MailUnavailable, for_mailbox
 from .mail import _tree, reachable
 from .. import mail_password
 from ..db import get_db
@@ -82,9 +82,17 @@ def _write_rules(mail=None):
 def index():
     mailbox_id = g.mailbox["id"]
     signatures = views.signatures(mailbox_id)
+    rules = sieve.settings(mailbox_id)
+    waiting = 0
+    if rules["undelivered_on"]:   # (the notices in the Inbox, to move: none said when the engine can't tell)
+        try:
+            mail = _mail()
+            waiting = undelivered.waiting(mail, _tree(mail))
+        except (MailError, MailUnavailable):
+            pass
     return _page("webmail-settings.html", display_name=_who(), preferences=views.preferences(mailbox_id),
                  default_signature=next((one for one in signatures if one["is_default"]), None),
-                 signature_count=len(signatures), rules=sieve.settings(mailbox_id),
+                 signature_count=len(signatures), rules=rules, undelivered_waiting=waiting,
                  filter_count=sum(1 for rule in sieve.rules(mailbox_id) if rule["enabled"]),
                  shortcuts=SHORTCUTS, server=_server(), ports=PORTS)
 
@@ -157,6 +165,42 @@ def forwarding():
     kept = sieve.settings(g.mailbox["id"])
     return {"forwarding": {"address": kept["forward_to"], "on": kept["forward_on"], "keep": kept["forward_keep"]},
             "message": "Forwarding settings have been saved"}
+
+
+@bp.post("/undelivered")
+@login_required
+@reachable
+def undelivered_switch():
+    """The Undelivered folder on or off ({"on"}; undelivered.py): switched on, the folder's made,
+    and the answer says how many notices are in the Inbox already, to move in one go."""
+    on = bool((request.get_json(silent=True) or {}).get("on"))
+    mail = _mail()
+    before = sieve.settings(g.mailbox["id"])["undelivered_on"]
+    sieve.save_settings(g.mailbox["id"], undelivered_on=on)
+    try:
+        if on:
+            undelivered.make_folder(mail, _tree(mail))
+        _write_rules(mail)
+    except MailError:
+        sieve.save_settings(g.mailbox["id"], undelivered_on=before)
+        return {"problem": "Failed to update the Undelivered folder setting."}, 502
+    if not on:
+        return {"on": False, "waiting": 0, "message": "Notices about undelivered mail now stay in your Inbox"}
+    return {"on": True, "waiting": undelivered.waiting(mail, _tree(mail)),
+            "message": "Notices about undelivered mail now go to the Undelivered folder"}
+
+
+@bp.post("/undelivered/move")
+@login_required
+@reachable
+def undelivered_move():
+    """The notices in the Inbox, into the Undelivered folder."""
+    mail = _mail()
+    moved = undelivered.move(mail, _tree(mail))
+    if not moved:
+        return {"moved": 0, "waiting": 0, "warning": True, "message": "There are no notices in your Inbox to move"}
+    return {"moved": moved, "waiting": 0, "warning": False,
+            "message": f'Moved {moved} {"notice" if moved == 1 else "notices"} to "{undelivered.FOLDER}"'}
 
 
 @bp.post("/forwarding/delete")

@@ -1,6 +1,6 @@
-"""A mailbox's folders as PrivateEmail shows them: Inbox, Drafts, Sent, Archive, Spam and Trash
-first (the engine's roles for them), each with the folders made inside it, then the mailbox's own
-folders. Drafts counts all its mail; the others, what's unread. The mailbox's own folders go in
+"""A mailbox's folders as PrivateEmail shows them: Inbox, Drafts, Sent, Archive, Spam, Undelivered
+and Trash first (the engine's roles for them; Undelivered, which has no role, by its name at the top:
+undelivered.py makes it), each with the folders made inside it, then the mailbox's own folders. Drafts counts all its mail; the others, what's unread. The mailbox's own folders go in
 the order they were made, or by name ("Sort alphabetically", in a folder's menu), and a folder's
 own folders can be folded away. The engine has no Archive to begin with: it's made the first time
 the folders are looked at.
@@ -14,12 +14,14 @@ from .jmap import MailError
 
 # (role, key in the address bar, name, icon)
 STANDARD = [("inbox", "inbox", "Inbox", "inbox"), ("drafts", "drafts", "Drafts", "drafts"), ("sent", "sent", "Sent", "sent"),
-            ("archive", "archive", "Archive", "archive"), ("junk", "spam", "Spam", "spam"), ("trash", "trash", "Trash", "trash")]
+            ("archive", "archive", "Archive", "archive"), ("junk", "spam", "Spam", "spam"), ("undelivered", "undelivered", "Undelivered", "undelivered"),
+            ("trash", "trash", "Trash", "trash")]
 KEYS = {role: key for role, key, _, _ in STANDARD}
 PROPERTIES = ["name", "role", "parentId", "sortOrder", "totalEmails", "unreadEmails"]
 LONGEST_NAME = 60
 MAX_DEPTH = 3            # the top level is 0: four levels in all
-NO_FOLDERS_IN = ("drafts", "sent", "junk")
+NO_FOLDERS_IN = ("drafts", "sent", "junk", "undelivered")
+UNDELIVERED = "Undelivered"   # the folder notices of undelivered mail go to (undelivered.py)
 NAME_MARKS = set("!@#$%^&*()_+-={}[];:'\"<.,|\\?`~")   # besides letters, digits and spaces
 
 
@@ -41,6 +43,10 @@ class Folders:
         for box in boxes:
             if box.get("role") in KEYS and box.get("role") not in standard:
                 standard[box["role"]] = box
+        undelivered = next((box for box in boxes if not box.get("role") and not box.get("parentId")
+                            and box["name"].casefold() == UNDELIVERED.casefold()), None)
+        if undelivered is not None:
+            standard["undelivered"] = undelivered
         own = [box for box in boxes if box not in standard.values()]
         ids = {box["id"] for box in boxes}
         made = {box["id"]: place for place, box in enumerate(boxes)}   # the engine lists them as they were made

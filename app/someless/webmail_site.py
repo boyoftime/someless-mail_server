@@ -8,6 +8,7 @@ import secrets
 import time
 from urllib.parse import urlsplit
 
+from . import domain_records
 from .db import get_db
 
 PORT = 17090
@@ -24,9 +25,18 @@ def saved():
 
 def beside(host):
     """The webmail beside the panel: the same server, port 17090 (plain http: it has no certificate
-    of its own; Nginx Proxy Manager gives it one at its own name)."""
+    of its own; Nginx Proxy Manager gives it one at its own name). A panel behind Cloudflare's proxy
+    can't have it there, since the proxy doesn't carry port 17090: then it's at the server's own
+    address (when DNS can tell it), and the Mailboxes page says to give the webmail one."""
     name = urlsplit(f"//{host}").hostname or "localhost"
+    if domain_records.behind_proxy(host):
+        name = domain_records.own_address() or name
     return f"http://{f'[{name}]' if ':' in name else name}:{PORT}"
+
+
+def behind_proxy(host):
+    """Whether the webmail has no address of its own while the panel is behind Cloudflare's proxy."""
+    return not saved() and domain_records.behind_proxy(host)
 
 
 def address(host):
