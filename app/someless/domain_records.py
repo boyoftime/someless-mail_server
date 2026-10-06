@@ -823,7 +823,15 @@ def save(domain_id, host, found, results=None):
     db = get_db()
     db.execute("UPDATE domain_keys SET mail_host = ?, found = ? WHERE domain_id = ?", (host, json.dumps(found), domain_id))
     if results is not None:
+        from .engine import names, remember, state
+        before = names.server_name()
         db.execute("UPDATE domain_keys SET checks = ?, checked_at = ? WHERE domain_id = ?",
                    (json.dumps(results), time.time(), domain_id))
         db.execute("UPDATE domains SET authenticated = ? WHERE id = ?", (1 if authenticated(results) else 0, domain_id))
+        db.commit()
+        # The mail server's name stays the one in use when another domain is authenticated: the new
+        # domain's is only an option (Settings > Mail server name), never taken by itself because it
+        # comes first in the list. So the name in use is kept, once there's one, unless one was picked.
+        if not state()["server_name"] and (before or names.server_name()):
+            remember(server_name=before or names.server_name())
     db.commit()

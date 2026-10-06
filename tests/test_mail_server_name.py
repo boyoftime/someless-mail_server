@@ -168,3 +168,68 @@ def test_the_mail_server_names_save_waits_for_a_change(app, client, login):
     page = text(client.get("/settings/mail-server"))
 
     assert re.search(r'<form[^>]*data-server-name-form[^>]*data-save-when-changed', page)
+
+
+# --- a new domain keeps the name in use: it's only an option, until it's picked here ---
+
+def _authenticate(app, name):
+    """A domain's records found, as a look at its DNS would save them (domain_records.save)."""
+    from someless import domain_records
+    domain_id = authenticated_domain(app, name, authenticated=False)
+    with app.app_context():
+        domain_records.save(domain_id, "mail", {}, {key: {"state": "found"} for key in domain_records.AUTHENTICATING})
+    return domain_id
+
+
+def _in_use(app):
+    from someless.engine import names
+    with app.app_context():
+        return names.server_name(), names.server_names()
+
+
+def test_the_first_domain_authenticated_gives_the_name(app):
+    _authenticate(app, "pineloop.online")
+
+    with app.app_context():
+        assert engine_module.state()["server_name"] == "mail.pineloop.online"   # (kept: whatever comes later)
+
+
+def test_a_domain_authenticated_later_keeps_the_name_in_use(app):
+    _authenticate(app, "pineloop.online")
+
+    _authenticate(app, "abc-later.com")   # (first, alphabetically: once, that made it the name)
+
+    in_use, options = _in_use(app)
+    assert in_use == "mail.pineloop.online"
+    assert "mail.abc-later.com" in options   # (to pick, on the page)
+
+
+def test_the_new_domain_is_an_option_on_the_page_not_the_name(app, client, login):
+    _authenticate(app, "pineloop.online")
+    _authenticate(app, "abc-later.com")
+    login()
+
+    page = plain(text(client.get("/settings/mail-server")))
+
+    assert re.search(r"mail\.pineloop\.online\s*In use now", page)
+    assert re.search(r"mail\.abc-later\.com\s*For abc-later\.com", page)
+
+
+def test_a_name_picked_comes_back_after_its_domain_was_away_a_while(app, client, login):
+    """Picked, then its domain fails a check for a while: another stands in, but the pick isn't forgotten."""
+    from someless.db import get_db
+    pine = _authenticate(app, "pineloop.online")
+    _authenticate(app, "samakiafrica.com")
+    login()
+    client.post("/settings/mail-server", data={"server_name": "mail.samakiafrica.com"})
+    with app.app_context():
+        get_db().execute("UPDATE domains SET authenticated = 0 WHERE name = 'samakiafrica.com'")
+        get_db().commit()
+    assert _in_use(app)[0] == "mail.pineloop.online"   # (standing in)
+
+    _authenticate(app, "abc-later.com")   # meanwhile, a new one
+    with app.app_context():
+        get_db().execute("UPDATE domains SET authenticated = 1 WHERE name = 'samakiafrica.com'")
+        get_db().commit()
+
+    assert _in_use(app)[0] == "mail.samakiafrica.com" and pine
