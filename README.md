@@ -685,6 +685,10 @@ The same thanks, and the donate button, are in the web interface too: **Credits*
 - The webmail's animations are from [LottieFiles](https://lottiefiles.com/): the loading arrows and the unread-mail badge. So are the Dashboard's helicopter and the API guide's sparkle animations.
 - The new-mail sound: "Modern short message tone" by [digitalstore07](https://pixabay.com/users/digitalstore07/) on [Pixabay](https://pixabay.com/) (Pixabay Content License).
 
+## Security
+
+Found a security problem in Someless Mail? Please report it privately, not in a public issue: [SECURITY.md](SECURITY.md) says how, and who looks after it.
+
 ## Licence
 
 Someless Mail is free and open source under the [GNU Affero General Public License, version 3](LICENSE) (AGPL-3.0). Copyright © 2026 Someless Ado.

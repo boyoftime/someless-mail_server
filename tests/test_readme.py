@@ -72,3 +72,12 @@ def test_it_tells_of_the_finished_server_and_its_api():
     for part in ("webmail", "API", "Dashboard"):
         assert part in status, part
     assert "## The API: domains, senders and mailboxes from your apps" in README
+
+
+def test_there_is_a_security_policy_with_its_maintainer():
+    """SECURITY.md: who looks after Someless Mail's security, and how to report a problem privately."""
+    policy = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
+    assert "Someless Ado" in policy and "@boyoftime" in policy
+    assert "https://github.com/boyoftime/someless-mail_server/security/advisories/new" in policy
+    assert "Stalwart" in policy   # (the engine's own problems: reported to its team)
+    assert "[SECURITY.md](SECURITY.md)" in README
