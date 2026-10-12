@@ -124,10 +124,17 @@ def from_text(text):
 
 
 def _body_of(source):
-    """What's inside the <body> (with the <style>s of its <head>), since the frame has its own page."""
-    head = re.split(r"<body\b", source, maxsplit=1, flags=re.I)
+    """What's inside the <body> (with the <style>s of its <head>), since the frame has its own page.
+    What some mail programs put outside the page (163.com's: a reply's words before <html>, the
+    message replied to inside it) is kept around it, before and after, as a browser shows it."""
+    start = re.search(r"<!doctype\b|<html\b|<head\b|<body\b", source, re.I)
+    before = source[:start.start()] if start else ""
+    end = re.search(r"</html\s*>", source, re.I)
+    after = source[end.end():] if end else ""
+    page = source[len(before):end.start() if end else len(source)]
+    head = re.split(r"<body\b", page, maxsplit=1, flags=re.I)
     head_styles = "".join(re.findall(r"<style\b[^>]*>.*?</style>", head[0], re.I | re.S)) if len(head) > 1 else ""
-    match = re.search(r"<body\b[^>]*>(.*)</body>", source, re.I | re.S)
+    match = re.search(r"<body\b[^>]*>(.*)</body>", page, re.I | re.S)
     if not match:
-        match = re.search(r"<body\b[^>]*>(.*)", source, re.I | re.S)
-    return head_styles + (match.group(1) if match else source)
+        match = re.search(r"<body\b[^>]*>(.*)", page, re.I | re.S)
+    return before + head_styles + (match.group(1) if match else page) + after
