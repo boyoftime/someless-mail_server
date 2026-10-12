@@ -213,11 +213,16 @@ body.webmail-app .wm-cm-link-form input:focus { border-color: var(--wm-blue); }
   height: auto;
   max-height: none;
   margin-bottom: 1.2rem;
-  border: 1px solid var(--wm-line);
+  border: 1px solid var(--wm-blue);
   border-radius: 12px;
-  box-shadow: none;
-  animation: wm-read-in 0.25s var(--wm-ease) both;
+  /* the box being written in: a blue glow round it, pulsing as it opens, then kept, softer */
+  box-shadow: 0 0 0 1px var(--wm-blue), 0 0 22px -6px var(--wm-blue);
+  animation: wm-read-in 0.25s var(--wm-ease) both, wm-reply-glow 1.4s ease-in-out 0.25s 2;
 }
+@keyframes wm-reply-glow {
+  50% { box-shadow: 0 0 0 2px var(--wm-blue), 0 0 36px 2px color-mix(in srgb, var(--wm-blue) 70%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) { .wm-composer.is-inline { animation: none; } }
 .wm-composer.is-inline .wm-cm-head { display: none; }
 .wm-composer.is-inline .wm-cm-inline-head { display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; padding: 8px 8px 0 16px; }
 .wm-composer.is-inline .wm-cm-row.is-subject { display: none; }

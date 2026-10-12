@@ -562,3 +562,10 @@ def test_maximize_takes_a_reply_to_the_large_window(mail):
     pop = script[script.index("Composer.prototype.popOut = function"):]
     pop = pop[:pop.index("\n  };")]
     assert "this.toggleFull(true);" in pop
+
+
+def test_the_reply_box_glows_as_it_opens(mail):
+    """A blue glow round it, pulsing as it opens, then kept, softer: the box being written in."""
+    css = mail.get("/static/css/webmail-compose.css").get_data(as_text=True)
+    assert "@keyframes wm-reply-glow" in css and "wm-reply-glow 1.4s" in css
+    assert "@media (prefers-reduced-motion: reduce) { .wm-composer.is-inline { animation: none; } }" in css
