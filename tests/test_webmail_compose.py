@@ -554,3 +554,11 @@ def test_the_font_and_size_pickers_are_boxed_as_privateemails(mail):
     select = css[css.index(".wm-cm-select {"):]
     select = select[:select.index("}")]
     assert "border: 1px solid var(--wm-line)" in select and "border-radius: 10px" in select and "height: 34px" in select
+
+
+def test_maximize_takes_a_reply_to_the_large_window(mail):
+    """As Compose opens: the window in the middle of the screen, not the small one at the bottom right."""
+    script = mail.get("/static/js/webmail-compose.js").get_data(as_text=True)
+    pop = script[script.index("Composer.prototype.popOut = function"):]
+    pop = pop[:pop.index("\n  };")]
+    assert "this.toggleFull(true);" in pop

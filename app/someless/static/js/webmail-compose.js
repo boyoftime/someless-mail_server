@@ -907,6 +907,7 @@
     this.mountEditor(html);
     layout();
     showLimit();
+    this.toggleFull(true);   // (the large window in the middle, as Compose opens)
   };
 
   // --- what its buttons do ---
