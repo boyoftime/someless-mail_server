@@ -168,9 +168,80 @@ def clean_outgoing(source, inline):
             return value if value.strip().lower().startswith(content.LINK_SCHEMES + ("#",)) else None
         return value
 
-    return nh3.clean(source or "", tags=content.TAGS - {"style"}, attributes=content.ATTRIBUTES,
-                     attribute_filter=attribute, url_schemes={"http", "https", "mailto", "tel", "cid", "data"},
-                     link_rel=None, strip_comments=True, clean_content_tags={"script", "style", "title"})
+    return _lined_tables(nh3.clean(source or "", tags=content.TAGS - {"style"}, attributes=content.ATTRIBUTES,
+                                   attribute_filter=attribute, url_schemes={"http", "https", "mailto", "tel", "cid", "data"},
+                                   link_rel=None, strip_comments=True, clean_content_tags={"script", "style", "title"}))
+
+
+CELL_LINES = "border:1px solid #c9ced8"   # as the compose window draws a table's cells (webmail-compose.js)
+CELL_PADDING = "padding:4px 8px"
+
+
+def _has_lines(attrs):
+    """Whether a table or cell says how its lines are (a border attribute, even 0, or a border style)."""
+    return "border" in attrs or "border" in (attrs.get("style") or "").lower()
+
+
+def _with_style(attrs, *more):
+    style = (attrs.get("style") or "").strip().rstrip(";")
+    return {**attrs, "style": ";".join(part for part in [style, *more] if part)}
+
+
+class _LinedTables(HTMLParser):
+    """The tables written, with the lines the compose window showed (there, a style of its own
+    page draws them; a mail program shows none of it): each table without lines of its own gets
+    them in its cells. The message replied to (blockquote.wm-quote) is sent as it came."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=False)
+        self.out, self.quoted, self.tables = [], 0, []   # tables: whether each open one gets lines
+
+    def _tag(self, tag, attrs):
+        return "<" + tag + "".join(f' {name}="{html.escape(value or "", quote=True)}"' for name, value in attrs.items()) + ">"
+
+    def handle_starttag(self, tag, attr_list):
+        attrs = dict(attr_list)
+        if tag == "blockquote" and (self.quoted or "wm-quote" in (attrs.get("class") or "").split()):
+            self.quoted += 1
+        if tag == "table":
+            lined = not self.quoted and not _has_lines(attrs)
+            self.tables.append(lined)
+            if lined:
+                self.out.append(self._tag(tag, _with_style(attrs, "border-collapse:collapse")))
+                return
+        elif tag in ("td", "th") and self.tables and self.tables[-1] and not _has_lines(attrs):
+            padding = [] if "padding" in (attrs.get("style") or "").lower() else [CELL_PADDING]
+            self.out.append(self._tag(tag, _with_style(attrs, CELL_LINES, *padding)))
+            return
+        self.out.append(self.get_starttag_text())
+
+    def handle_endtag(self, tag):
+        if tag == "table" and self.tables:
+            self.tables.pop()
+        elif tag == "blockquote" and self.quoted:
+            self.quoted -= 1
+        self.out.append(f"</{tag}>")
+
+    def handle_startendtag(self, tag, attrs):
+        self.out.append(self.get_starttag_text())
+
+    def handle_data(self, data):
+        self.out.append(data)
+
+    def handle_entityref(self, name):
+        self.out.append(f"&{name};")
+
+    def handle_charref(self, name):
+        self.out.append(f"&#{name};")
+
+
+def _lined_tables(source):
+    if "<table" not in source:
+        return source
+    parser = _LinedTables()
+    parser.feed(source)
+    parser.close()
+    return "".join(parser.out)
 
 
 DATA_PICTURE = re.compile(r'src="data:image/(png|gif|jpe?g|webp);base64,([A-Za-z0-9+/=]+)"', re.I)

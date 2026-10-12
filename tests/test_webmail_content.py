@@ -32,3 +32,47 @@ def test_a_proper_page_shows_its_body_as_before():
     shown = content.from_html(page).html
 
     assert "<p>Hello</p>" in shown and "p{color:red}" in shown and ">x<" not in shown
+
+
+# --- a table written in the webmail is sent as it looked there (compose.clean_outgoing) ---
+
+from someless.webmail.compose import clean_outgoing  # noqa: E402
+
+LINE = "border:1px solid #c9ced8"
+
+
+def test_a_table_written_is_sent_with_the_lines_it_was_written_with():
+    written = ('<p>Our needs:</p><table><tbody><tr><th>Product</th><th>Size</th></tr>'
+               "<tr><td>Frozen Whole Squid</td><td>100&ndash;300g</td></tr></tbody></table>")
+
+    sent = clean_outgoing(written, [])
+
+    assert 'style="border-collapse:collapse"' in sent.split("<tbody>")[0]
+    cells = sent.count("<td") + sent.count("<th")
+    assert cells == 4 and sent.count(LINE) == 4 and sent.count("padding:4px 8px") == 4
+    assert "Frozen Whole Squid" in sent and "300g" in sent
+
+
+def test_a_tables_own_lines_or_none_on_purpose_are_kept():
+    own = '<table border="0"><tr><td>Layout</td></tr></table><table><tr><td style="border:2px solid red">Mine</td></tr></table>'
+
+    sent = clean_outgoing(own, [])
+
+    assert LINE not in sent.split("</table>")[0]   # (border="0": no lines, on purpose)
+    assert "border:2px solid red" in sent and sent.count(LINE) == 0
+
+
+def test_the_message_replied_to_is_sent_as_it_came():
+    reply = ('<p>See below</p><blockquote class="wm-quote"><table><tr><td>Their table</td></tr></table>'
+             "<blockquote><table><tr><td>Older</td></tr></table></blockquote></blockquote>"
+             "<table><tr><td>After the quote</td></tr></table>")
+
+    sent = clean_outgoing(reply, [])
+
+    assert sent.count(LINE) == 1 and LINE in sent.split("After the quote")[0].rsplit("<table", 1)[1]
+
+
+def test_a_cells_own_padding_stays():
+    sent = clean_outgoing('<table><tr><td style="padding:10px">Wide</td></tr></table>', [])
+
+    assert "padding:10px" in sent and "padding:4px 8px" not in sent and LINE in sent
