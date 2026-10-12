@@ -254,12 +254,11 @@
       self.addFile({ name: part.name, size: part.size, type: part.type, blobId: part.blobId, cid: part.cid, inline: part.inline });
     });
     this.mountEditor(started.html || "");
-    if (this.reply) {   // a reply or a forward: the formatting bar out from the start, Aa lit
-      var format = this.element.querySelector('[data-cm="format"]');
-      format.setAttribute("aria-pressed", "true");
-      format.classList.add("is-on");
-      this.element.querySelector("[data-cm-toolbar]").hidden = false;
-    }
+    // every message, new or a reply: the formatting bar out from the start, Aa lit (Aa hides it)
+    var format = this.element.querySelector('[data-cm="format"]');
+    format.setAttribute("aria-pressed", "true");
+    format.classList.add("is-on");
+    this.element.querySelector("[data-cm-toolbar]").hidden = false;
     this.changed = false;
     this.touched = false;
   };

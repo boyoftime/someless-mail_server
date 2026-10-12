@@ -569,3 +569,11 @@ def test_the_reply_box_glows_as_it_opens(mail):
     css = mail.get("/static/css/webmail-compose.css").get_data(as_text=True)
     assert "@keyframes wm-reply-glow" in css and "wm-reply-glow 1.4s" in css
     assert "@media (prefers-reduced-motion: reduce) { .wm-composer.is-inline { animation: none; } }" in css
+
+
+def test_every_message_opens_with_the_formatting_bar_out(mail):
+    """A new message too, not only a reply: the bar in sight from the start, Aa lit (Aa hides it)."""
+    script = mail.get("/static/js/webmail-compose.js").get_data(as_text=True)
+    fill = script[script.index("this.mountEditor(started.html"):]
+    fill = fill[:fill.index("this.changed = false;")]
+    assert "if (this.reply)" not in fill and 'this.element.querySelector("[data-cm-toolbar]").hidden = false;' in fill
