@@ -33,7 +33,10 @@ jobs:
 
       - run: pip install -r requirements-dev.txt
 
-      - run: python -m pytest
+      - name: Run the tests on every core
+        run: |
+          echo "Cores: $(nproc)"
+          python -m pytest -n auto
 
   image:
     needs: test

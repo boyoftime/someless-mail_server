@@ -123,3 +123,11 @@ def test_the_smoke_test_waits_for_the_webmail_as_for_the_panel():
     wait = "curl -fsS http://127.0.0.1:17090/healthz && break"
     assert wait in workflow
     assert workflow.index(wait) < workflow.index("curl -fsS http://127.0.0.1:17090/login")
+
+
+def test_github_runs_the_tests_on_every_core():
+    """In parallel (pytest-xdist), as here: the run says how many cores it had."""
+    workflow = (ROOT / ".github" / "workflows" / "docker.yml").read_text()
+
+    assert "nproc" in workflow and "python -m pytest -n auto" in workflow
+    assert "pytest-xdist==" in (ROOT / "requirements-dev.txt").read_text()
