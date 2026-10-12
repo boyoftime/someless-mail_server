@@ -55,15 +55,24 @@ def set_folders_by_name(mailbox_id, on):
 
 
 def display_name(mailbox_id):
-    """The name the mailbox's mail goes out with, as set in Settings (None: not set)."""
-    row = get_db().execute("SELECT display_name FROM webmail_settings WHERE mailbox_id = ?", (mailbox_id,)).fetchone()
-    return row["display_name"] if row and row["display_name"] else None
+    """The name the mailbox's mail goes out with: its sender's, one name for the panel (Senders) and
+    Settings > Profile here (None: no name)."""
+    row = get_db().execute(
+        "SELECT senders.name AS sender, webmail_settings.display_name AS own FROM mailboxes"
+        " LEFT JOIN senders ON lower(senders.email) = mailboxes.email"
+        " LEFT JOIN webmail_settings ON webmail_settings.mailbox_id = mailboxes.id WHERE mailboxes.id = ?",
+        (mailbox_id,)).fetchone()
+    return (row["sender"] or row["own"]) if row else None   # (its own: only a mailbox without a sender)
 
 
 def set_display_name(mailbox_id, name):
+    """The mailbox's name: its sender's, so the panel's Senders page says it too."""
     database = get_db()
+    changed = database.execute("UPDATE senders SET name = ? WHERE lower(email) = (SELECT email FROM mailboxes WHERE id = ?)",
+                               (name, mailbox_id)).rowcount
     database.execute("INSERT INTO webmail_settings (mailbox_id, display_name) VALUES (?, ?) "
-                     "ON CONFLICT (mailbox_id) DO UPDATE SET display_name = excluded.display_name", (mailbox_id, name))
+                     "ON CONFLICT (mailbox_id) DO UPDATE SET display_name = excluded.display_name",
+                     (mailbox_id, None if changed else name))
     database.commit()
 
 

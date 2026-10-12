@@ -159,10 +159,9 @@ def _storage(mail):
 
 
 def _who():
-    """The name the mailbox goes by: its sender's, else what's before the @."""
-    email = g.mailbox["email"]
-    sender = get_db().execute("SELECT name FROM senders WHERE lower(email) = ?", (email,)).fetchone()
-    return sender["name"] if sender else email.partition("@")[0]
+    """The name the mailbox goes by (one name: its sender's, Settings > Profile changes it), else
+    what's before the @."""
+    return views.display_name(g.mailbox["id"]) or g.mailbox["email"].partition("@")[0]
 
 
 def _columns():

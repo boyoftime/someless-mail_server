@@ -26,7 +26,7 @@ from ..engine import sync as engine_sync
 bp = Blueprint("settings", __name__, url_prefix="/settings")
 
 NAME_MARKS = set(".-_,'()|&")
-LONGEST_NAME = 128
+LONGEST_NAME = 70   # (the sender's name it is: senders.NAME_LIMIT)
 LONGEST_SIGNATURE_NAME = 50
 LONGEST_SIGNATURE = 2_000_000   # characters: its pictures are kept inside it (the page makes each at most 600px wide)
 LONGEST_REPLY_SUBJECT = 1000
@@ -51,12 +51,7 @@ def _mail():
 
 
 def _who():
-    email = g.mailbox["email"]
-    name = views.display_name(g.mailbox["id"])
-    if not name:
-        sender = get_db().execute("SELECT name FROM senders WHERE lower(email) = ?", (email,)).fetchone()
-        name = sender["name"] if sender else ""
-    return name
+    return views.display_name(g.mailbox["id"]) or ""   # (one name: its sender's)
 
 
 def _page(template, **context):
@@ -105,8 +100,8 @@ def display_name_problem(name):
         return "A new display name is required."
     if not name.strip():
         return "Your display name can't contain only spaces."
-    if len(name) >= LONGEST_NAME:
-        return "Your name must be under 128 symbols."
+    if len(" ".join(name.split())) > LONGEST_NAME:   # (a sender's name, which it is: senders.py)
+        return f"Keep your name to {LONGEST_NAME} characters or fewer."
     if any(not (character.isalnum() or character.isspace() or character in NAME_MARKS) for character in name):
         return "The only symbols allowed are: .-_,'()|&"
     return None

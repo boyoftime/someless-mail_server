@@ -100,7 +100,7 @@ def test_the_display_name_is_what_mail_goes_out_with(mail):
 @pytest.mark.parametrize("name, problem", [
     ("", "A new display name is required."),
     ("    ", "Your display name can't contain only spaces."),
-    ("A" * 128, "Your name must be under 128 symbols."),
+    ("A" * 71, "Keep your name to 70 characters or fewer."),
     ("Amani <CEO>", "The only symbols allowed are: .-_,'()|&"),
 ])
 def test_a_display_name_is_checked_as_privateemail_checks_it(mail, name, problem):

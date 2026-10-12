@@ -315,6 +315,19 @@ def _add_later_columns(db):
     db.commit()
 
 
+def one_name(db):
+    """A name chosen in the webmail before it was the sender's (Settings > Profile): made the
+    sender's, so the panel and the webmail say the same."""
+    db.execute("UPDATE senders SET name = (SELECT webmail_settings.display_name FROM webmail_settings"
+               " JOIN mailboxes ON mailboxes.id = webmail_settings.mailbox_id WHERE mailboxes.email = lower(senders.email)"
+               " AND webmail_settings.display_name IS NOT NULL)"
+               " WHERE lower(email) IN (SELECT mailboxes.email FROM webmail_settings JOIN mailboxes"
+               " ON mailboxes.id = webmail_settings.mailbox_id WHERE webmail_settings.display_name IS NOT NULL)")
+    db.execute("UPDATE webmail_settings SET display_name = NULL WHERE display_name IS NOT NULL AND mailbox_id IN"
+               " (SELECT mailboxes.id FROM mailboxes JOIN senders ON lower(senders.email) = mailboxes.email)")
+    db.commit()
+
+
 def _fill_key_logins(db):
     """Keys made before each had a login get one (logins.py)."""
     from .logins import make_login
@@ -346,6 +359,7 @@ def init_app(app):
         db.executescript(SCHEMA)
         _add_later_columns(db)
         _fill_key_logins(db)
+        one_name(db)
         if db.execute("SELECT 1 FROM admin").fetchone() is None:
             from .first_password import first   # (it uses this module)
             db.execute(

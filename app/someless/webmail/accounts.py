@@ -74,13 +74,9 @@ def keep(owner_id, mailbox_id, version):
 
 
 def name_of(row):
-    """The name a mailbox goes by: its own (Settings), its sender's, else what's before the @."""
+    """The name a mailbox goes by: its sender's (Settings > Profile changes it), else what's before the @."""
     from . import views
-    name = views.display_name(row["id"])
-    if not name:
-        sender = get_db().execute("SELECT name FROM senders WHERE lower(email) = ?", (row["email"],)).fetchone()
-        name = sender["name"] if sender else ""
-    return name or row["email"].partition("@")[0]
+    return views.display_name(row["id"]) or row["email"].partition("@")[0]
 
 
 def card():
