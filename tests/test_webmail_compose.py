@@ -503,3 +503,54 @@ def test_the_mail_page_brings_the_tools_for_tables_before_the_composer(mail):
     page = mail.get("/mail/inbox").get_data(as_text=True)
     assert "js/webmail-tables.js" in page
     assert page.index("js/webmail-tables.js") < page.index("js/webmail-compose.js")
+
+
+def test_a_reply_opens_above_the_message_it_answers(mail):
+    """As PrivateEmail: Reply puts the box at the top of the reading pane, under the subject, and the
+    message goes down below it; nothing scrolls down to find it."""
+    script = mail.get("/static/js/webmail-compose.js").get_data(as_text=True)
+    inline = script[script.index("function openInline"):script.index("function leaveInline")]
+
+    assert "card.parentNode.insertBefore(composer.element, card)" in inline and "appendChild" not in inline
+    assert "scrollToTop(card)" in inline and "scrollIntoView" not in inline
+
+
+def test_the_message_replied_to_opens_from_a_line_saying_so(mail):
+    """As PrivateEmail: a round arrow and "Replying to … on …" under what's written (no ⋯); the
+    arrow turns when the message shows. The line isn't said again at the top."""
+    page = mail.get("/mail/inbox").get_data(as_text=True)
+    button = page[page.index('data-cm="quote"'):]
+    button = button[:button.index("</button>")]
+    assert 'class="wm-cm-quote-arrow"' in button and "data-cm-quote-text" in button and "data-tip=" not in button
+    script = mail.get("/static/js/webmail-compose.js").get_data(as_text=True)
+    assert '"[data-cm-quote-text]"' in script and "data-cm-inline-title" not in script
+    css = mail.get("/static/css/webmail-compose.css").get_data(as_text=True)
+    assert '.wm-cm-quote[aria-expanded="true"] .wm-cm-quote-arrow { transform: rotate(90deg); }' in css
+
+
+def test_the_line_above_the_message_replied_to_has_room(mail):
+    """As PrivateEmail: room between what's written and the line, and under it."""
+    script = mail.get("/static/js/webmail-compose.js").get_data(as_text=True)
+    assert "blockquote.wm-quote{margin:36px 0 0!important;padding:22px 0 0;" in script   # (over its own margin:0, kept for mail programs)
+
+
+def test_a_click_in_the_room_above_the_message_replied_to_writes_in_the_reply(mail):
+    """The gap above the line is the reply's: a click there puts the cursor at the end of what's
+    being written, never inside the message replied to (writeHere)."""
+    script = mail.get("/static/js/webmail-compose.js").get_data(as_text=True)
+    assert "function writeHere(doc)" in script and "writeHere(doc);" in script
+
+
+def test_the_reply_box_shrinks_back_when_the_message_replied_to_is_folded(mail):
+    """Its height follows what's in it (the body), both ways: the page's own height never shrinks."""
+    script = mail.get("/static/js/webmail-compose.js").get_data(as_text=True)
+    fit = script[script.index("Composer.prototype.fit = function"):]
+    fit = fit[:fit.index("\n  };")]
+    assert "doc.body.getBoundingClientRect().bottom" in fit and "documentElement.scrollHeight" not in fit
+
+
+def test_the_font_and_size_pickers_are_boxed_as_privateemails(mail):
+    css = mail.get("/static/css/webmail-compose.css").get_data(as_text=True)
+    select = css[css.index(".wm-cm-select {"):]
+    select = select[:select.index("}")]
+    assert "border: 1px solid var(--wm-line)" in select and "border-radius: 10px" in select and "height: 34px" in select

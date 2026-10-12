@@ -26,7 +26,6 @@
       </div>
     </header>
     <div class="wm-cm-inline-head" data-cm-inline-head>
-      <p class="wm-cm-inline-title" data-cm-inline-title></p>
       <button type="button" class="wm-icon wm-mini" data-cm="popout" aria-label="Maximize" data-tip="Maximize">{{ icon("maximize") }}</button>
     </div>
     <div class="wm-cm-body" data-cm-body>
@@ -77,9 +76,11 @@
       <div class="wm-cm-editor-wrap" data-cm-editor-wrap>
         <iframe class="wm-cm-editor" data-cm-editor title="Write your message here" sandbox="allow-same-origin"></iframe>
       </div>
-      {# a reply under the message: what it answers folded away behind this (webmail-compose.js foldQuote) #}
+      {# a reply: what it answers folded away behind this line, as PrivateEmail's (webmail-compose.js foldQuote) #}
       <button type="button" class="wm-cm-quote" data-cm="quote" aria-expanded="false" aria-label="Show the message it answers"
-              data-tip="Show the message it answers" data-tip-on="Hide the message it answers" data-tip-off="Show the message it answers" hidden>{{ icon("more") }}</button>
+              data-label-on="Hide the message it answers" data-label-off="Show the message it answers" hidden>
+        <span class="wm-cm-quote-arrow" aria-hidden="true">{{ icon("chevron-right") }}</span><span class="wm-cm-quote-text" data-cm-quote-text></span>
+      </button>
       <ul class="wm-cm-files" data-cm-files aria-label="Attachments" hidden></ul>
     </div>
     <footer class="wm-cm-foot">

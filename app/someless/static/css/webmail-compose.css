@@ -121,8 +121,9 @@ body.webmail-app .wm-cm-subject { height: 34px; }
 .wm-cm-toolbar .wm-icon svg { width: 18px; height: 18px; }
 .wm-cm-toolbar .wm-icon { transition: background-color 0.22s ease, color 0.22s ease, box-shadow 0.3s ease; }
 .wm-cm-toolbar .wm-icon.is-on { background: var(--wm-blue); color: #fff; box-shadow: var(--wm-lit-glow-small); }
-.wm-cm-select { display: inline-flex; align-items: center; gap: 0.25rem; height: 30px; padding: 0 0.4rem 0 0.55rem; border: 0; border-radius: 6px; background: none; color: var(--wm-ink); font: inherit; font-size: 0.82rem; cursor: pointer; }
-.wm-cm-select:hover { background: var(--wm-icon-hover); }
+/* the font and size pickers, each in a rounded box (as PrivateEmail's) */
+.wm-cm-select { display: inline-flex; align-items: center; gap: 0.35rem; height: 34px; margin-right: 0.3rem; padding: 0 0.6rem 0 0.75rem; border: 1px solid var(--wm-line); border-radius: 10px; background: none; color: var(--wm-ink); font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: border-color 0.15s ease, background-color 0.15s ease; }
+.wm-cm-select:hover { border-color: var(--wm-soft); background: var(--wm-icon-hover); }
 .wm-cm-select span { min-width: 4.2rem; text-align: left; }
 .wm-cm-select.is-size span { min-width: 3.1rem; }
 .wm-cm-select svg { width: 13px; height: 13px; color: var(--wm-soft); }
@@ -158,10 +159,15 @@ body.is-sizing-column, body.is-sizing-column * { cursor: col-resize !important; 
 body.is-sizing-row, body.is-sizing-row * { cursor: row-resize !important; }
 
 /* a reply under the message: ⋯ for what it answers, folded away so Send is just below the words */
-.wm-cm-quote { display: grid; flex: none; align-self: flex-start; place-items: center; width: 36px; height: 20px; margin: 4px 16px 10px; padding: 0; border: 0; border-radius: 10px; background: var(--wm-icon-hover); color: var(--wm-soft); cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; }
+/* "Replying to … on …", a round arrow before it (as PrivateEmail's): the message replied to, shown or folded */
+.wm-cm-quote { display: inline-flex; flex: none; align-self: flex-start; align-items: center; gap: 0.6rem; max-width: calc(100% - 32px); margin: 6px 16px 10px; padding: 0; border: 0; background: none; color: var(--wm-soft); font: inherit; font-size: 0.9rem; text-align: left; cursor: pointer; transition: color 0.2s ease; }
 .wm-cm-quote[hidden] { display: none; }
-.wm-cm-quote svg { width: 20px; height: 20px; }
-.wm-cm-quote:hover, .wm-cm-quote[aria-expanded="true"] { background: var(--wm-blue-soft); color: var(--wm-blue); }
+.wm-cm-quote-arrow { display: grid; flex: none; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--wm-icon-hover); transition: transform 0.2s ease, background-color 0.2s ease; }
+.wm-cm-quote-arrow svg { width: 18px; height: 18px; }
+.wm-cm-quote-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wm-cm-quote:hover { color: var(--wm-ink); }
+.wm-cm-quote:hover .wm-cm-quote-arrow { background: var(--wm-blue-soft); }
+.wm-cm-quote[aria-expanded="true"] .wm-cm-quote-arrow { transform: rotate(90deg); }
 
 /* along the bottom: Send, the tools, Discard */
 .wm-cm-foot { display: flex; flex: none; align-items: center; gap: 2px; min-height: 56px; padding: 0 8px; border-top: 1px solid var(--wm-line); }
@@ -200,21 +206,20 @@ body.webmail-app .wm-cm-link-form input:focus { border-color: var(--wm-blue); }
 .wm-cm-link-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .wm-button.is-danger-text { color: var(--wm-danger); }
 
-/* a reply under the message it answers: no window, a line saying what it answers */
+/* a reply above the message it answers (as PrivateEmail's): no window, a line saying what it answers */
 .wm-cm-inline-head { display: none; }
 .wm-composer.is-inline {
   width: auto;
   height: auto;
   max-height: none;
-  margin-top: 1.4rem;
+  margin-bottom: 1.2rem;
   border: 1px solid var(--wm-line);
   border-radius: 12px;
   box-shadow: none;
   animation: wm-read-in 0.25s var(--wm-ease) both;
 }
 .wm-composer.is-inline .wm-cm-head { display: none; }
-.wm-composer.is-inline .wm-cm-inline-head { display: flex; align-items: center; gap: 0.5rem; padding: 8px 8px 0 16px; }
-.wm-cm-inline-title { flex: 1; min-width: 0; margin: 0; overflow: hidden; color: var(--wm-soft); font-size: 0.8rem; text-overflow: ellipsis; white-space: nowrap; }
+.wm-composer.is-inline .wm-cm-inline-head { display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; padding: 8px 8px 0 16px; }
 .wm-composer.is-inline .wm-cm-row.is-subject { display: none; }
 .wm-composer.is-inline .wm-cm-body { overflow: visible; }
 .wm-composer.is-inline .wm-cm-editor { flex: none; }

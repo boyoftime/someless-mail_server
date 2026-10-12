@@ -374,13 +374,13 @@ body.webmail-app .wm-copy { position: relative; flex: none; width: 26px; height:
 /* Below the bar: the folders, the mail, the reading pane. On wide screens their widths are
    dragged by the dividers between them (webmail-resize.js), as far as PrivateEmail lets them go:
    the folders from 184 to 320px, the mail from 248px until the reading pane would be narrower
-   than 430px. They start at 250 and 336px, or as they were left (the wm_columns cookie). */
+   than 520px (where a message still reads well). They start at 250 and 336px, or as they were left (the wm_columns cookie). */
 .wm-shell {
   --wm-side-width: 250px;
   --wm-list-width: 336px;
   --wm-side: clamp(184px, var(--wm-side-width), 320px);
   display: grid;
-  grid-template-columns: var(--wm-side) clamp(248px, var(--wm-list-width), calc(100% - var(--wm-side) - 430px)) minmax(0, 1fr);
+  grid-template-columns: var(--wm-side) clamp(248px, var(--wm-list-width), calc(100% - var(--wm-side) - 520px)) minmax(0, 1fr);
   min-height: 0;
 }
 /* the dividers: 5px across each edge, seen only in the pointer (and when one has the keyboard) */
@@ -744,7 +744,7 @@ body.webmail-app .wm-check input:checked::after { content: ""; width: 8px; heigh
 .wm-read-subject { margin: 0; font-size: 1.5rem; font-weight: 700; line-height: 1.3; letter-spacing: -0.015em; overflow-wrap: anywhere; }
 .wm-read-priority { display: inline-flex; align-items: center; gap: 0.15rem; padding: 0.15rem 0.55rem 0.15rem 0.3rem; border-radius: 999px; background: var(--wm-danger-soft); color: var(--wm-danger); font-size: 0.74rem; font-weight: 700; }
 .wm-read-priority svg { width: 14px; height: 14px; stroke-width: 2.6; }
-.wm-read-card { padding: 1.3rem 1.55rem 1.1rem; border: 1px solid var(--wm-card-line); border-radius: 14px; background: var(--wm-read-card); }
+.wm-read-card { container: wm-read / inline-size; padding: 1.3rem 1.55rem 1.1rem; border: 1px solid var(--wm-card-line); border-radius: 14px; background: var(--wm-read-card); }
 .wm-read-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 0.5rem 0.9rem; }
 .wm-read-avatar {
   display: grid;
@@ -1332,4 +1332,11 @@ img.wm-img-loading { background: url("../img/webmail-loading-light.svg") center 
 @media (prefers-reduced-motion: reduce) {
   .wm-flare, .wm-flare::before, .wm-flare i, .is-flaring { animation-duration: 0.01s; }
   .wm-loader, .wm-loader.is-leaving { animation: none; }
+}
+
+/* a reading pane too narrow for the sender and the date side by side (the divider dragged, or a small
+   window): the date and buttons go under the sender, so the name and address read in full */
+@container wm-read (max-width: 640px) {
+  .wm-read-head { grid-template-columns: auto minmax(0, 1fr); }
+  .wm-read-meta { grid-column: 1 / -1; flex-wrap: wrap; }
 }

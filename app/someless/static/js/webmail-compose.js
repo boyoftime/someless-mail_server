@@ -51,6 +51,32 @@
   }
 
   // --- the page of what it says (a frame, where no script runs; this script works it) ---
+  // what's being written ends here: the last part before the signature and the message replied to
+  function lastWritten(doc) {
+    var last = null;
+    for (var part = doc.body.firstElementChild; part; part = part.nextElementSibling) {
+      if (part.matches(".wm-signature, blockquote.wm-quote")) break;
+      last = part;
+    }
+    if (!last) {
+      last = doc.createElement("p");
+      last.innerHTML = "<br>";
+      doc.body.insertBefore(last, doc.body.firstChild);
+    }
+    return last;
+  }
+
+  // the cursor at the end of what's being written
+  function writeHere(doc) {
+    var range = doc.createRange();
+    range.selectNodeContents(lastWritten(doc));
+    range.collapse(false);
+    doc.body.focus();
+    var selection = doc.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
   function editorPage() {
     var dark = document.documentElement.dataset.theme === "dark";
     return '<!doctype html><html class="' + (dark ? "is-dark" : "is-light") + '"><head><meta charset="utf-8"><style>' +
@@ -60,7 +86,7 @@
       "body.is-empty::before{content:'Write your message here';position:absolute;color:" + (dark ? "#7c87a9" : "#878d98") + ";pointer-events:none}" +
       "p{margin:0}a{color:" + (dark ? "#8cb4ff" : "#3b63e6") + "}img{max-width:100%;height:auto}" +
       "blockquote{margin:0 0 0 .4em;padding-left:.9em;border-left:2px solid " + (dark ? "#3b4777" : "#c9ced8") + "}" +
-      "blockquote.wm-quote{margin:16px 0 0;padding:16px 0 0;border:0;border-top:1px solid " + (dark ? "#1f2a55" : "#e6e8ed") + "}" +
+      "blockquote.wm-quote{margin:36px 0 0!important;padding:22px 0 0;border:0;border-top:1px solid " + (dark ? "#1f2a55" : "#e6e8ed") + "}" +
       ".wm-quote-title{margin:0 0 8px;color:" + (dark ? "#a7b0cd" : "#5d636e") + "}.wm-quote-head{margin-bottom:12px;color:" +
       (dark ? "#a7b0cd" : "#5d636e") + "}table{border-collapse:collapse}td,th{border:1px solid " + (dark ? "#3b4777" : "#c9ced8") +
       ";padding:4px 8px;min-width:40px}" +
@@ -153,8 +179,9 @@
     }
   };
 
-  // A reply under the message: what it answers folded away behind ⋯, so Send is just under the
-  // words being written; ⋯ shows it again. It goes with the reply either way.
+  // A reply: what it answers folded away behind a line saying so ("Replying to … on …", a round
+  // arrow, as PrivateEmail's), so Send is just under the words being written; the line shows it
+  // again. It goes with the reply either way.
   Composer.prototype.foldQuote = function (folded) {
     var doc = this.doc();
     var button = this.element.querySelector('[data-cm="quote"]');
@@ -162,9 +189,7 @@
     button.hidden = !doc || !doc.querySelector("blockquote.wm-quote") || !this.element.classList.contains("is-inline");
     if (doc) doc.body.classList.toggle("wm-quote-folded", folded && !button.hidden);
     button.setAttribute("aria-expanded", String(!folded));
-    var tip = folded ? button.dataset.tipOff : button.dataset.tipOn;
-    button.dataset.tip = tip;
-    button.setAttribute("aria-label", tip);
+    button.setAttribute("aria-label", folded ? button.dataset.labelOff : button.dataset.labelOn);
     this.fit();
   };
 
@@ -177,7 +202,11 @@
     var doc = this.doc();
     if (!doc) return;
     doc.body.style.minHeight = "0";
-    this.frame.style.height = Math.max(180, Math.ceil(doc.documentElement.scrollHeight) + 4) + "px";
+    // (what's in it, measured by its body: the page's own height is never less than the frame's,
+    // so the frame would only ever grow, and stay tall once the message replied to is folded)
+    var bottom = doc.body.getBoundingClientRect().bottom + (doc.defaultView.scrollY || 0) +
+      (parseFloat(doc.defaultView.getComputedStyle(doc.body).marginBottom) || 0);
+    this.frame.style.height = Math.max(180, Math.ceil(bottom) + 4) + "px";
   };
 
   Composer.prototype.changedNow = function () {
@@ -706,10 +735,7 @@
     if (this.tables) this.tables.destroy();
     if (element.classList.contains("is-screen")) this.toggleScreen(false);
     if (element.classList.contains("is-full")) setOverlay(false);
-    if (element.classList.contains("is-inline")) {
-      var card = element.closest(".wm-read-card");
-      if (card) card.classList.remove("has-reply");
-    }
+    if (element.classList.contains("is-inline") && this.card) this.card.classList.remove("has-reply");
     element.classList.add("is-leaving");
     setTimeout(function () { element.remove(); layout(); }, wm.reduceMotion ? 0 : 180);
     layout();
@@ -875,8 +901,7 @@
   // an inline reply taken to a window of its own
   Composer.prototype.popOut = function () {
     var html = this.html();
-    var card = this.element.closest(".wm-read-card");
-    if (card) card.classList.remove("has-reply");
+    if (this.card) this.card.classList.remove("has-reply");
     this.element.classList.remove("is-inline");
     holder.appendChild(this.element);
     this.mountEditor(html);
@@ -1026,6 +1051,17 @@
       self.checkEmpty();
       self.changedNow();
       self.fit();
+    });
+    // a click in the room above the message replied to (its line, the gap round it): the reply's
+    // words, not the message's
+    doc.addEventListener("mousedown", function (event) {
+      var quote = doc.querySelector("blockquote.wm-quote");
+      var first = quote && quote.firstElementChild;
+      if (event.button !== 0 || !first || !first.getClientRects().length) return;   // (folded: nothing there to click)
+      var space = event.target === doc.body || event.target === doc.documentElement || event.target === quote;
+      if (!space || event.clientY >= first.getBoundingClientRect().top || event.clientY < lastWritten(doc).getBoundingClientRect().bottom) return;
+      event.preventDefault();
+      writeHere(doc);
     });
     doc.addEventListener("keydown", function (event) {
       var mod = event.ctrlKey || event.metaKey;
@@ -1622,7 +1658,20 @@
     }, 60);
   }
 
-  // A reply or forward under the open message: in place of its reply buttons
+  // the reading pane back at its top (the subject, then what's being written): the part of the
+  // page that scrolls, round the message
+  function scrollToTop(card) {
+    for (var box = card.parentElement; box && box !== document.body; box = box.parentElement) {
+      var overflow = getComputedStyle(box).overflowY;
+      if ((overflow === "auto" || overflow === "scroll") && box.scrollHeight > box.clientHeight) {
+        box.scrollTo({ top: 0, behavior: wm.reduceMotion ? "auto" : "smooth" });
+        return;
+      }
+    }
+  }
+
+  // A reply or forward to the open message, as PrivateEmail's: at the top of the reading pane,
+  // under the subject, the message it answers below it (in place of its reply buttons)
   function openInline(kind, id) {
     var card = document.querySelector('[data-wm-read][data-id="' + CSS.escape(id) + '"] .wm-read-card');
     if (!card || narrow()) return openWindow({ kind: kind, id: id });
@@ -1635,12 +1684,13 @@
       composer.element.classList.add("is-inline", "is-loading");
       composers.push(composer);
       card.classList.add("has-reply");
-      card.appendChild(composer.element);
+      composer.card = card;
+      card.parentNode.insertBefore(composer.element, card);
+      scrollToTop(card);
       start({ kind: kind, id: id }).then(function (started) {
         composer.element.classList.remove("is-loading");
         composer.fill(started);
-        composer.element.querySelector("[data-cm-inline-title]").textContent = started.reply ? started.reply.title : "";
-        composer.element.scrollIntoView({ block: "nearest", behavior: wm.reduceMotion ? "auto" : "smooth" });
+        composer.element.querySelector("[data-cm-quote-text]").textContent = started.reply ? started.reply.title : "";
         if (kind === "forward") composer.fields.to.input.focus();
         else setTimeout(function () { composer.frame.contentWindow.focus(); }, 120);
       }, function () {

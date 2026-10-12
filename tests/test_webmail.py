@@ -1333,3 +1333,16 @@ def test_the_same_person_always_has_the_same_colour(signed_in, jmap):
         hues.setdefault(email, set()).add(part.split("--hue:")[1].split(";")[0].strip())
 
     assert len(hues["amina@example.com"]) == 1
+
+
+def test_a_narrow_reading_pane_stays_readable(client):
+    """The divider stops at a reading pane of 520px, and in a pane that narrow the message's header
+    puts its date and buttons under the sender, so the name and address never squeeze to a letter."""
+    css = client.application.test_client().get("/static/css/webmail-app.css").get_data(as_text=True)
+
+    assert "calc(100% - var(--wm-side) - 520px)" in css and "- 430px)" not in css
+    assert "container: wm-read / inline-size" in css
+    narrow = css[css.index("@container wm-read (max-width: 640px)"):]
+    narrow = narrow[:narrow.index("}\n}") + 3]
+    assert ".wm-read-head { grid-template-columns: auto minmax(0, 1fr); }" in narrow
+    assert ".wm-read-meta { grid-column: 1 / -1; flex-wrap: wrap; }" in narrow

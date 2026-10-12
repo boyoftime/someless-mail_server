@@ -1,7 +1,7 @@
 // The dividers between the webmail's columns (webmail-mail.html), as PrivateEmail has them: one on
 // the folders' edge, one on the mail's, on screens 1200px wide and wider. Dragging one sets that
 // column's width, and webmail-app.css keeps it where PrivateEmail stops: the folders from 184 to
-// 320px, the mail from 248px until the reading pane would be narrower than 430px. Letting go
+// 320px, the mail from 248px until the reading pane would be narrower than 520px. Letting go
 // keeps both widths, in a cookie the page is drawn with next time (webmail.py). A divider with
 // the keyboard moves with the arrow keys.
 (function () {
