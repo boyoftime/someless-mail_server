@@ -22,7 +22,7 @@ from flask_wtf import CSRFProtect
 from flask_wtf.csrf import CSRFError, generate_csrf
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from .. import (FLOAT_ICONS, STATIC_CACHE_SECONDS, VERSION, db, disabling, fingerprint_static_links, picked_theme,
+from .. import (FLOAT_ICONS, LOGIN_LASTS, STATIC_CACHE_SECONDS, VERSION, db, disabling, fingerprint_static_links, picked_theme,
                 webmail_lock, webmail_site)
 from ..db import get_db
 from . import accounts
@@ -57,6 +57,7 @@ def _load_mailbox():
         session.clear()
         session["notice"] = disabling.NOTICE
         return
+    session.permanent = True   # (LOGIN_LASTS; a login from before it lasts from its next visit)
     g.owner = row
     g.accounts = [row, *accounts.linked(row["id"])]
     by_id = {one["id"]: one for one in g.accounts}
@@ -99,6 +100,7 @@ def _signed_in(row):
     session.clear()
     session["mailbox_id"] = row["id"]
     session["password_version"] = row["password_version"]
+    session.permanent = True   # until Log out (LOGIN_LASTS)
     remember_login(row["id"])   # (Settings > Security lists them)
     return redirect(url_for("mail.home"))
 
@@ -191,6 +193,7 @@ def create_webmail_app(test_config=None):
         DATA_DIR=os.environ.get("SOMELESS_DATA_DIR", "/data/someless"),
         SESSION_COOKIE_NAME="someless_webmail",
         SESSION_COOKIE_SAMESITE="Lax",
+        PERMANENT_SESSION_LIFETIME=LOGIN_LASTS,
         SEND_FILE_MAX_AGE_DEFAULT=STATIC_CACHE_SECONDS,
         MAX_CONTENT_LENGTH=30 * 1024 * 1024,   # the biggest request: attachments on their way (compose)
         WTF_CSRF_TIME_LIMIT=None,   # a page's token lasts as long as the sign-in: left open for hours, it still sends

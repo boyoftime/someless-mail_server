@@ -7,6 +7,7 @@ import html
 import io
 import json
 import re
+import time
 import zipfile
 
 import pytest
@@ -183,6 +184,18 @@ def test_a_deleted_mailbox_is_logged_out(app, mail, mailbox):
 def test_log_out(signed_in):
     assert signed_in.post("/logout").headers["Location"] == "/login"
     assert signed_in.get("/mail/inbox").headers["Location"] == "/login"
+
+
+def test_a_login_lasts_until_logout(mail, mailbox):
+    """Closing the browser doesn't log out: the cookie is kept about 400 days (the longest a
+    browser keeps one) and starts again on every visit, so only Log out (or a new password, or
+    the mailbox switched off) ends it."""
+    mail.post("/login", data={"email": "ceo@pineloop.online", "password": PASSWORD})
+    cookie = mail.get_cookie("someless_webmail")
+    assert cookie.expires is not None and cookie.expires.timestamp() - time.time() > 399 * 86400
+
+    again = mail.get("/mail/inbox")
+    assert any(header.startswith("someless_webmail=") for header in again.headers.getlist("Set-Cookie"))
 
 
 def test_its_cookie_is_its_own(app, webmail, client, login, mailbox):

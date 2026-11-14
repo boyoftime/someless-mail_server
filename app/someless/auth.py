@@ -26,6 +26,7 @@ def load_admin():
     admin_id = session.get("admin_id")
     if admin_id is not None:
         g.admin = get_db().execute("SELECT * FROM admin WHERE id = ?", (admin_id,)).fetchone()
+        session.permanent = True   # (LOGIN_LASTS; a login from before it lasts from its next visit)
 
 
 def login_required(view):
@@ -46,6 +47,7 @@ def _wants_json():
 def _logged_in(admin):
     session.clear()
     session["admin_id"] = admin["id"]
+    session.permanent = True   # until Log out (LOGIN_LASTS)
     flash(f"Logged in as {admin['username']}.", "welcome")
     if _wants_json():
         return jsonify(redirect=url_for("pages.dashboard"))

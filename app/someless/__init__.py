@@ -1,3 +1,4 @@
+import datetime
 import hashlib
 import os
 import secrets
@@ -90,6 +91,9 @@ PRELOAD_FILES = LOGIN_PAGE_FILES + SIGNED_IN_PAGE_FILES
 # Static links carry a fingerprint of the file (?v=...), so browsers can keep the files
 # for a year and still fetch a new copy the moment a file changes.
 STATIC_CACHE_SECONDS = 365 * 24 * 60 * 60
+# A login lasts until Log out: its cookie is kept this long (the most a browser keeps one, 400
+# days) and starts again on every visit, so closing the browser or a quiet month doesn't end it
+LOGIN_LASTS = datetime.timedelta(days=400)
 
 csrf = CSRFProtect()
 
@@ -129,6 +133,7 @@ def create_app(test_config=None):
         # a mail engine (Stalwart) runs beside the panel: in the container, not on a dev machine
         ENGINE_ENABLED=os.environ.get("SOMELESS_ENGINE") == "1",
         SESSION_COOKIE_SAMESITE="Lax",
+        PERMANENT_SESSION_LIFETIME=LOGIN_LASTS,
         SEND_FILE_MAX_AGE_DEFAULT=STATIC_CACHE_SECONDS,
         MAX_CONTENT_LENGTH=8 * 1024 * 1024,   # the biggest request: a 5 MB profile picture (avatar.py)
     )

@@ -1,4 +1,5 @@
 import html as html_lib
+import time
 
 from someless import create_app
 
@@ -19,6 +20,18 @@ def test_default_admin_can_log_in(client, login):
 
     assert response.status_code == 302
     assert response.headers["Location"] == "/dashboard"
+
+
+def test_a_login_lasts_until_logout(client, login):
+    """Closing the browser doesn't log out: the cookie is kept about 400 days (the longest a
+    browser keeps one) and starts again on every visit, so only Log out ends it."""
+    response = login("admin", "admin")
+    cookie = next(header for header in response.headers.getlist("Set-Cookie") if header.startswith("session="))
+    assert "Expires=" in cookie
+    assert client.get_cookie("session").expires.timestamp() - time.time() > 399 * 86400
+
+    again = client.get("/dashboard")
+    assert any(header.startswith("session=") for header in again.headers.getlist("Set-Cookie"))
 
 
 def test_wrong_password_is_rejected(client, login):
