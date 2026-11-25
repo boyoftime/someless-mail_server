@@ -17,7 +17,7 @@ KEYWORDS = {
     "php": "true false null if exit",
     "json": "true false null",
 }
-STATUS = {200: "200 OK", 201: "201 Created", 404: "404 Not Found", 429: "429 Too Many Requests"}
+STATUS = {200: "200 OK", 201: "201 Created", 404: "404 Not Found", 409: "409 Conflict", 429: "429 Too Many Requests"}
 EXAMPLE_PASSWORD = "Choose-A-Strong-1!"
 
 
@@ -153,6 +153,19 @@ def calls(base, domain):
                           (429, {"valid": False, "reason": "locked", "retry_after": 300},
                            "Too many wrong passwords in a row: the address can try again after retry_after seconds "
                            "(also in the Retry-After header).")]},
+            {"method": "POST", "path": "/mailboxes/{id}/sign-in-link", "name": "Open the webmail signed in",
+             "example": "/mailboxes/7/sign-in-link", "text": "A one-time link that opens the webmail already signed in as "
+             "the mailbox, for an app where people manage their mailbox: send the person's browser to url, and they're in, "
+             "on their inbox. Then they stay signed in until they log out, as with their password. The link works once, "
+             "within expires_in seconds, for this mailbox alone; after that it shows the webmail's sign-in page. Make a new "
+             "link each time, right before it's opened, from your app's server, never from a browser, since the key must "
+             "stay secret. It never shows, changes or checks the password, and doesn't count towards the sign-in lock. "
+             "Every link made and opened is logged, with the API key and the IP address.",
+             "answer": {"url": f"https://webmail.{domain}/sso/q3Z8xLkW0vT1nR5bYfH2aJm9cE4uP7sD6gK0iQ1oV3w",
+                        "expires_in": 60, "expires_at": "2026-10-01T09:31:00+00:00"},
+             "outcomes": [(404, {"error": "There's no mailbox with the id 7."}, "There's no such mailbox."),
+                          (409, {"error": "This mailbox is disabled: nobody can sign in to it."},
+                           "The mailbox is disabled: enable it first (PATCH /mailboxes/{id} with \"disabled\": false).")]},
             {"method": "GET", "path": "/mailboxes/{id}/picture", "name": "Get a profile picture", "example": "/mailboxes/7/picture",
              "text": "The mailbox's profile picture, as its owner chose it in the webmail (Settings, Profile): a "
              "WebP picture, 512 by 512 pixels, to show beside their name. A mailbox's picture_url says where it is, or is "

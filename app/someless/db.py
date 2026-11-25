@@ -180,6 +180,18 @@ CREATE TABLE IF NOT EXISTS webmail_tickets (
     mailbox_id INTEGER NOT NULL,
     expires_at REAL NOT NULL
 );
+-- Sign-in links an app asked for with its API key (POST /api/s1/mailboxes/{id}/sign-in-link), each
+-- made and each used: which mailbox, which key, from where, when. Never the link itself.
+CREATE TABLE IF NOT EXISTS sign_in_links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event TEXT NOT NULL,            -- made, used
+    mailbox_id INTEGER,
+    email TEXT NOT NULL,            -- (kept, should the mailbox be deleted)
+    api_key_id INTEGER,
+    api_key_name TEXT,              -- (kept, should the key be deleted)
+    address TEXT,                   -- the IP address it came from
+    at REAL NOT NULL
+);
 -- The webmail's wrong passwords in a row, per address typed (webmail.py), until the lock
 CREATE TABLE IF NOT EXISTS webmail_tries (
     email TEXT PRIMARY KEY,
@@ -283,7 +295,7 @@ CREATE TABLE IF NOT EXISTS deliveries (
 
 
 # Columns that came after their table first shipped: databases from before get them on start
-LATER_COLUMNS = [("domains", "provider", "TEXT"), ("domain_keys", "mail_host", "TEXT"), ("domain_keys", "found", "TEXT"),
+LATER_COLUMNS = [("webmail_tickets", "api_key_id", "INTEGER"), ("domains", "provider", "TEXT"), ("domain_keys", "mail_host", "TEXT"), ("domain_keys", "found", "TEXT"),
                  ("smtp_keys", "login", "TEXT"), ("engine", "certificate_asked_at", "REAL"),
                  ("domain_checks", "every_minutes", "INTEGER"), ("help_links", "shown", "TEXT"),
                  ("help_links", "url", "TEXT"), ("engine", "webmail_password", "TEXT"),

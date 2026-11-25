@@ -10,7 +10,8 @@ import time
 
 from flask import Blueprint, Response, g, jsonify, request, send_file
 
-from . import api_guide, avatar, disabling, domain_records, domains, mail_password, mailboxes, senders, webmail_lock
+from . import (api_guide, avatar, disabling, domain_records, domains, mail_password, mailboxes, senders, webmail_lock,
+               webmail_site)
 from .db import get_db
 from .webmail import views as webmail_views
 from .engine import sync as engine_sync
@@ -479,6 +480,20 @@ def check_login():
     mailbox = _mailbox(row["id"])
     return {"valid": True, "email": mailbox["email"], "name": webmail_views.display_name(row["id"]) or mailbox["name"],
             "picture": avatar.data_url(avatar.mailbox_path(row["id"])), "mailbox": _mailbox_json(mailbox)}
+
+
+@bp.post("/mailboxes/<int:mailbox_id>/sign-in-link")
+def sign_in_link(mailbox_id):
+    """A one-time link that opens the webmail signed in as the mailbox, for an app to send the
+    person's browser to: it works once, within a minute (the panel's own tickets, webmail_site.py),
+    and never shows, changes or checks the password. Logged, made and used."""
+    mailbox = _mailbox(mailbox_id)
+    if mailbox["disabled"]:
+        raise Refused("This mailbox is disabled: nobody can sign in to it.", 409)
+    token, expires_at = webmail_site.new_ticket(mailbox_id, api_key_id=g.api_key["id"])
+    webmail_site.log_link("made", mailbox_id, mailbox["email"], g.api_key["id"], request.remote_addr)
+    return ({"url": f"{webmail_site.address(request.host)}/sso/{token}", "expires_in": webmail_site.TICKET_SECONDS,
+             "expires_at": _moment(expires_at)}, 200, {"Cache-Control": "no-store"})
 
 
 @bp.get("/mailboxes/<int:mailbox_id>/picture")

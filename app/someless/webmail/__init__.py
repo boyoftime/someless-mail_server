@@ -75,7 +75,7 @@ def _keep_account_in_address():
     """With more than one account, a page opened at a plain address (a bookmark, a new tab) goes
     to its account's own address, so the tab keeps it whatever the others switch to."""
     if (g.mailbox is None or len(g.accounts) < 2 or "someless.account" in request.environ or request.method != "GET"
-            or request.endpoint in (None, "static", "healthz", "login", "logout", "enter")
+            or request.endpoint in (None, "static", "healthz", "login", "logout", "enter", "sso")
             or (request.blueprint or "") == "dav" or request.headers.get("Upgrade", "").lower() == "websocket"):
         return None
     query = request.query_string.decode("utf-8", "replace")
@@ -154,6 +154,25 @@ def enter():
     return _signed_in(row)
 
 
+LINK_GONE = "This sign-in link has expired. Sign in with your password."
+
+
+def sso(token):
+    """Opened from an app (its sign-in link, api.py): signed in as the link's mailbox, then to the
+    inbox, so the link leaves the address bar. A used, old or made-up link says only that it has
+    expired: never whose it was."""
+    taken = webmail_site.take(token)
+    row = taken and get_db().execute("SELECT * FROM mailboxes WHERE id = ?", (taken["mailbox_id"],)).fetchone()
+    if not row:
+        return render_template("webmail-login.html", email="", problem=LINK_GONE), 400
+    webmail_site.log_link("used", row["id"], row["email"], taken["api_key_id"], request.remote_addr)
+    if row["disabled"]:
+        return render_template("webmail-login.html", email="", problem=disabling.NOTICE), 403
+    response = _signed_in(row)
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 def logout():
     session.clear()
     return redirect(url_for("login"))
@@ -217,6 +236,7 @@ def create_webmail_app(test_config=None):
     app.add_url_rule("/login", "login", login, methods=["GET", "POST"])
     app.add_url_rule("/logout", "logout", logout, methods=["POST"])
     app.add_url_rule("/enter", "enter", enter)
+    app.add_url_rule("/sso/<token>", "sso", sso)
     app.add_url_rule("/healthz", "healthz", healthz)
     app.register_blueprint(mail.bp)
     app.jinja_env.globals["kept_mail"] = mail.kept_mail   # (Disable delete: the delete buttons go)

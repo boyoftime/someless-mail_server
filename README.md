@@ -499,6 +499,7 @@ The API is at your web interface's address, followed by `/api/s1`, like `https:/
 | `GET`, `POST /mailboxes`; `GET`, `PATCH`, `DELETE /mailboxes/{id}` | list, make, read, change and delete mailboxes: storage, password, send limit, Disable delete, aliases |
 | `POST /mailboxes/password` | reset a mailbox's password by its address (`email`, `password`, `confirm_password`), for someone who has forgotten theirs |
 | `POST /mailboxes/login` | check an address and password (`email`, `password`), for an app where people sign in with their mailbox: the answer says whether they match, with their name and profile picture to greet them. Wrong passwords count towards the webmail's sign-in lock, so it can't be used to guess passwords any faster |
+| `POST /mailboxes/{id}/sign-in-link` | a one-time link that opens the webmail already signed in as the mailbox: it works once, within 60 seconds, and never shows or changes the password |
 | `GET /mailboxes/{id}/picture` | the mailbox's profile picture (WebP, 512 by 512), as its owner chose it in the webmail; every mailbox's `picture_url` says where it is |
 | `POST /mailboxes/{id}/aliases`; `DELETE /mailboxes/{id}/aliases/{alias}` | add and delete aliases |
 

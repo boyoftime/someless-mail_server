@@ -68,23 +68,41 @@ def save(value):
     db.commit()
 
 
-def new_ticket(mailbox_id):
+def new_ticket(mailbox_id, api_key_id=None):
+    """A ticket for the mailbox: (the token, when it stops working) with an API key (an app's
+    sign-in link, api.py), the token alone from the Mailboxes page."""
     token = secrets.token_urlsafe(32)
+    now = time.time()
     db = get_db()
-    db.execute("DELETE FROM webmail_tickets WHERE expires_at <= ?", (time.time(),))   # the old ones go
-    db.execute("INSERT INTO webmail_tickets (token_hash, mailbox_id, expires_at) VALUES (?, ?, ?)",
-               (_fingerprint(token), mailbox_id, time.time() + TICKET_SECONDS))
+    db.execute("DELETE FROM webmail_tickets WHERE expires_at <= ?", (now,))   # the old ones go
+    db.execute("INSERT INTO webmail_tickets (token_hash, mailbox_id, expires_at, api_key_id) VALUES (?, ?, ?, ?)",
+               (_fingerprint(token), mailbox_id, now + TICKET_SECONDS, api_key_id))
     db.commit()
-    return token
+    return (token, now + TICKET_SECONDS) if api_key_id is not None else token
 
 
-def take_ticket(token):
-    """The mailbox a ticket is for, once: None when it's unknown, used or too old."""
+def take(token):
+    """A ticket, once: {mailbox_id, api_key_id}, or None when it's unknown, used or too old."""
     db = get_db()
-    row = db.execute("SELECT mailbox_id, expires_at FROM webmail_tickets WHERE token_hash = ?",
+    row = db.execute("SELECT mailbox_id, expires_at, api_key_id FROM webmail_tickets WHERE token_hash = ?",
                      (_fingerprint(token or ""),)).fetchone()
     if row is None:
         return None
     db.execute("DELETE FROM webmail_tickets WHERE token_hash = ?", (_fingerprint(token),))
     db.commit()
-    return row["mailbox_id"] if row["expires_at"] > time.time() else None
+    return {"mailbox_id": row["mailbox_id"], "api_key_id": row["api_key_id"]} if row["expires_at"] > time.time() else None
+
+
+def take_ticket(token):
+    """The mailbox a ticket is for, once: None when it's unknown, used or too old."""
+    taken = take(token)
+    return taken and taken["mailbox_id"]
+
+
+def log_link(event, mailbox_id, email, api_key_id, address):
+    """A sign-in link made or used (the sign_in_links table): never the link itself."""
+    db = get_db()
+    key = db.execute("SELECT name FROM api_keys WHERE id = ?", (api_key_id,)).fetchone()
+    db.execute("INSERT INTO sign_in_links (event, mailbox_id, email, api_key_id, api_key_name, address, at)"
+               " VALUES (?, ?, ?, ?, ?, ?, ?)", (event, mailbox_id, email, api_key_id, key and key["name"], address, time.time()))
+    db.commit()
