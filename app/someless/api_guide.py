@@ -164,7 +164,10 @@ def calls(base, domain):
             {"method": "POST", "path": "/mailboxes/{id}/sign-in-link", "name": "Open the webmail signed in",
              "example": "/mailboxes/7/sign-in-link", "text": "A one-time link that opens the webmail already signed in as "
              "the mailbox, for an app where people manage their mailbox: send the person's browser to url, and they're in, "
-             "on their inbox. Then they stay signed in until they log out, as with their password. The link works once, "
+             "on their inbox. Then they stay signed in until they log out, as with their password. url is at the "
+             "webmail's own address, the one set in the panel (Settings, Miscellaneous, Webmail address), like "
+             "https://webmail.yourcompany.com: one address for every mailbox, whatever its domain. Until it's set, "
+             "it's this server's address on port 17090. The link works once, "
              "within expires_in seconds, for this mailbox alone; after that it shows the webmail's sign-in page. Make a new "
              "link each time, right before it's opened, from your app's server, never from a browser, since the key must "
              "stay secret. It never shows, changes or checks the password, and doesn't count towards the sign-in lock. "
