@@ -164,7 +164,7 @@ def test_each_call_shows_its_request_and_its_response_side_by_side(client, login
     page = text(client.get("/api-keys/docs"))
 
     calls = re.findall(r'<article class="api-call" id="(call-[a-z-]+)">(.*?)</article>', page, re.S)
-    assert len(calls) == 21
+    assert len(calls) == 26
     for call_id, call in calls:
         assert '<div class="api-call-doc">' in call and '<div class="api-call-code">' in call, call_id
         tabs = re.findall(r'<button [^>]*role="tab"[^>]*>(.*?)</button>', call, re.S)
@@ -186,7 +186,8 @@ CALLS = ("GET /domains", "POST /domains", "GET /domains/{name}", "POST /domains/
          "GET /senders", "POST /senders", "GET /senders/{id}", "PATCH /senders/{id}", "DELETE /senders/{id}",
          "GET /mailboxes", "POST /mailboxes", "GET /mailboxes/{id}", "PATCH /mailboxes/{id}", "POST /mailboxes/password",
          "DELETE /mailboxes/{id}", "POST /mailboxes/{id}/aliases", "DELETE /mailboxes/{id}/aliases/{alias}",
-         "POST /mailboxes/{id}/sign-in-link")
+         "POST /mailboxes/{id}/sign-in-link", "GET /mailboxes/{id}/mail-app-settings", "GET /mailboxes/{id}/signatures", "POST /mailboxes/{id}/signatures",
+         "PATCH /mailboxes/{id}/signatures/{signature_id}", "DELETE /mailboxes/{id}/signatures/{signature_id}")
 
 
 def test_the_whole_guide_is_also_plain_text_for_an_ai_with_no_login(client, app):
@@ -280,12 +281,12 @@ def test_the_guide_starts_with_an_index_of_the_calls(client, login):
     index = page[page.index('<nav class="api-index"'):]
     index = index[:index.index("</nav>")]
     links = re.findall(r'<a [^>]*href="#(call-[a-z-]+)"[^>]*>', index)
-    assert len(links) == 21 and len(set(links)) == 21
+    assert len(links) == 26 and len(set(links)) == 26
     for link in links:
         assert f'id="{link}"' in page
     # as in Postman's sidebar: each group with its icon and how many calls; each call named in words, its path under it
     words = re.sub(r"\s+", " ", plain(index))
-    for group, count in (("Domains", "5 calls"), ("Senders", "5 calls"), ("Mailboxes", "11 calls")):
+    for group, count in (("Domains", "5 calls"), ("Senders", "5 calls"), ("Mailboxes", "12 calls"), ("Signatures", "4 calls")):
         assert f"{group} {count}" in words, group
     for name, path in (("Make a mailbox", "/mailboxes"), ("Reset a password", "/mailboxes/password"),
                        ("Check a mailbox's password", "/mailboxes/login"), ("Open the webmail signed in", "/mailboxes/{id}/sign-in-link"), ("Get a profile picture", "/mailboxes/{id}/picture"),

@@ -17,7 +17,7 @@ KEYWORDS = {
     "php": "true false null if exit",
     "json": "true false null",
 }
-STATUS = {200: "200 OK", 201: "201 Created", 404: "404 Not Found", 409: "409 Conflict", 429: "429 Too Many Requests"}
+STATUS = {200: "200 OK", 201: "201 Created", 400: "400 Bad Request", 404: "404 Not Found", 409: "409 Conflict", 429: "429 Too Many Requests"}
 EXAMPLE_PASSWORD = "Choose-A-Strong-1!"
 
 
@@ -46,6 +46,14 @@ def calls(base, domain):
     new_mailbox = {"email": f"sales@{domain}", "name": "Sales Team", "password": EXAMPLE_PASSWORD, "storage": "15 GB",
                    "send_limit_mb": 50, "disable_delete": {"webmail": False, "apps": False}, "aliases": [f"orders@{domain}"]}
     new = "newdomain.com"
+    signature = {"id": 12, "name": "Work", "html": '<p><b>Lewis Mutalemwa</b></p><p><b>Sales Manager, PineLoop INC</b></p>'
+                 '<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA…" width="600" alt="PineLoop INC"></p>',
+                 "default": True}
+    signature_name = ("name", "text", "What the owner sees it called in the webmail, like Work: up to 50 characters.", True)
+    signature_html = ("html", "text", "What it says, as HTML: text, bold, links and pictures (a logo as a data: picture, "
+                      "like data:image/png;base64,…). Up to 2 MB, pictures included.", True)
+    signature_default = ("default", "true or false", "Make it the default: added to every new message. The first "
+                         "signature is the default anyway.")
 
     def records(state):   # a domain's records to add, as an answer shows them
         made = [("code", "Someless code", "Shows that the domain is yours.", "TXT", "@", "someless-code:7f3a9c2e5b1d4a60"),
@@ -166,6 +174,20 @@ def calls(base, domain):
              "outcomes": [(404, {"error": "There's no mailbox with the id 7."}, "There's no such mailbox."),
                           (409, {"error": "This mailbox is disabled: nobody can sign in to it."},
                            "The mailbox is disabled: enable it first (PATCH /mailboxes/{id} with \"disabled\": false).")]},
+            {"method": "GET", "path": "/mailboxes/{id}/mail-app-settings", "name": "Get mail app settings",
+             "example": "/mailboxes/7/mail-app-settings", "text": "What Outlook, Thunderbird or a phone's Mail app asks "
+             "for to add the mailbox, to show the person in your app: the username, the incoming server (IMAP, or POP3 "
+             "to download the mail and keep it on one device), the outgoing server (SMTP), and the calendar and "
+             "contacts servers. The same as the webmail's Settings, Connect third-party apps. The password isn't "
+             "here: Someless Mail keeps only a hash of it, so it's the one the mailbox was made with (or last reset to). "
+             "The outgoing server takes port 465 (SSL/TLS) or starttls_port, 587 (STARTTLS), and needs the same "
+             "username and password.",
+             "answer": {"email": f"sales@{domain}", "username": f"sales@{domain}",
+                        "imap": {"server": f"mail.{domain}", "port": 993, "security": "SSL/TLS"},
+                        "pop3": {"server": f"mail.{domain}", "port": 995, "security": "SSL/TLS"},
+                        "smtp": {"server": f"mail.{domain}", "port": 465, "security": "SSL/TLS", "starttls_port": 587},
+                        "calendar_server": f"https://webmail.{domain}/dav/cal/sales@{domain}/",
+                        "contacts_server": f"https://webmail.{domain}/dav/card/sales@{domain}/"}},
             {"method": "GET", "path": "/mailboxes/{id}/picture", "name": "Get a profile picture", "example": "/mailboxes/7/picture",
              "text": "The mailbox's profile picture, as its owner chose it in the webmail (Settings, Profile): a "
              "WebP picture, 512 by 512 pixels, to show beside their name. A mailbox's picture_url says where it is, or is "
@@ -183,6 +205,33 @@ def calls(base, domain):
             {"method": "DELETE", "path": "/mailboxes/{id}/aliases/{alias}", "name": "Delete an alias", "example": f"/mailboxes/7/aliases/orders@{domain}",
              "text": f"Delete an alias: {{alias}} is its address, like orders@{domain}.",
              "answer": {"mailbox": {**mailbox, "aliases": []}}},
+        ]},
+        {"title": "Signatures", "id": "signatures", "calls": [
+            {"method": "GET", "path": "/mailboxes/{id}/signatures", "name": "List signatures", "example": "/mailboxes/7/signatures",
+             "text": "A mailbox's signatures, the default first: the ones its owner sees in the webmail (Settings, "
+             "Signatures) and picks from as they write. The default one is added to every new message.",
+             "answer": {"signatures": [signature]}},
+            {"method": "POST", "path": "/mailboxes/{id}/signatures", "name": "Add a signature", "example": "/mailboxes/7/signatures",
+             "text": "Add a signature to a mailbox, as its owner would in the webmail: it shows there at once. The first "
+             "one is the default. A mailbox can have 20. The HTML is cleaned as the webmail cleans it (no scripts, no "
+             "styles that reach outside it). Put a logo in it as a data: picture, like data:image/png;base64,…: it goes "
+             "out with each message, so every mail app shows it. A link to a picture (https://) works too, but many mail "
+             "apps hide those until the reader allows them.",
+             "status": 201, "fields": [signature_name, signature_html, (*signature_default, False)],
+             "body": {"name": "Work", "html": signature["html"], "default": True}, "answer": {"signature": signature},
+             "outcomes": [(400, {"error": "A mailbox can have 20 signatures at most."}, "Delete one first."),
+                          (400, {"error": "This signature is too large. Use smaller pictures, or fewer of them."},
+                           "It's over 2 MB, pictures included: make the logo smaller.")]},
+            {"method": "PATCH", "path": "/mailboxes/{id}/signatures/{signature_id}", "name": "Change a signature",
+             "example": "/mailboxes/7/signatures/12", "text": "Change a signature: send only what changes. \"default\": true "
+             "makes it the default instead of the one before; false leaves the mailbox with no default.",
+             "fields": [(*signature_name[:3], False), (*signature_html[:3], False), (*signature_default, False)],
+             "body": {"name": "Work (full)"}, "answer": {"signature": {**signature, "name": "Work (full)"}},
+             "outcomes": [(404, {"error": "This mailbox has no signature with the id 12."},
+                           "There's no such signature on this mailbox.")]},
+            {"method": "DELETE", "path": "/mailboxes/{id}/signatures/{signature_id}", "name": "Delete a signature",
+             "example": "/mailboxes/7/signatures/12", "text": "Delete a signature. Messages already sent keep it.",
+             "answer": {"deleted": True}},
         ]},
     ]
     for group in groups:

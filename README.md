@@ -500,6 +500,8 @@ The API is at your web interface's address, followed by `/api/s1`, like `https:/
 | `POST /mailboxes/password` | reset a mailbox's password by its address (`email`, `password`, `confirm_password`), for someone who has forgotten theirs |
 | `POST /mailboxes/login` | check an address and password (`email`, `password`), for an app where people sign in with their mailbox: the answer says whether they match, with their name and profile picture to greet them. Wrong passwords count towards the webmail's sign-in lock, so it can't be used to guess passwords any faster |
 | `POST /mailboxes/{id}/sign-in-link` | a one-time link that opens the webmail already signed in as the mailbox: it works once, within 60 seconds, and never shows or changes the password |
+| `GET`, `POST /mailboxes/{id}/signatures`, `PATCH`, `DELETE /mailboxes/{id}/signatures/{signature_id}` | a mailbox's signatures, as in the webmail's Settings > Signatures: list, add (`name`, `html`, `default`), change and delete; a logo goes inside as a `data:` picture |
+| `GET /mailboxes/{id}/mail-app-settings` | what Outlook, Thunderbird or a phone's Mail app asks for to add the mailbox: the username, IMAP, POP3 and SMTP servers, ports and security, and the calendar and contacts servers (never the password) |
 | `GET /mailboxes/{id}/picture` | the mailbox's profile picture (WebP, 512 by 512), as its owner chose it in the webmail; every mailbox's `picture_url` says where it is |
 | `POST /mailboxes/{id}/aliases`; `DELETE /mailboxes/{id}/aliases/{alias}` | add and delete aliases |
 

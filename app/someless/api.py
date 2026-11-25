@@ -13,7 +13,8 @@ from flask import Blueprint, Response, g, jsonify, request, send_file
 from . import (api_guide, avatar, disabling, domain_records, domains, mail_password, mailboxes, senders, webmail_lock,
                webmail_site)
 from .db import get_db
-from .webmail import views as webmail_views
+from .webmail import settings as webmail_settings, views as webmail_views
+from .webmail.compose import clean_outgoing
 from .engine import sync as engine_sync
 from .smtp import fingerprint
 
@@ -494,6 +495,118 @@ def sign_in_link(mailbox_id):
     webmail_site.log_link("made", mailbox_id, mailbox["email"], g.api_key["id"], request.remote_addr)
     return ({"url": f"{webmail_site.address(request.host)}/sso/{token}", "expires_in": webmail_site.TICKET_SECONDS,
              "expires_at": _moment(expires_at)}, 200, {"Cache-Control": "no-store"})
+
+
+@bp.get("/mailboxes/<int:mailbox_id>/mail-app-settings")
+def mail_app_settings(mailbox_id):
+    """What a mail app (Outlook, Thunderbird, a phone's Mail app) asks for to add the mailbox: the
+    servers, ports and security the webmail's Settings > Connect third-party apps shows. Never the
+    password, which is only kept as a hash: it's the one the mailbox was made with."""
+    mailbox = _mailbox(mailbox_id)
+    server = mailboxes._server_for(mailbox["domain"])
+    ports = webmail_settings.PORTS
+    dav = f"{webmail_site.address(request.host)}/dav"
+    return {"email": mailbox["email"], "username": mailbox["email"],
+            "imap": {"server": server, "port": ports["imap"], "security": "SSL/TLS"},
+            "pop3": {"server": server, "port": ports["pop3"], "security": "SSL/TLS"},
+            "smtp": {"server": server, "port": ports["smtp_ssl"], "security": "SSL/TLS",
+                     "starttls_port": ports["smtp_starttls"]},
+            "calendar_server": f"{dav}/cal/{mailbox['email']}/", "contacts_server": f"{dav}/card/{mailbox['email']}/"}
+
+
+# --- a mailbox's signatures ----------------------------------------------------------------------
+
+def _signature_json(row):
+    return {"id": row["id"], "name": row["name"], "html": row["html"], "default": bool(row["is_default"])}
+
+
+def _signature(mailbox_id, signature_id):
+    row = get_db().execute("SELECT * FROM webmail_signatures WHERE id = ? AND mailbox_id = ?",
+                           (signature_id, mailbox_id)).fetchone()
+    if row is None:
+        raise Refused(f"This mailbox has no signature with the id {signature_id}.", 404)
+    return row
+
+
+def _signature_fields(body, required):
+    """The name, html and default sent, checked and cleaned as the webmail's Settings > Signatures
+    does them: {field: value} for those sent."""
+    found = {}
+    if "name" in body or required:
+        name = " ".join(_text(body, "name").split())
+        if not name:
+            raise Refused("Give the signature a name.")
+        if len(name) > webmail_settings.LONGEST_SIGNATURE_NAME:
+            raise Refused("Signature name max length is 50 symbols")
+        found["name"] = name
+    if "html" in body or required:
+        html = clean_outgoing(_text(body, "html"), [])
+        if not re.sub(r"<[^>]*>|&nbsp;|\s", "", html) and "<img" not in html:
+            raise Refused("html is empty: give what the signature says.")
+        if len(html) > webmail_settings.LONGEST_SIGNATURE:
+            raise Refused("This signature is too large. Use smaller pictures, or fewer of them.")
+        found["html"] = html
+    if "default" in body:
+        if not isinstance(body["default"], bool):
+            raise Refused("Give default as true or false.")
+        found["default"] = body["default"]
+    return found
+
+
+def _make_default(mailbox_id, signature_id):
+    get_db().execute("UPDATE webmail_signatures SET is_default = (id = ?) WHERE mailbox_id = ?", (signature_id, mailbox_id))
+
+
+@bp.get("/mailboxes/<int:mailbox_id>/signatures")
+def list_signatures(mailbox_id):
+    """The mailbox's signatures, the default first: the ones its owner picks from in the webmail."""
+    _mailbox(mailbox_id)
+    return {"signatures": [_signature_json(row) for row in webmail_views.signatures(mailbox_id)]}
+
+
+@bp.post("/mailboxes/<int:mailbox_id>/signatures")
+def add_signature(mailbox_id):
+    """Add a signature, as its owner would in the webmail: the first is the default."""
+    _mailbox(mailbox_id)
+    fields = _signature_fields(_body("name", "html", "default"), required=True)
+    db = get_db()
+    count = db.execute("SELECT COUNT(*) FROM webmail_signatures WHERE mailbox_id = ?", (mailbox_id,)).fetchone()[0]
+    if count >= webmail_settings.MOST_SIGNATURES:
+        raise Refused(f"A mailbox can have {webmail_settings.MOST_SIGNATURES} signatures at most.")
+    first = not db.execute("SELECT 1 FROM webmail_signatures WHERE mailbox_id = ?", (mailbox_id,)).fetchone()
+    made = db.execute("INSERT INTO webmail_signatures (mailbox_id, name, html, is_default, created_at) VALUES (?, ?, ?, 0, ?)",
+                      (mailbox_id, fields["name"], fields["html"], time.time())).lastrowid
+    if fields.get("default") or first:
+        _make_default(mailbox_id, made)
+    db.commit()
+    return {"signature": _signature_json(_signature(mailbox_id, made))}, 201
+
+
+@bp.patch("/mailboxes/<int:mailbox_id>/signatures/<int:signature_id>")
+def change_signature(mailbox_id, signature_id):
+    """Change a signature: only what's sent. default false leaves the mailbox with none."""
+    _mailbox(mailbox_id)
+    _signature(mailbox_id, signature_id)
+    fields = _signature_fields(_body("name", "html", "default"), required=False)
+    db = get_db()
+    for field in ("name", "html"):
+        if field in fields:
+            db.execute(f"UPDATE webmail_signatures SET {field} = ? WHERE id = ?", (fields[field], signature_id))
+    if fields.get("default") is True:
+        _make_default(mailbox_id, signature_id)
+    elif fields.get("default") is False:
+        db.execute("UPDATE webmail_signatures SET is_default = 0 WHERE id = ?", (signature_id,))
+    db.commit()
+    return {"signature": _signature_json(_signature(mailbox_id, signature_id))}
+
+
+@bp.delete("/mailboxes/<int:mailbox_id>/signatures/<int:signature_id>")
+def delete_signature(mailbox_id, signature_id):
+    _mailbox(mailbox_id)
+    _signature(mailbox_id, signature_id)
+    get_db().execute("DELETE FROM webmail_signatures WHERE id = ?", (signature_id,))
+    get_db().commit()
+    return {"deleted": True}
 
 
 @bp.get("/mailboxes/<int:mailbox_id>/picture")

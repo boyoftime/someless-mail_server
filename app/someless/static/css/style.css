@@ -3424,14 +3424,15 @@ html.is-page-flipping body, body:has(#app-main.flip-in), body:has(#app-main.flip
 @container api-land (min-width: 760px) {
   .api-index {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: auto auto 1fr;
-    grid-template-areas: "head head" "domains mailboxes" "senders mailboxes";
+    grid-template-rows: auto auto auto 1fr;
+    grid-template-areas: "head head" "domains mailboxes" "senders mailboxes" "signatures mailboxes";
     align-items: start;
   }
   .api-index-head { grid-area: head; }
   .api-index-group.is-domains { grid-area: domains; }
   .api-index-group.is-senders { grid-area: senders; align-self: stretch; }
   .api-index-group.is-mailboxes { grid-area: mailboxes; align-self: stretch; }
+  .api-index-group.is-signatures { grid-area: signatures; align-self: stretch; }
 }
 .api-index-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.75rem; }
 .api-index-hint { margin: 0; color: var(--muted); font-size: 0.9rem; }
