@@ -37,11 +37,11 @@ def switch(mail, on):
     return post(mail, "/settings/undelivered", on=on)
 
 
-def test_settings_has_the_card_switched_off_to_begin_with(mail):
+def test_settings_has_the_card_switched_on_to_begin_with(mail):
     page = mail.get("/settings").get_data(as_text=True)
 
     assert ">Undelivered mail</h2>" in page
-    assert re.search(r'role="switch" aria-checked="false"\s+data-wm-undelivered-switch', page)
+    assert re.search(r'role="switch" aria-checked="true"\s+data-wm-undelivered-switch', page)
 
 
 def test_switching_it_on_makes_the_folder_and_the_rule(mail, jmap):
@@ -146,6 +146,7 @@ def test_a_folder_of_that_name_made_before_is_the_one(mail, jmap):
 
 
 def test_the_engine_refusing_leaves_it_off(mail, jmap):
+    switch(mail, False)
     jmap.refuse_script = "no"
 
     answer = switch(mail, True)

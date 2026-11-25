@@ -295,7 +295,11 @@ CREATE TABLE IF NOT EXISTS deliveries (
 
 
 # Columns that came after their table first shipped: databases from before get them on start
-LATER_COLUMNS = [("webmail_tickets", "api_key_id", "INTEGER"), ("domains", "provider", "TEXT"), ("domain_keys", "mail_host", "TEXT"), ("domain_keys", "found", "TEXT"),
+LATER_COLUMNS = [("webmail_tickets", "api_key_id", "INTEGER"),
+                 # the Undelivered folder is on unless switched off (webmail/sieve.py); undelivered_on is no longer read
+                 ("webmail_settings", "undelivered_off", "INTEGER NOT NULL DEFAULT 0"),
+                 # when the mailbox's rules last went into the engine (webmail/sieve.py; engine/sync.py installs them)
+                 ("mailboxes", "rules_installed_at", "REAL"), ("domains", "provider", "TEXT"), ("domain_keys", "mail_host", "TEXT"), ("domain_keys", "found", "TEXT"),
                  ("smtp_keys", "login", "TEXT"), ("engine", "certificate_asked_at", "REAL"),
                  ("domain_checks", "every_minutes", "INTEGER"), ("help_links", "shown", "TEXT"),
                  ("help_links", "url", "TEXT"), ("engine", "webmail_password", "TEXT"),

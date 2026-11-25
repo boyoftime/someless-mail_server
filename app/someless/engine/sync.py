@@ -18,7 +18,7 @@ from flask import current_app
 
 from ..db import get_db
 from . import (INTERNAL_DOMAIN, PANEL_ACCOUNT, SENDERS_GROUP, WEBMAIL_ACCOUNT, client, deliveries, enabled, names, remember,
-               secret, state)
+               API_URL, secret, state)
 
 from .client import EngineError, EngineUnavailable
 
@@ -405,6 +405,7 @@ def run():
     try:
         with _lock():
             done = reconcile(client(), desired_state())
+            install_rules(done)
     except (EngineUnavailable, EngineError, KeyError) as error:
         remember(sync_error=str(error))
         current_app.logger.warning("mail engine sync failed: %s", error)
@@ -417,6 +418,27 @@ def run():
     if done:
         current_app.logger.info("mail engine sync: %s", "; ".join(done))
     return True
+
+
+def install_rules(done):
+    """Each mailbox's rules for its incoming mail (webmail/sieve.py: its Undelivered folder, on to
+    begin with, its filters, forwarding and auto-reply) into the engine once its account is there:
+    a new mailbox's, an account made again (its rules went with it), and any from before they were
+    installed. A disabled mailbox waits until it's enabled; one the engine can't take now waits for
+    the next sync. Never raises."""
+    from ..webmail import sieve
+    from ..webmail.jmap import Jmap
+    made = {what.split(" ", 2)[2] for what in done if what.startswith("create mailbox ")}
+    factory = current_app.config.get("JMAP") or (
+        lambda email: Jmap(email, secret("webmail_password"), current_app.config.get("ENGINE_URL", API_URL)))
+    for row in get_db().execute("SELECT id, email, rules_installed_at FROM mailboxes WHERE disabled = 0").fetchall():
+        if row["rules_installed_at"] is not None and row["email"] not in made:
+            continue
+        try:
+            sieve.install_for(row["id"], row["email"], factory(row["email"]))
+            done.append(f"install rules {row['email']}")
+        except Exception as error:   # (the next sync tries again)
+            current_app.logger.warning("mail rules for %s not installed yet: %s", row["email"], error)
 
 
 def after_change():

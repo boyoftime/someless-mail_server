@@ -280,6 +280,7 @@ def test_notices_of_undelivered_mail_go_to_their_folder(app, live):
         db.execute("INSERT INTO mailboxes (email, domain_id, quota_bytes, password_hash, created_at)"
                    " VALUES ('ceo@example.com', ?, ?, ?, 0)", (domain_id, 50 * 1024 ** 2, mail_password.hash_password("Mailbox-Pass-123!")))
         db.commit()
+        sieve.save_settings(db.execute("SELECT id FROM mailboxes").fetchone()[0], undelivered_on=False)   # (switched off: on to begin with)
         assert sync.run(), engine_module.state()["sync_error"]
         jmap = Jmap("ceo@example.com", engine_module.secret("webmail_password"))
 
@@ -300,3 +301,51 @@ def test_notices_of_undelivered_mail_go_to_their_folder(app, live):
     assert where("Failed to deliver message") == ["Undelivered", "Undelivered"]
     assert where("Mail delivery failed") == ["Undelivered", "Undelivered"]
     assert where("Lunch?") in (["Inbox"], ["Junk Mail"])   # (a person's mail: wherever the spam filter puts it)
+
+
+def test_a_new_mailbox_files_its_notices_in_undelivered_from_the_start(app, live):
+    """On to begin with (webmail/sieve.py): the sync that makes a mailbox's account installs its
+    rules, so its first bounce skips the Inbox with nobody ever opening its webmail."""
+    import time
+
+    from someless import mail_password
+    from someless.db import get_db
+    from someless.engine import sync
+    from someless.webmail.jmap import Jmap
+    report = (b"From: Mail Delivery Subsystem <MAILER-DAEMON@friend.test>\r\nTo: new@example.com\r\n"
+              b"Subject: Failed to deliver message\r\nMIME-Version: 1.0\r\n"
+              b"Content-Type: multipart/report; report-type=delivery-status; boundary=\"b1\"\r\n\r\n"
+              b"--b1\r\nContent-Type: text/plain\r\n\r\nYour message could not be delivered.\r\n"
+              b"--b1\r\nContent-Type: message/delivery-status\r\n\r\nReporting-MTA: dns; friend.test\r\n\r\n"
+              b"Final-Recipient: rfc822; nobody@gmail.com\r\nAction: failed\r\nStatus: 5.1.1\r\n\r\n--b1--\r\n")
+    person = b"From: friend@friend.test\r\nTo: new@example.com\r\nSubject: Welcome aboard\r\n\r\nHi!\r\n"
+
+    with app.app_context():
+        domain_id = _live_domain_and_key(app)
+        db = get_db()
+        mailbox_id = db.execute("INSERT INTO mailboxes (email, domain_id, quota_bytes, password_hash, created_at)"
+                                " VALUES ('new@example.com', ?, ?, ?, 0)",
+                                (domain_id, 50 * 1024 ** 2, mail_password.hash_password("Mailbox-Pass-123!"))).lastrowid
+        db.commit()
+        assert sync.run(), engine_module.state()["sync_error"]
+        assert db.execute("SELECT rules_installed_at FROM mailboxes WHERE id = ?", (mailbox_id,)).fetchone()[0]
+        jmap = Jmap("new@example.com", engine_module.secret("webmail_password"))
+
+    with smtplib.SMTP("127.0.0.1", 25, timeout=20) as smtp:
+        smtp.ehlo("mx.friend.test")
+        assert smtp.sendmail("", ["new@example.com"], report) == {}
+        assert smtp.sendmail("friend@friend.test", ["new@example.com"], person) == {}
+
+    def where(subject):
+        boxes = {box["id"]: box["name"] for box in jmap.call(("Mailbox/get", {"properties": ["name"]}))[0]["list"]}
+        for _ in range(20):
+            found = jmap.call(("Email/query", {"filter": {"subject": subject}}),
+                              ("Email/get", {"#ids": {"resultOf": "0", "name": "Email/query", "path": "/ids"},
+                                             "properties": ["mailboxIds"]}))[1]["list"]
+            if found:
+                return sorted(boxes[box] for email in found for box in email["mailboxIds"])
+            time.sleep(0.5)
+        return []
+
+    assert where("Failed to deliver message") == ["Undelivered"]
+    assert where("Welcome aboard") in (["Inbox"], ["Junk Mail"])

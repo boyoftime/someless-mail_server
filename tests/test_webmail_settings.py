@@ -127,7 +127,7 @@ def test_forwarding_is_written_into_the_mailboxs_script(mail, jmap):
     assert answer.status_code == 200
     assert answer.get_json()["forwarding"] == {"address": "boss@example.com", "on": True, "keep": True}
     script = jmap.active_script()
-    assert 'require ["copy"];' in script and 'redirect :copy "boss@example.com";' in script
+    assert script.startswith('require ["copy", ') and 'redirect :copy "boss@example.com";' in script
 
 
 def test_forwarding_without_a_copy_kept(mail, jmap):
@@ -369,7 +369,7 @@ def test_filters_are_deleted_together(mail, jmap):
     answer = mail.post("/settings/filters/delete", json={"ids": [first, second]})
 
     assert answer.get_json()["message"] == "The selected filters have been removed." and answer.get_json()["rules"] == []
-    assert "fileinto" not in jmap.active_script()
+    assert ":mailboxid" not in jmap.active_script()   # (no filter files mail anywhere: only the Undelivered rule, by name)
 
 
 def test_a_filter_the_engine_refuses_is_not_kept(mail, jmap):

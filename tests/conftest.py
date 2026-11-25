@@ -68,4 +68,6 @@ def engine(app):
     fake.objects["Email"] = {"singleton": {"maxAttachmentSize": 50000000, "maxMessageSize": 75000000}}
     fake.objects["Imap"] = {"singleton": {"maxRequestSize": 52428800}}
     app.config.update(ENGINE_ENABLED=True, ENGINE_CLIENT=lambda: fake)
+    from jmap_fake import FakeJmap
+    app.config.setdefault("JMAP", lambda email: FakeJmap())   # (each mailbox's mail, as the sync installs its rules)
     return fake

@@ -12,6 +12,7 @@ thrown away; "stop" skips the filters after it."""
 import datetime
 import json
 import re
+import time
 
 from flask import g
 
@@ -58,12 +59,13 @@ def settings(mailbox_id):
     """Forwarding, the auto-reply and the Undelivered folder, as kept: {"forward_to", "forward_on",
     "forward_keep", "reply_on", "reply_start", "reply_end", "reply_subject", "reply_html", "undelivered_on"}."""
     row = get_db().execute("SELECT forward_to, forward_on, forward_keep, reply_on, reply_start, reply_end, reply_subject,"
-                           " reply_html, undelivered_on FROM webmail_settings WHERE mailbox_id = ?", (mailbox_id,)).fetchone()
-    if row is None:
+                           " reply_html, undelivered_off FROM webmail_settings WHERE mailbox_id = ?", (mailbox_id,)).fetchone()
+    if row is None:   # (the Undelivered folder is on to begin with)
         return {"forward_to": None, "forward_on": False, "forward_keep": True, "reply_on": False, "reply_start": None,
-                "reply_end": None, "reply_subject": "", "reply_html": "", "undelivered_on": False}
+                "reply_end": None, "reply_subject": "", "reply_html": "", "undelivered_on": True}
     kept = dict(row)
-    for key in ("forward_on", "forward_keep", "reply_on", "undelivered_on"):
+    kept["undelivered_on"] = not kept.pop("undelivered_off")
+    for key in ("forward_on", "forward_keep", "reply_on"):
         kept[key] = bool(kept[key])
     kept["reply_subject"] = kept["reply_subject"] or ""
     kept["reply_html"] = kept["reply_html"] or ""
@@ -77,6 +79,8 @@ def save_settings(mailbox_id, **values):
         if key not in ("forward_to", "forward_on", "forward_keep", "reply_on", "reply_start", "reply_end", "reply_subject",
                        "reply_html", "undelivered_on"):
             raise ValueError(key)
+        if key == "undelivered_on":   # (kept as whether it's switched off: on unless it is)
+            key, value = "undelivered_off", not value
         database.execute(f"UPDATE webmail_settings SET {key} = ? WHERE mailbox_id = ?",
                          (int(value) if isinstance(value, bool) else value, mailbox_id))
     database.commit()
@@ -362,12 +366,29 @@ def install(mail, text):
             raise MailError(f"SieveScript/set: {(result.get('notCreated') or {}).get('new')}")
 
 
-def write(mail, tree, own):
-    """The mailbox's rules, written again into the engine (after any change in Settings)."""
+def write(mail, tree, own, mailbox_id=None):
+    """The mailbox's rules, written again into the engine (after any change in Settings, and once
+    its account is there: install_for)."""
+    mailbox_id = g.mailbox["id"] if mailbox_id is None else mailbox_id
     folders = {folder["id"]: {"id": folder["id"], "name": tree.engine_path(folder)} for folder in tree.list}
     trash = tree.role("trash")
     if trash:
         folders["trash"] = folders[trash["id"]]
     kept = tree.role("undelivered")
-    install(mail, script(settings(g.mailbox["id"]), rules(g.mailbox["id"]), folders, own,
-                         folders[kept["id"]] if kept else None))
+    install(mail, script(settings(mailbox_id), rules(mailbox_id), folders, own, folders[kept["id"]] if kept else None))
+    database = get_db()
+    database.execute("UPDATE mailboxes SET rules_installed_at = ? WHERE id = ?", (time.time(), mailbox_id))
+    database.commit()
+
+
+def install_for(mailbox_id, email, mail):
+    """A mailbox's rules into the engine, outside the webmail (engine/sync.py, once its account is
+    there): its Undelivered folder made first when it's on, as switching it on makes it."""
+    from . import folders as folder_lib
+    tree = folder_lib.load(mail)
+    if settings(mailbox_id)["undelivered_on"] and not tree.role("undelivered"):
+        undelivered.make_folder(mail, tree)
+        tree = folder_lib.load(mail)
+    own = [email] + [row["email"] for row in get_db().execute(
+        "SELECT email FROM mailbox_aliases WHERE mailbox_id = ? ORDER BY email", (mailbox_id,))]
+    write(mail, tree, own, mailbox_id)
