@@ -1348,12 +1348,25 @@ def test_the_same_person_always_has_the_same_colour(signed_in, jmap):
     assert len(hues["amina@example.com"]) == 1
 
 
+def test_the_folders_column_has_its_own_background_on_a_phone(client):
+    """On a phone the folders slide in over the list: their background (--wm-side, the colour) is
+    never redefined as the column's width, which made it see-through, the list showing through it."""
+    import re as regex
+    css = client.application.test_client().get("/static/css/webmail-app.css").get_data(as_text=True)
+
+    shell = css[css.index(".wm-shell {"):]
+    shell = shell[:shell.index("}")]
+    assert "--wm-side:" not in shell and "--wm-side-column: clamp(184px, var(--wm-side-width), 320px)" in shell
+    assert regex.search(r"\.wm-side \{[^}]*background: var\(--wm-side\)", css)
+    assert len(regex.findall(r"--wm-side:\s*#[0-9a-f]{6}", css)) == 2   # (a colour in each theme)
+
+
 def test_a_narrow_reading_pane_stays_readable(client):
     """The divider stops at a reading pane of 520px, and in a pane that narrow the message's header
     puts its date and buttons under the sender, so the name and address never squeeze to a letter."""
     css = client.application.test_client().get("/static/css/webmail-app.css").get_data(as_text=True)
 
-    assert "calc(100% - var(--wm-side) - 520px)" in css and "- 430px)" not in css
+    assert "calc(100% - var(--wm-side-column) - 520px)" in css and "- 430px)" not in css
     assert "container: wm-read / inline-size" in css
     narrow = css[css.index("@container wm-read (max-width: 640px)"):]
     narrow = narrow[:narrow.index("}\n}") + 3]
